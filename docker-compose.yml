@@ -1,0 +1,42 @@
+services:
+  db:
+    image: mysql:8
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - my-db:/var/lib/mysql
+    networks:
+      - appnet
+
+  app:
+    build: .
+    container_name: own_wiki_go
+    depends_on:
+      - db
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../../Ashurbanipal:/var/lib/datos
+      - ./volumenes/output:/var/lib/output
+    networks:
+      - appnet
+    command: ["./own_wiki", "/var/lib/datos", "/var/lib/output"] 
+
+volumes:
+  my-db: 
+
+networks:
+  appnet:
