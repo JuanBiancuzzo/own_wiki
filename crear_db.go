@@ -39,24 +39,35 @@ func main() {
 		return
 	}
 
+	canalMensajes := make(chan string)
+	go func(canal chan string) {
+		fmt.Println("Imprimiendo mensajes")
+		for {
+			mensaje := <-canal
+			fmt.Print(mensaje)
+		}
+	}(canalMensajes)
+
 	canalInfo := make(chan db.InfoArchivos)
 	canalDirectorio := make(chan fs.Directorio)
-	go func(canalInfo chan db.InfoArchivos, dirOrigen string) {
+	go func(canalInfo chan db.InfoArchivos, canalMensajes chan string, dirOrigen string) {
 		var infoArchivos db.InfoArchivos
-		directorioRoot := fs.EstablecerDirectorio(dirOrigen, &infoArchivos)
+		directorioRoot := fs.EstablecerDirectorio(dirOrigen, &infoArchivos, canalMensajes)
 
-		fmt.Println("Procesando los archivos")
+		canalMensajes <- "Procesando los archivos\n"
+
 		var waitArchivos sync.WaitGroup
-		directorioRoot.ProcesarArchivos(&waitArchivos, &infoArchivos)
+		directorioRoot.ProcesarArchivos(&waitArchivos, &infoArchivos, canalMensajes)
 		waitArchivos.Wait()
-		fmt.Println("Se termino de procesar los archivos")
+
+		canalMensajes <- "Se termino de procesar los archivos\n"
 
 		// Ajustar valores de info de los archivos
 		infoArchivos.Incrementar()
 
 		canalInfo <- infoArchivos
 		canalDirectorio <- *directorioRoot
-	}(canalInfo, os.Args[1])
+	}(canalInfo, canalMensajes, os.Args[1])
 
 	canalDB := make(chan *sql.DB)
 	go func(canalDB chan *sql.DB, canalInfo chan db.InfoArchivos) {

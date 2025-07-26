@@ -112,40 +112,52 @@ Que tablas necesitamos
 func CrearTablas(db *sql.DB, info *InfoArchivos) error {
 	queryCrearTablas := fmt.Sprintf(strings.ReplaceAll(crearTablas, "(?)", "(%d)"), datosParaTabla(info)...)
 
-	cola := l.NewColaConCapacidad[string](uint32(len(strings.Split(queryCrearTablas, ");"))))
+	cantidadTablas := uint32(len(strings.Split(queryCrearTablas, ");")))
 
-	fmt.Printf("Creando todas las tablas")
+	pilaEliminar := l.NewPilaConCapacidad[string](cantidadTablas)
+	colaQuery := l.NewColaConCapacidad[string](cantidadTablas)
+
 	for query := range strings.SplitSeq(queryCrearTablas, ");") {
 		query = strings.TrimSpace(query)
 		if query == "" {
 			continue
 		}
 		query = fmt.Sprintf("%s);", query)
+		colaQuery.Encolar(query)
 
 		var _extra string
 		nombreTabla := "unknown"
-		if _, err := fmt.Sscanf(query, "CREATE TABLE IF NOT EXISTS %s %s\n", &nombreTabla, &_extra); err != nil {
-			fmt.Printf("Query para crear tabla %s\n", query)
-		} else {
-			fmt.Printf("Query para crear tabla %s\n", nombreTabla)
-			cola.Encolar(nombreTabla)
-		}
-
-		if _, err := db.Exec(query); err != nil {
-			return fmt.Errorf("error al intentar crear la tabla '%s' con error: %v", nombreTabla, err)
+		if _, err := fmt.Sscanf(query, "CREATE TABLE IF NOT EXISTS %s %s\n", &nombreTabla, &_extra); err == nil {
+			pilaEliminar.Apilar(nombreTabla)
 		}
 	}
 
 	fmt.Println("Limpiando sus datos")
-	for !cola.Vacia() {
-		if tabla, err := cola.Desencolar(); err != nil {
-			fmt.Printf("error al intentar trunca tabla con error: %v\n", err)
+	for !pilaEliminar.Vacia() {
+		if tabla, err := pilaEliminar.Desapilar(); err != nil {
+			fmt.Printf("error al intentar eliminar tabla con error: %v\n", err)
 
-		} else if _, err = db.Exec(fmt.Sprintf("TRUNCATE TABLE %s;", tabla)); err != nil {
-			fmt.Printf("error al intentar trunca la tabla %s, con error: %v\n", tabla, err)
+		} else if _, err = db.Exec(fmt.Sprintf("DROP TABLE %s;", tabla)); err != nil {
+			fmt.Printf("error al intentar eliminar la tabla %s, con error: %v\n", tabla, err)
 
+		} else {
+			fmt.Printf("Eliminar tabla: %s\n", tabla)
 		}
 	}
+
+	fmt.Printf("Creando todas las tablas\n")
+	for !colaQuery.Vacia() {
+		if query, err := colaQuery.Desencolar(); err != nil {
+			fmt.Printf("error al intentar crear tabla con error: %v\n", err)
+
+		} else if _, err = db.Exec(query); err != nil {
+			fmt.Printf("error al intentar eliminar la tabla con la query %s, con error: %v\n", query, err)
+
+		} else {
+			fmt.Printf("Crear la tabla con la query: %s\n", query)
+		}
+	}
+
 	fmt.Println("Tablas creadas")
 
 	return nil

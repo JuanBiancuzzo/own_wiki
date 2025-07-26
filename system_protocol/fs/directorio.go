@@ -30,23 +30,23 @@ func NewDirectorio(path string) *Directorio {
 	}
 }
 
-func EstablecerDirectorio(root string, infoArchivos *db.InfoArchivos) *Directorio {
+func EstablecerDirectorio(root string, infoArchivos *db.InfoArchivos, canal chan string) *Directorio {
 	directorioRoot := NewDirectorio(root)
 
 	colaDirectorios := ls.NewCola[*Directorio]()
 	colaDirectorios.Encolar(directorioRoot)
-	fmt.Printf("El directorio para trabajar va a ser: %s\n", directorioRoot.Path)
+	canal <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", directorioRoot.Path)
 
 	for !colaDirectorios.Vacia() {
 		directorio, err := colaDirectorios.Desencolar()
 		if err != nil {
-			fmt.Printf("Se tuvo un error al operar sobre la queue con el error: %v", err)
+			canal <- fmt.Sprintf("Se tuvo un error al operar sobre la queue con el error: %v", err)
 			break
 		}
 
 		archivos, err := os.ReadDir(directorio.Path)
 		if err != nil {
-			fmt.Printf("Se tuvo un error al leer el directorio dando el error: %v", err)
+			canal <- fmt.Sprintf("Se tuvo un error al leer el directorio dando el error: %v", err)
 			break
 		}
 
@@ -82,7 +82,7 @@ func (d *Directorio) AgregarArchivo(archivo *Archivo) {
 	d.Archivos.Push(archivo)
 }
 
-func (d *Directorio) ProcesarArchivos(wg *sync.WaitGroup, infoArchivos *db.InfoArchivos) {
+func (d *Directorio) ProcesarArchivos(wg *sync.WaitGroup, infoArchivos *db.InfoArchivos, canal chan string) {
 	for _, subdirectorio := range d.Subdirectorios.Items() {
 		if subdirectorio.Vacio() {
 			continue
@@ -90,13 +90,13 @@ func (d *Directorio) ProcesarArchivos(wg *sync.WaitGroup, infoArchivos *db.InfoA
 
 		wg.Add(1)
 		go func(directorio *Directorio, wg *sync.WaitGroup) {
-			directorio.ProcesarArchivos(wg, infoArchivos)
+			directorio.ProcesarArchivos(wg, infoArchivos, canal)
 			wg.Done()
 		}(subdirectorio, wg)
 	}
 
 	for _, archivo := range d.Archivos.Items() {
-		archivo.Interprestarse(infoArchivos)
+		archivo.Interprestarse(infoArchivos, canal)
 	}
 }
 

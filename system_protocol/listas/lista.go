@@ -72,6 +72,7 @@ func (l *Lista[T]) AgregarEn(elemento T, en uint32) error {
 		elementoAReemplazar = temp
 	}
 
+	l.Largo++
 	return nil
 }
 

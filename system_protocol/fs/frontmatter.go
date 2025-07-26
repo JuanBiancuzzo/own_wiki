@@ -1,5 +1,7 @@
 package fs
 
+import "strconv"
+
 type Frontmatter struct {
 	Tags                []string   `yaml:"tags,omitempty"`
 	Dia                 string     `yaml:"dia,omitempty"`
@@ -64,6 +66,19 @@ type Libro struct {
 	IdArchivo   int64
 }
 
+func NewLibro(titulo string, subtitulo string, anio string, idEditorial int64, edicion string, volumen string, url string, idArchivo int64) Libro {
+	return Libro{
+		Titulo:      titulo,
+		Subtitulo:   subtitulo,
+		Anio:        NumeroODefault(anio, 0),
+		IdEditorial: idEditorial,
+		Edicion:     NumeroODefault(edicion, 1),
+		Volumen:     NumeroODefault(volumen, 0),
+		Url:         url,
+		IdArchivo:   idArchivo,
+	}
+}
+
 func (l Libro) Valores() []any {
 	return []any{
 		l.Titulo,
@@ -85,6 +100,15 @@ type Capitulo struct {
 	Paginas        Pagina  `yaml:"paginas,omitempty"`
 }
 
+func (c Capitulo) Valores() []any {
+	return []any{
+		NumeroODefault(c.NumeroCapitulo, 1),
+		c.NombreCapitulo,
+		NumeroODefault(c.Paginas.Inicio, 0),
+		NumeroODefault(c.Paginas.Final, 0),
+	}
+}
+
 type Autor struct {
 	Nombre   string `yaml:"nombre"`
 	Apellido string `yaml:"apellido"`
@@ -103,4 +127,12 @@ type Articulo struct {
 		Tipo  string `yaml:"tipo,omitempty"`
 		Texto string `yaml:"texto,omitempty"`
 	} `yaml:"textos,omitempty"`
+}
+
+func NumeroODefault(representacion string, valorDefault int) int {
+	if nuevoValor, err := strconv.Atoi(representacion); err == nil {
+		return nuevoValor
+	} else {
+		return valorDefault
+	}
 }

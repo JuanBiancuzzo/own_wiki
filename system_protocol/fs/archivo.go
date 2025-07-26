@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"own_wiki/system_protocol/db"
-	"strconv"
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -13,13 +12,21 @@ import (
 )
 
 var insertar_archivo = "INSERT INTO archivos (path) VALUES (?)"
+
 var insertar_tag = "INSERT INTO tags (tag, idArchivo) VALUES (?, ?)"
+
 var query_editorial = "SELECT id FROM editoriales WHERE editorial = ?"
 var insertar_editorial = "INSERT INTO editoriales (editorial) VALUES (?)"
+
 var query_personas = "SELECT id FROM personas WHERE nombre = ? AND apellido = ?"
 var insertar_persona = "INSERT INTO personas (nombre, apellido) VALUES (?, ?)"
+
 var insertar_libro = "INSERT INTO libros (titulo, subtitulo, anio, idEditorial, edicion, volumen, url, idArchivo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+
+var insertar_capitulo = "INSERT INTO capitulos (capitulo, nombre, paginaInicial, paginaFinal, idLibro, idArchivo) VALUES (?, ?, ?, ?, ?, ?)"
+
 var insertar_autor_libro = "INSERT INTO autoresLibro (idLibro, idPersona) VALUES (?, ?)"
+var insertar_editor_capitulo = "INSERT INTO editoresCapitulo (idCapitulo, idPersona) VALUES (?, ?)"
 
 type Archivo struct {
 	Path      string
@@ -37,14 +44,14 @@ func NewArchivo(path string) *Archivo {
 	}
 }
 
-func (a *Archivo) Interprestarse(infoArchivos *db.InfoArchivos) {
+func (a *Archivo) Interprestarse(infoArchivos *db.InfoArchivos, canal chan string) {
 	if !strings.Contains(a.Path, ".md") {
 		return
 	}
 
 	bytes, err := os.ReadFile(a.Path)
 	if err != nil {
-		fmt.Printf("Error al leer %s obteniendo el error: %v", a.Path, err)
+		canal <- fmt.Sprintf("Error al leer %s obteniendo el error: %v", a.Path, err)
 		return
 	}
 	contenido := string(bytes)
@@ -59,7 +66,7 @@ func (a *Archivo) Interprestarse(infoArchivos *db.InfoArchivos) {
 	var metadata Frontmatter
 	err = decodificador.Decode(&metadata)
 	if err != nil {
-		fmt.Printf("Error al decodificar en %s la metadata, con el error: %v\n", a.Path, err)
+		canal <- fmt.Sprintf("Error al decodificar en %s la metadata, con el error: %v\n", a.Path, err)
 		return
 	}
 
@@ -90,6 +97,7 @@ func (a *Archivo) InsertarDatos(baseDeDatos *sql.DB) {
 		return
 	}
 
+	// Agregar informacion general
 	var err error
 	if a.IdArchivo, err = Insertar(func() (sql.Result, error) { return baseDeDatos.Exec(insertar_archivo, a.Path) }); err != nil {
 		fmt.Printf("Error al obtener insertar el archivo: %s, con error: %v\n", a.Nombre(), err)
@@ -102,49 +110,80 @@ func (a *Archivo) InsertarDatos(baseDeDatos *sql.DB) {
 		}
 	}
 
+	// Agregar informacion especifica
+
 	if a.Metadata.TipoCita == "Libro" {
-		a.CargarDatosDelLibro(baseDeDatos)
+		if err = CargarDatosDelLibro(baseDeDatos, a.IdArchivo, a.Metadata); err != nil {
+			fmt.Printf("Error al insertar libro en el archivo: %s, con error: %v\n", a.Nombre(), err)
+		}
 	}
 }
 
-func (a *Archivo) CargarDatosDelLibro(baseDeDatos *sql.DB) {
-	var libro Libro
+func CargarDatosDelLibro(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error {
+	var idLibro int64
+	var err error
+
 	if idEditorial, err := ObtenerOInsertar(
-		func() (*sql.Rows, error) { return baseDeDatos.Query(query_editorial, a.Metadata.Editorial) },
-		func() (sql.Result, error) { return baseDeDatos.Exec(insertar_editorial, a.Metadata.Editorial) },
+		func() (*sql.Rows, error) { return bdd.Query(query_editorial, meta.Editorial) },
+		func() (sql.Result, error) { return bdd.Exec(insertar_editorial, meta.Editorial) },
 	); err != nil {
-		fmt.Printf("Error al hacer una querry de la editorial %s con error: %v\n", a.Metadata.Editorial, err)
-		return
+		return fmt.Errorf("error al hacer una querry de la editorial %s con error: %v", meta.Editorial, err)
 
 	} else {
-		libro = Libro{
-			Titulo:      a.Metadata.TituloObra,
-			Subtitulo:   a.Metadata.SubtituloObra,
-			Anio:        NumeroODefault(a.Metadata.Anio, -1),
-			IdEditorial: idEditorial,
-			Edicion:     NumeroODefault(a.Metadata.Edicion, 1),
-			Volumen:     NumeroODefault(a.Metadata.Volumen, 1),
-			Url:         a.Metadata.Url,
-			IdArchivo:   a.IdArchivo,
+		libro := NewLibro(
+			meta.TituloObra,
+			meta.SubtituloObra,
+			meta.Anio,
+			idEditorial,
+			meta.Edicion,
+			meta.Volumen,
+			meta.Url,
+			idArchivo,
+		)
+
+		if idLibro, err = Insertar(
+			func() (sql.Result, error) { return bdd.Exec(insertar_libro, libro.Valores()...) },
+		); err != nil {
+			return fmt.Errorf("error al insertar un libro, con error: %v", err)
 		}
 	}
 
-	for _, autor := range a.Metadata.NombreAutores {
+	for _, autor := range meta.NombreAutores {
 		if idAutor, err := ObtenerOInsertar(
-			func() (*sql.Rows, error) { return baseDeDatos.Query(query_personas, autor.Nombre, autor.Apellido) },
-			func() (sql.Result, error) { return baseDeDatos.Exec(insertar_persona, autor.Nombre, autor.Apellido) },
+			func() (*sql.Rows, error) { return bdd.Query(query_personas, autor.Nombre, autor.Apellido) },
+			func() (sql.Result, error) { return bdd.Exec(insertar_persona, autor.Nombre, autor.Apellido) },
 		); err != nil {
-			fmt.Printf("Error al hacer una querry del autor: %s %s con error: %v\n", autor.Nombre, autor.Apellido, err)
+			return fmt.Errorf("error al hacer una querry del autor: %s %s con error: %v", autor.Nombre, autor.Apellido, err)
 
-		} else if idLibro, err := Insertar(
-			func() (sql.Result, error) { return baseDeDatos.Exec(insertar_libro, libro.Valores()...) },
-		); err != nil {
-			fmt.Printf("Error al insertar un libro en el archivo: %s\n, con error: %v", a.Nombre(), err)
-
-		} else if _, err := baseDeDatos.Exec(insertar_autor_libro, idLibro, idAutor); err != nil {
-			fmt.Printf("Error al insertar par idLibro-idAutor en el archivo: %s\n, con error: %v", a.Nombre(), err)
+		} else if _, err := bdd.Exec(insertar_autor_libro, idLibro, idAutor); err != nil {
+			return fmt.Errorf("error al insertar par idLibro-idAutor, con error: %v", err)
 		}
 	}
+
+	for _, capitulo := range meta.Capitulos {
+		ids := []any{idLibro, idArchivo}
+		var idCapitulo int64
+
+		if idCapitulo, err = Insertar(
+			func() (sql.Result, error) { return bdd.Exec(insertar_capitulo, append(capitulo.Valores(), ids...)...) },
+		); err != nil {
+			return fmt.Errorf("error al insertar un capitulo, con error: %v", err)
+		}
+
+		for _, autor := range capitulo.Editores {
+			if idAutor, err := ObtenerOInsertar(
+				func() (*sql.Rows, error) { return bdd.Query(query_personas, autor.Nombre, autor.Apellido) },
+				func() (sql.Result, error) { return bdd.Exec(insertar_persona, autor.Nombre, autor.Apellido) },
+			); err != nil {
+				return fmt.Errorf("error al hacer una querry del autor: %s %s con error: %v", autor.Nombre, autor.Apellido, err)
+
+			} else if _, err := bdd.Exec(insertar_editor_capitulo, idCapitulo, idAutor); err != nil {
+				return fmt.Errorf("error al insertar par idLibro-idAutor, con error: %v", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (a *Archivo) Nombre() string {
@@ -160,28 +199,19 @@ func ObtenerOInsertar(query func() (*sql.Rows, error), insert func() (sql.Result
 		var id int64
 		rows.Scan(&id)
 		return id, nil
-
-	} else {
-		return Insertar(insert)
 	}
+
+	return Insertar(insert)
 }
 
 func Insertar(insert func() (sql.Result, error)) (int64, error) {
 	if filaAfectada, err := insert(); err != nil {
-		return 0, fmt.Errorf("error al insertar con query")
+		return 0, fmt.Errorf("error al insertar con query, con error: %v", err)
 
 	} else if id, err := filaAfectada.LastInsertId(); err != nil {
-		return 0, fmt.Errorf("error al obtener id from query")
+		return 0, fmt.Errorf("error al obtener id from query, con error: %v", err)
 
 	} else {
 		return id, nil
-	}
-}
-
-func NumeroODefault(representacion string, valorDefault int) int {
-	if nuevoValor, err := strconv.Atoi(representacion); err == nil {
-		return nuevoValor
-	} else {
-		return valorDefault
 	}
 }

@@ -17,7 +17,7 @@ func NewColaConCapacidad[T any](capacidad uint32) *Cola[T] {
 }
 
 func (c *Cola[T]) Encolar(elemento T) {
-	c.Lista.AgregarEn(elemento, c.Lista.Largo)
+	c.Lista.Push(elemento)
 }
 
 func (c *Cola[T]) Desencolar() (T, error) {
