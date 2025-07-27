@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"own_wiki/system_protocol/db"
+	l "own_wiki/system_protocol/listas"
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -28,19 +29,31 @@ const INSERTAR_EDITOR_CAPITULO = "INSERT INTO editoresCapitulo (idCapitulo, idPe
 
 const INSERTAR_DISTRIBUCION = "INSERT INTO distribuciones (nombre, tipo, idArchivo) VALUES (?, ?, ?)"
 
+const INSERTAR_CARRERA = "INSERT INTO carreras (nombre, etapa, tieneCodigoMateria, idArchivo) VALUES (?, ?, ?, ?)"
+
+type TipoArchivo byte
+
+const (
+	ES_LIBRO = iota
+	ES_DISTRIBUCION
+	ES_CARRERA
+)
+
 type Archivo struct {
-	Path      string
-	Metadata  *Frontmatter
-	Contenido string
-	IdArchivo int64
+	Path           string
+	Metadata       *Frontmatter
+	Contenido      string
+	IdArchivo      int64
+	TiposDeArchivo *l.Lista[TipoArchivo]
 }
 
 func NewArchivo(path string) *Archivo {
 	return &Archivo{
-		Path:      path,
-		Metadata:  nil,
-		Contenido: "",
-		IdArchivo: 0,
+		Path:           path,
+		Metadata:       nil,
+		Contenido:      "",
+		IdArchivo:      0,
+		TiposDeArchivo: l.NewLista[TipoArchivo](),
 	}
 }
 
@@ -75,6 +88,15 @@ func (a *Archivo) Interprestarse(infoArchivos *db.InfoArchivos, canal chan strin
 
 	for _, tag := range a.Metadata.Tags {
 		infoArchivos.MaxTags = max(infoArchivos.MaxTags, uint32(len(tag)))
+
+		switch tag {
+		case "facultad/carrera":
+			a.TiposDeArchivo.Push(ES_CARRERA)
+		case "colección/distribuciones/distribución":
+			a.TiposDeArchivo.Push(ES_DISTRIBUCION)
+		case "colección/biblioteca/libro":
+			a.TiposDeArchivo.Push(ES_LIBRO)
+		}
 	}
 
 	// Libros
@@ -114,16 +136,21 @@ func (a *Archivo) InsertarDatos(bdd *sql.DB) {
 	}
 
 	// Agregar informacion especifica
-	if err = CargarDatosDeLasDistribuciones(bdd, a.IdArchivo, a.Metadata); err != nil {
-		fmt.Printf("Error al insertar distribuciones en el archivo: %s, con error: %v\n", a.Nombre(), err)
-	}
-
-	if err = CargarDatosDelLibro(bdd, a.IdArchivo, a.Metadata); err != nil {
-		fmt.Printf("Error al insertar libro en el archivo: %s, con error: %v\n", a.Nombre(), err)
-	}
-
-	if err = CargarDatosDelPaper(bdd, a.IdArchivo, a.Metadata); err != nil {
-		fmt.Printf("Error al insertar paper en el archivo: %s, con error: %v\n", a.Nombre(), err)
+	for _, tipoArchivo := range a.TiposDeArchivo.Items() {
+		switch tipoArchivo {
+		case ES_CARRERA:
+			if err = CargarDatosDeLaCarrera(bdd, a.Nombre(), a.IdArchivo, a.Metadata); err != nil {
+				fmt.Printf("Error al insertar distribuciones en el archivo: %s, con error: %v\n", a.Nombre(), err)
+			}
+		case ES_LIBRO:
+			if err = CargarDatosDelLibro(bdd, a.IdArchivo, a.Metadata); err != nil {
+				fmt.Printf("Error al insertar libro en el archivo: %s, con error: %v\n", a.Nombre(), err)
+			}
+		case ES_DISTRIBUCION:
+			if err = CargarDatosDeLasDistribuciones(bdd, a.IdArchivo, a.Metadata); err != nil {
+				fmt.Printf("Error al insertar paper en el archivo: %s, con error: %v\n", a.Nombre(), err)
+			}
+		}
 	}
 }
 
@@ -137,7 +164,7 @@ func CargarDatosDeLasDistribuciones(bdd *sql.DB, idArchivo int64, meta *Frontmat
 	case "multivariada":
 		tipoDistribucion = DISTRIBUCION_MULTIVARIADA
 	default:
-		return nil
+		return fmt.Errorf("el tipo de distribucion (%s) no es uno de los esperados", meta.TipoDistribucion)
 	}
 
 	distribucion := NewDistribucion(tipoDistribucion, meta.NombreDistribuucion)
@@ -149,19 +176,26 @@ func CargarDatosDeLasDistribuciones(bdd *sql.DB, idArchivo int64, meta *Frontmat
 	return nil
 }
 
-func CargarDatosDelPaper(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error {
-	if meta.TipoCita != "Paper" {
-		return nil
+func CargarDatosDeLaCarrera(bdd *sql.DB, nombreArchivo string, idArchivo int64, meta *Frontmatter) error {
+	etapa, err := ObtenerEtapa(meta.Etapa)
+	if err != nil {
+		return fmt.Errorf("al cargar carrera se obtuvo el error: %v", err)
+	}
+
+	carrera := NewCarrera(nombreArchivo, etapa, meta.TieneCodigo)
+	if _, err := bdd.Exec(INSERTAR_CARRERA, append(carrera.Valores(), idArchivo)...); err != nil {
+		return fmt.Errorf("error al insertar una carrera, con error: %v", err)
 	}
 
 	return nil
 }
 
-func CargarDatosDelLibro(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error {
-	if meta.TipoCita != "Libro" {
-		return nil
-	}
+func CargarDatosDelPaper(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error {
 
+	return nil
+}
+
+func CargarDatosDelLibro(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error {
 	var idLibro int64
 	var err error
 

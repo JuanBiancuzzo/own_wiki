@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS carreras (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?),
   etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
-  tieneCodigoMateria bool,
+  tieneCodigoMateria BOOLEAN,
   idArchivo INT NOT NULL,
 
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
