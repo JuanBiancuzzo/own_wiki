@@ -185,6 +185,9 @@ func (c Carrera) Valores() []any {
 	}
 }
 
+type Materia struct {
+}
+
 func NumeroODefault(representacion string, valorDefault int) int {
 	if nuevoValor, err := strconv.Atoi(representacion); err == nil {
 		return nuevoValor

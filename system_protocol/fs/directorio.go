@@ -100,24 +100,17 @@ func (d *Directorio) ProcesarArchivos(wg *sync.WaitGroup, infoArchivos *db.InfoA
 	}
 }
 
-func (d *Directorio) InsertarDatos(db *sql.DB, dbLock *sync.Mutex, wg *sync.WaitGroup) {
+func (d *Directorio) InsertarDatos(db *sql.DB, dbLock *sync.Mutex, canal chan func() bool) {
 	for subdirectorio := range d.Subdirectorios.Iterar {
 		if subdirectorio.Vacio() {
 			continue
 		}
-
-		wg.Add(1)
-		go func(directorio *Directorio, wg *sync.WaitGroup) {
-			directorio.InsertarDatos(db, dbLock, wg)
-			wg.Done()
-		}(subdirectorio, wg)
+		subdirectorio.InsertarDatos(db, dbLock, canal)
 	}
 
-	dbLock.Lock()
 	for archivo := range d.Archivos.Iterar {
-		archivo.InsertarDatos(db)
+		archivo.InsertarDatos(db, dbLock, canal)
 	}
-	dbLock.Unlock()
 }
 
 func (d *Directorio) Vacio() bool {

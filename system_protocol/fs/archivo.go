@@ -7,6 +7,7 @@ import (
 	"own_wiki/system_protocol/db"
 	l "own_wiki/system_protocol/listas"
 	"strings"
+	"sync"
 
 	_ "github.com/go-sql-driver/mysql"
 	"gopkg.in/yaml.v2"
@@ -29,7 +30,10 @@ const INSERTAR_EDITOR_CAPITULO = "INSERT INTO editoresCapitulo (idCapitulo, idPe
 
 const INSERTAR_DISTRIBUCION = "INSERT INTO distribuciones (nombre, tipo, idArchivo) VALUES (?, ?, ?)"
 
+const QUERY_CARRERA = "SELECT id FROM carreras WHERE nombre = ?"
 const INSERTAR_CARRERA = "INSERT INTO carreras (nombre, etapa, tieneCodigoMateria, idArchivo) VALUES (?, ?, ?, ?)"
+
+const INSERTAR_MATERIA = "INSERT INTO carreras (nombre, etapa, tieneCodigoMateria, idArchivo) VALUES (?, ?, ?, ?)"
 
 type TipoArchivo byte
 
@@ -37,6 +41,7 @@ const (
 	ES_LIBRO = iota
 	ES_DISTRIBUCION
 	ES_CARRERA
+	ES_MATERIA
 )
 
 type Archivo struct {
@@ -92,6 +97,8 @@ func (a *Archivo) Interprestarse(infoArchivos *db.InfoArchivos, canal chan strin
 		switch tag {
 		case "facultad/carrera":
 			a.TiposDeArchivo.Push(ES_CARRERA)
+		case "facultad/materia":
+			a.TiposDeArchivo.Push(ES_MATERIA)
 		case "colección/distribuciones/distribución":
 			a.TiposDeArchivo.Push(ES_DISTRIBUCION)
 		case "colección/biblioteca/libro":
@@ -117,12 +124,13 @@ func (a *Archivo) Interprestarse(infoArchivos *db.InfoArchivos, canal chan strin
 	// Distribuciones
 }
 
-func (a *Archivo) InsertarDatos(bdd *sql.DB) {
+func (a *Archivo) InsertarDatos(bdd *sql.DB, dbLock *sync.Mutex, canal chan func() bool) {
 	if a.Metadata == nil {
 		return
 	}
 
 	// Agregar informacion general
+	dbLock.Lock()
 	var err error
 	if a.IdArchivo, err = Insertar(func() (sql.Result, error) { return bdd.Exec(INSERTAR_ARCHIVO, a.Path) }); err != nil {
 		fmt.Printf("Error al obtener insertar el archivo: %s, con error: %v\n", a.Nombre(), err)
@@ -134,21 +142,46 @@ func (a *Archivo) InsertarDatos(bdd *sql.DB) {
 			fmt.Printf("Error al insertar tag: %s en el archivo: %s\n", tag, a.Nombre())
 		}
 	}
+	dbLock.Unlock()
 
 	// Agregar informacion especifica
-	for _, tipoArchivo := range a.TiposDeArchivo.Items() {
+	idArchivo := a.IdArchivo
+	nombreArchivo := a.Nombre()
+	meta := a.Metadata
+	for tipoArchivo := range a.TiposDeArchivo.Iterar {
+
 		switch tipoArchivo {
 		case ES_CARRERA:
-			if err = CargarDatosDeLaCarrera(bdd, a.Nombre(), a.IdArchivo, a.Metadata); err != nil {
-				fmt.Printf("Error al insertar distribuciones en el archivo: %s, con error: %v\n", a.Nombre(), err)
+			canal <- func() bool {
+				if err = CargarDatosDeLaCarrera(bdd, nombreArchivo, idArchivo, meta); err != nil {
+					fmt.Printf("Error al insertar una carrera en el archivo: %s, con error: %v\n", nombreArchivo, err)
+				}
+				return true
+			}
+		case ES_MATERIA:
+			canal <- func() bool {
+				if idCarrera, existe := ExisteCarrera(bdd); !existe {
+					return false
+
+				} else if err = CargarDatosDeLaMateria(bdd, nombreArchivo, idArchivo, idCarrera, meta); err != nil {
+					fmt.Printf("Error al insertar una materia en el archivo: %s, con error: %v\n", nombreArchivo, err)
+				}
+
+				return true
 			}
 		case ES_LIBRO:
-			if err = CargarDatosDelLibro(bdd, a.IdArchivo, a.Metadata); err != nil {
-				fmt.Printf("Error al insertar libro en el archivo: %s, con error: %v\n", a.Nombre(), err)
+			canal <- func() bool {
+				if err = CargarDatosDelLibro(bdd, idArchivo, meta); err != nil {
+					fmt.Printf("Error al insertar libro en el archivo: %s, con error: %v\n", nombreArchivo, err)
+				}
+				return true
 			}
 		case ES_DISTRIBUCION:
-			if err = CargarDatosDeLasDistribuciones(bdd, a.IdArchivo, a.Metadata); err != nil {
-				fmt.Printf("Error al insertar paper en el archivo: %s, con error: %v\n", a.Nombre(), err)
+			canal <- func() bool {
+				if err = CargarDatosDeLasDistribuciones(bdd, idArchivo, meta); err != nil {
+					fmt.Printf("Error al insertar distribuciones en el archivo: %s, con error: %v\n", nombreArchivo, err)
+				}
+				return true
 			}
 		}
 	}
@@ -174,6 +207,15 @@ func CargarDatosDeLasDistribuciones(bdd *sql.DB, idArchivo int64, meta *Frontmat
 	// Cuando parsee el texto intentar ver si puedo obtener las relaciones que hay entre las distribuciones
 
 	return nil
+}
+
+func CargarDatosDeLaMateria(bdd *sql.DB, nombreArchivo string, idArchivo int64, idCarrera int64, meta *Frontmatter) error {
+	return nil
+}
+
+func ExisteCarrera(bdd *sql.DB) (int64, bool) {
+
+	return 0, false
 }
 
 func CargarDatosDeLaCarrera(bdd *sql.DB, nombreArchivo string, idArchivo int64, meta *Frontmatter) error {
@@ -268,16 +310,26 @@ func (a *Archivo) Nombre() string {
 }
 
 func ObtenerOInsertar(query func() (*sql.Rows, error), insert func() (sql.Result, error)) (int64, error) {
-	if rows, err := query(); err != nil {
-		return 0, fmt.Errorf("error al hacer una querry con error: %v", err)
-
-	} else if rows.Next() {
-		var id int64
-		rows.Scan(&id)
+	if id, seObtuvo, err := Obtener(query); err != nil {
+		return 0, err
+	} else if seObtuvo {
 		return id, nil
 	}
 
 	return Insertar(insert)
+}
+
+func Obtener(query func() (*sql.Rows, error)) (int64, bool, error) {
+	if rows, err := query(); err != nil {
+		return 0, false, fmt.Errorf("error al hacer una querry con error: %v", err)
+
+	} else if rows.Next() {
+		var id int64
+		rows.Scan(&id)
+		return id, true, nil
+	}
+
+	return 0, false, nil
 }
 
 func Insertar(insert func() (sql.Result, error)) (int64, error) {

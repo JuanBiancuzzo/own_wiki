@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS relacionDistribuciones (
 
 CREATE TABLE IF NOT EXISTS carreras (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) UNIQUE,
   etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
   tieneCodigoMateria BOOLEAN,
   idArchivo INT NOT NULL,

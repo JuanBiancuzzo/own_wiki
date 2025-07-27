@@ -69,42 +69,74 @@ func main() {
 		canalDirectorio <- *directorioRoot
 	}(canalInfo, canalMensajes, os.Args[1])
 
-	canalDB := make(chan *sql.DB)
-	go func(canalDB chan *sql.DB, canalInfo chan db.InfoArchivos) {
-		baseDeDatos, err := db.EstablecerBaseDeDatos()
+	canalBDD := make(chan *sql.DB)
+	go func(canalBDD chan *sql.DB, canalInfo chan db.InfoArchivos) {
+		bdd, err := db.EstablecerBaseDeDatos()
 		if err != nil {
 			fmt.Printf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
-			canalDB <- nil
+			canalBDD <- nil
 			return
 		}
 
 		infoArchivos := <-canalInfo
 
-		err = db.CrearTablas(baseDeDatos, &infoArchivos)
+		err = db.CrearTablas(bdd, &infoArchivos)
 		if err != nil {
 			fmt.Printf("No se pudo crear las tablas para la base de datos, con error: %v\n", err)
-			canalDB <- nil
+			canalBDD <- nil
 			return
 		}
 
-		canalDB <- baseDeDatos
-	}(canalDB, canalInfo)
+		canalBDD <- bdd
+	}(canalBDD, canalInfo)
 
-	baseDeDatos := <-canalDB
-	if baseDeDatos == nil {
+	bdd := <-canalBDD
+	if bdd == nil {
 		return
 	}
-	defer baseDeDatos.Close()
+	defer bdd.Close()
 
 	directorioRoot := <-canalDirectorio
 
 	fmt.Println("Insertando datos en la base de datos")
-	var waitInsersion sync.WaitGroup
-	var dbLock sync.Mutex
+	canalProcesamiento := make(chan func() bool)
+	var bddLock sync.Mutex
 
-	directorioRoot.InsertarDatos(baseDeDatos, &dbLock, &waitInsersion)
+	go func(bdd *sql.DB, canal chan func() bool, lock *sync.Mutex) {
+		directorioRoot.InsertarDatos(bdd, &bddLock, canal)
+		fmt.Println("Dejar de mandar archivos para procesar")
+		close(canal)
+	}(bdd, canalProcesamiento, &bddLock)
 
-	waitInsersion.Wait()
+	canalEnEspera := make(chan func() bool)
+	esperaNuevoProcesamiento := true
+	cantidadProcesamientoPendiente := 0
+
+	for esperaNuevoProcesamiento || cantidadProcesamientoPendiente > 0 {
+		var funcProcesar func() bool
+		select {
+		case procesar, ok := <-canalProcesamiento:
+			if !ok {
+				esperaNuevoProcesamiento = false
+				continue
+			}
+			funcProcesar = procesar
+
+		case procesar := <-canalEnEspera:
+			fmt.Println("Se intenta procesar de nuevo un archivo")
+			cantidadProcesamientoPendiente--
+			funcProcesar = procesar
+		}
+
+		bddLock.Lock()
+		if !funcProcesar() {
+			cantidadProcesamientoPendiente++
+			fmt.Println("No se pudo procesar un archivo")
+			canalEnEspera <- funcProcesar
+		}
+		bddLock.Unlock()
+	}
+
 	fmt.Println("Se termino de insertar los archivos")
 
 	fmt.Println("Fin")
