@@ -11,22 +11,22 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var insertar_archivo = "INSERT INTO archivos (path) VALUES (?)"
+const INSERTAR_ARCHIVO = "INSERT INTO archivos (path) VALUES (?)"
 
-var insertar_tag = "INSERT INTO tags (tag, idArchivo) VALUES (?, ?)"
+const INSERTAR_TAG = "INSERT INTO tags (tag, idArchivo) VALUES (?, ?)"
 
-var query_editorial = "SELECT id FROM editoriales WHERE editorial = ?"
-var insertar_editorial = "INSERT INTO editoriales (editorial) VALUES (?)"
+const QUERY_EDITORIAL = "SELECT id FROM editoriales WHERE editorial = ?"
+const INSERTAR_EDITORIAL = "INSERT INTO editoriales (editorial) VALUES (?)"
 
-var query_personas = "SELECT id FROM personas WHERE nombre = ? AND apellido = ?"
-var insertar_persona = "INSERT INTO personas (nombre, apellido) VALUES (?, ?)"
+const QUERY_PERSONAS = "SELECT id FROM personas WHERE nombre = ? AND apellido = ?"
+const INSERTAR_PERSONA = "INSERT INTO personas (nombre, apellido) VALUES (?, ?)"
 
-var insertar_libro = "INSERT INTO libros (titulo, subtitulo, anio, idEditorial, edicion, volumen, url, idArchivo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+const INSERTAR_LIBRO = "INSERT INTO libros (titulo, subtitulo, anio, idEditorial, edicion, volumen, url, idArchivo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+const INSERTAR_CAPITULO = "INSERT INTO capitulos (capitulo, nombre, paginaInicial, paginaFinal, idLibro, idArchivo) VALUES (?, ?, ?, ?, ?, ?)"
+const INSERTAR_AUTOR_LIBRO = "INSERT INTO autoresLibro (idLibro, idPersona) VALUES (?, ?)"
+const INSERTAR_EDITOR_CAPITULO = "INSERT INTO editoresCapitulo (idCapitulo, idPersona) VALUES (?, ?)"
 
-var insertar_capitulo = "INSERT INTO capitulos (capitulo, nombre, paginaInicial, paginaFinal, idLibro, idArchivo) VALUES (?, ?, ?, ?, ?, ?)"
-
-var insertar_autor_libro = "INSERT INTO autoresLibro (idLibro, idPersona) VALUES (?, ?)"
-var insertar_editor_capitulo = "INSERT INTO editoresCapitulo (idCapitulo, idPersona) VALUES (?, ?)"
+const INSERTAR_DISTRIBUCION = "INSERT INTO distribuciones (nombre, tipo, idArchivo) VALUES (?, ?, ?)"
 
 type Archivo struct {
 	Path      string
@@ -77,6 +77,7 @@ func (a *Archivo) Interprestarse(infoArchivos *db.InfoArchivos, canal chan strin
 		infoArchivos.MaxTags = max(infoArchivos.MaxTags, uint32(len(tag)))
 	}
 
+	// Libros
 	for _, autor := range a.Metadata.Autores {
 		infoArchivos.MaxNombre = max(infoArchivos.MaxNombre, uint32(len(autor.Nombre)))
 		infoArchivos.MaxApellido = max(infoArchivos.MaxApellido, uint32(len(autor.Apellido)))
@@ -90,42 +91,83 @@ func (a *Archivo) Interprestarse(infoArchivos *db.InfoArchivos, canal chan strin
 
 	infoArchivos.MaxEditorial = max(infoArchivos.MaxEditorial, uint32(len(a.Metadata.Editorial)))
 	infoArchivos.MaxUrl = max(infoArchivos.MaxUrl, uint32(len(a.Metadata.Url)))
+
+	// Distribuciones
 }
 
-func (a *Archivo) InsertarDatos(baseDeDatos *sql.DB) {
+func (a *Archivo) InsertarDatos(bdd *sql.DB) {
 	if a.Metadata == nil {
 		return
 	}
 
 	// Agregar informacion general
 	var err error
-	if a.IdArchivo, err = Insertar(func() (sql.Result, error) { return baseDeDatos.Exec(insertar_archivo, a.Path) }); err != nil {
+	if a.IdArchivo, err = Insertar(func() (sql.Result, error) { return bdd.Exec(INSERTAR_ARCHIVO, a.Path) }); err != nil {
 		fmt.Printf("Error al obtener insertar el archivo: %s, con error: %v\n", a.Nombre(), err)
 		return
 	}
 
 	for _, tag := range a.Metadata.Tags {
-		if _, err := baseDeDatos.Exec(insertar_tag, tag, a.IdArchivo); err != nil {
+		if _, err := bdd.Exec(INSERTAR_TAG, tag, a.IdArchivo); err != nil {
 			fmt.Printf("Error al insertar tag: %s en el archivo: %s\n", tag, a.Nombre())
 		}
 	}
 
 	// Agregar informacion especifica
+	if err = CargarDatosDeLasDistribuciones(bdd, a.IdArchivo, a.Metadata); err != nil {
+		fmt.Printf("Error al insertar distribuciones en el archivo: %s, con error: %v\n", a.Nombre(), err)
+	}
 
-	if a.Metadata.TipoCita == "Libro" {
-		if err = CargarDatosDelLibro(baseDeDatos, a.IdArchivo, a.Metadata); err != nil {
-			fmt.Printf("Error al insertar libro en el archivo: %s, con error: %v\n", a.Nombre(), err)
-		}
+	if err = CargarDatosDelLibro(bdd, a.IdArchivo, a.Metadata); err != nil {
+		fmt.Printf("Error al insertar libro en el archivo: %s, con error: %v\n", a.Nombre(), err)
+	}
+
+	if err = CargarDatosDelPaper(bdd, a.IdArchivo, a.Metadata); err != nil {
+		fmt.Printf("Error al insertar paper en el archivo: %s, con error: %v\n", a.Nombre(), err)
 	}
 }
 
+func CargarDatosDeLasDistribuciones(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error {
+	var tipoDistribucion TipoDistribucion
+	switch meta.TipoDistribucion {
+	case "discreta":
+		tipoDistribucion = DISTRIBUCION_DISCRETA
+	case "continua":
+		tipoDistribucion = DISTRIBUCION_CONTINUA
+	case "multivariada":
+		tipoDistribucion = DISTRIBUCION_MULTIVARIADA
+	default:
+		return nil
+	}
+
+	distribucion := NewDistribucion(tipoDistribucion, meta.NombreDistribuucion)
+	if _, err := bdd.Exec(INSERTAR_DISTRIBUCION, distribucion.Nombre, distribucion.Tipo, idArchivo); err != nil {
+		return fmt.Errorf("error al insertar una distribucion, con error: %v", err)
+	}
+	// Cuando parsee el texto intentar ver si puedo obtener las relaciones que hay entre las distribuciones
+
+	return nil
+}
+
+func CargarDatosDelPaper(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error {
+	if meta.TipoCita != "Paper" {
+		return nil
+	}
+
+	return nil
+}
+
 func CargarDatosDelLibro(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error {
+	if meta.TipoCita != "Libro" {
+		return nil
+	}
+
 	var idLibro int64
 	var err error
 
 	if idEditorial, err := ObtenerOInsertar(
-		func() (*sql.Rows, error) { return bdd.Query(query_editorial, meta.Editorial) },
-		func() (sql.Result, error) { return bdd.Exec(insertar_editorial, meta.Editorial) },
+		func() (*sql.Rows, error) { return bdd.Query(QUERY_EDITORIAL, meta.Editorial) },
+		func() (sql.Result, error) { return bdd.Exec(INSERTAR_EDITORIAL, meta.Editorial) },
 	); err != nil {
 		return fmt.Errorf("error al hacer una querry de la editorial %s con error: %v", meta.Editorial, err)
 
@@ -142,7 +184,7 @@ func CargarDatosDelLibro(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error 
 		)
 
 		if idLibro, err = Insertar(
-			func() (sql.Result, error) { return bdd.Exec(insertar_libro, libro.Valores()...) },
+			func() (sql.Result, error) { return bdd.Exec(INSERTAR_LIBRO, libro.Valores()...) },
 		); err != nil {
 			return fmt.Errorf("error al insertar un libro, con error: %v", err)
 		}
@@ -150,12 +192,12 @@ func CargarDatosDelLibro(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error 
 
 	for _, autor := range meta.NombreAutores {
 		if idAutor, err := ObtenerOInsertar(
-			func() (*sql.Rows, error) { return bdd.Query(query_personas, autor.Nombre, autor.Apellido) },
-			func() (sql.Result, error) { return bdd.Exec(insertar_persona, autor.Nombre, autor.Apellido) },
+			func() (*sql.Rows, error) { return bdd.Query(QUERY_PERSONAS, autor.Nombre, autor.Apellido) },
+			func() (sql.Result, error) { return bdd.Exec(INSERTAR_PERSONA, autor.Nombre, autor.Apellido) },
 		); err != nil {
 			return fmt.Errorf("error al hacer una querry del autor: %s %s con error: %v", autor.Nombre, autor.Apellido, err)
 
-		} else if _, err := bdd.Exec(insertar_autor_libro, idLibro, idAutor); err != nil {
+		} else if _, err := bdd.Exec(INSERTAR_AUTOR_LIBRO, idLibro, idAutor); err != nil {
 			return fmt.Errorf("error al insertar par idLibro-idAutor, con error: %v", err)
 		}
 	}
@@ -165,19 +207,19 @@ func CargarDatosDelLibro(bdd *sql.DB, idArchivo int64, meta *Frontmatter) error 
 		var idCapitulo int64
 
 		if idCapitulo, err = Insertar(
-			func() (sql.Result, error) { return bdd.Exec(insertar_capitulo, append(capitulo.Valores(), ids...)...) },
+			func() (sql.Result, error) { return bdd.Exec(INSERTAR_CAPITULO, append(capitulo.Valores(), ids...)...) },
 		); err != nil {
 			return fmt.Errorf("error al insertar un capitulo, con error: %v", err)
 		}
 
 		for _, autor := range capitulo.Editores {
 			if idAutor, err := ObtenerOInsertar(
-				func() (*sql.Rows, error) { return bdd.Query(query_personas, autor.Nombre, autor.Apellido) },
-				func() (sql.Result, error) { return bdd.Exec(insertar_persona, autor.Nombre, autor.Apellido) },
+				func() (*sql.Rows, error) { return bdd.Query(QUERY_PERSONAS, autor.Nombre, autor.Apellido) },
+				func() (sql.Result, error) { return bdd.Exec(INSERTAR_PERSONA, autor.Nombre, autor.Apellido) },
 			); err != nil {
 				return fmt.Errorf("error al hacer una querry del autor: %s %s con error: %v", autor.Nombre, autor.Apellido, err)
 
-			} else if _, err := bdd.Exec(insertar_editor_capitulo, idCapitulo, idAutor); err != nil {
+			} else if _, err := bdd.Exec(INSERTAR_EDITOR_CAPITULO, idCapitulo, idAutor); err != nil {
 				return fmt.Errorf("error al insertar par idLibro-idAutor, con error: %v", err)
 			}
 		}

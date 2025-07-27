@@ -49,7 +49,7 @@ type Frontmatter struct {
 	FechaPublicacion    string     `yaml:"fechaPublicacion,omitempty"`
 	TituloArticulo      string     `yaml:"tituloArticulo,omitempty"`
 	Cuatri              string     `yaml:"cuatri,omitempty"`
-	NombreDistribuucion string     `yaml:"nombreDistribuucion,omitempty"`
+	NombreDistribuucion string     `yaml:"nombreDistribucion,omitempty"`
 	TipoDistribucion    string     `yaml:"tipoDistribucion,omitempty"`
 	Equivalencia        string     `yaml:"equivalencia,omitempty"`
 	NombreSubtema       string     `yaml:"nombreSubtema,omitempty"`
@@ -127,6 +127,26 @@ type Articulo struct {
 		Tipo  string `yaml:"tipo,omitempty"`
 		Texto string `yaml:"texto,omitempty"`
 	} `yaml:"textos,omitempty"`
+}
+
+type TipoDistribucion string
+
+const (
+	DISTRIBUCION_DISCRETA     = "Discreta"
+	DISTRIBUCION_CONTINUA     = "Continua"
+	DISTRIBUCION_MULTIVARIADA = "Multivariada"
+)
+
+type Distribucion struct {
+	Tipo   TipoDistribucion
+	Nombre string
+}
+
+func NewDistribucion(tipo TipoDistribucion, nombre string) Distribucion {
+	return Distribucion{
+		Tipo:   tipo,
+		Nombre: nombre,
+	}
 }
 
 func NumeroODefault(representacion string, valorDefault int) int {

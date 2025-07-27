@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS editoresCapitulo (
 CREATE TABLE IF NOT EXISTS distribuciones (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?),
-  tipo ENUM ("Discreta", "Continue", "Multivariada") NOT NULL,
+  tipo ENUM ("Discreta", "Continua", "Multivariada") NOT NULL,
   idArchivo INT NOT NULL,
 
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
