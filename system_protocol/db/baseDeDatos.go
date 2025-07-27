@@ -132,6 +132,8 @@ func CrearTablas(db *sql.DB, info *InfoArchivos) error {
 		}
 	}
 
+	// Tal vez en vez de eliminarla se pueden alterar, pero eso ya implica un poco mas de esfuerzo
+
 	fmt.Println("Limpiando sus datos")
 	for !pilaEliminar.Vacia() {
 		if tabla, err := pilaEliminar.Desapilar(); err != nil {

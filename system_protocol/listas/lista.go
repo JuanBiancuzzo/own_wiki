@@ -116,6 +116,14 @@ func (l *Lista[T]) Vaciar() {
 	l.Largo = 0
 }
 
+func (l *Lista[T]) Iterar(yield func(T) bool) {
+	for i := 0; i < int(l.Largo); i++ {
+		if !yield(l.Elementos[i]) {
+			return
+		}
+	}
+}
+
 func (l *Lista[T]) Items() []T {
 	slice := make([]T, l.Largo)
 	for i := 0; i < int(l.Largo); i++ {

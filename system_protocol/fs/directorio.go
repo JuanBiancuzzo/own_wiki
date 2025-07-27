@@ -83,7 +83,7 @@ func (d *Directorio) AgregarArchivo(archivo *Archivo) {
 }
 
 func (d *Directorio) ProcesarArchivos(wg *sync.WaitGroup, infoArchivos *db.InfoArchivos, canal chan string) {
-	for _, subdirectorio := range d.Subdirectorios.Items() {
+	for subdirectorio := range d.Subdirectorios.Iterar {
 		if subdirectorio.Vacio() {
 			continue
 		}
@@ -95,13 +95,13 @@ func (d *Directorio) ProcesarArchivos(wg *sync.WaitGroup, infoArchivos *db.InfoA
 		}(subdirectorio, wg)
 	}
 
-	for _, archivo := range d.Archivos.Items() {
+	for archivo := range d.Archivos.Iterar {
 		archivo.Interprestarse(infoArchivos, canal)
 	}
 }
 
 func (d *Directorio) InsertarDatos(db *sql.DB, dbLock *sync.Mutex, wg *sync.WaitGroup) {
-	for _, subdirectorio := range d.Subdirectorios.Items() {
+	for subdirectorio := range d.Subdirectorios.Iterar {
 		if subdirectorio.Vacio() {
 			continue
 		}
@@ -114,7 +114,7 @@ func (d *Directorio) InsertarDatos(db *sql.DB, dbLock *sync.Mutex, wg *sync.Wait
 	}
 
 	dbLock.Lock()
-	for _, archivo := range d.Archivos.Items() {
+	for archivo := range d.Archivos.Iterar {
 		archivo.InsertarDatos(db)
 	}
 	dbLock.Unlock()
@@ -132,14 +132,14 @@ func (d *Directorio) Nombre() string {
 func (d *Directorio) String() string {
 	resultado := fmt.Sprintf("> %s\n\t", d.Nombre())
 
-	for _, subdirectorio := range d.Subdirectorios.Items() {
+	for subdirectorio := range d.Subdirectorios.Iterar {
 		lineas := strings.Split(subdirectorio.String(), "\n")
 		representacion := strings.Join(lineas, "\n\t| ")
 
 		resultado = fmt.Sprintf("%s%s", resultado, representacion)
 	}
 
-	for _, archivo := range d.Archivos.Items() {
+	for archivo := range d.Archivos.Iterar {
 		resultado = fmt.Sprintf("%s| %s\n\t", resultado, archivo.Nombre())
 	}
 
