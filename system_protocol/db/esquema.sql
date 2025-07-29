@@ -1,21 +1,21 @@
 CREATE TABLE IF NOT EXISTS archivos (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  path VARCHAR(?) 
+  path VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci 
 );
 
 CREATE TABLE IF NOT EXISTS personas (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?),
-  apellido VARCHAR(?)
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  apellido VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS editoriales (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  editorial VARCHAR(?)
+  editorial VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS tags (
-  tag VARCHAR(?),
+  tag VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
 
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
@@ -23,13 +23,13 @@ CREATE TABLE IF NOT EXISTS tags (
 
 CREATE TABLE IF NOT EXISTS libros (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  titulo VARCHAR(?),
-  subtitulo VARCHAR(?),
+  titulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  subtitulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   anio INT,
   idEditorial INT NOT NULL,
   edicion INT,
   volumen INT,
-  url VARCHAR(?),
+  url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
 
   FOREIGN KEY (idEditorial) REFERENCES editoriales(id),
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS libros (
 CREATE TABLE IF NOT EXISTS capitulos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   capitulo INT,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   paginaInicial INT,
   paginaFinal INT,
   idLibro INT NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS editoresCapitulo (
 
 CREATE TABLE IF NOT EXISTS distribuciones (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   tipo ENUM ("Discreta", "Continua", "Multivariada") NOT NULL,
   idArchivo INT NOT NULL,
 
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS relacionDistribuciones (
 
 CREATE TABLE IF NOT EXISTS carreras (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) UNIQUE,
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
   tieneCodigoMateria BOOLEAN,
   idArchivo INT NOT NULL,
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS carreras (
 
 CREATE TABLE IF NOT EXISTS planesCarrera (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?)
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS cuatrimestreCarrera (
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS materias (
   idCuatrimestre INT NOT NULL,
   codigo INT,
   etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
 
   FOREIGN KEY (idCarrera) REFERENCES carreras(id),
@@ -121,10 +121,33 @@ CREATE TABLE IF NOT EXISTS materias (
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
 );
 
+CREATE TABLE IF NOT EXISTS materiasEquivalentes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  codigo INT,
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  idMateria INT NOT NULL,
+  idArchivo INT NOT NULL,
+
+  FOREIGN KEY (idMateria) REFERENCES materias(id),
+  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
+);
+
+CREATE TABLE IF NOT EXISTS materiasCorrelativas (
+  tipoMateria ENUM ("Materia", "Equivalente"),
+  idMateria INT NOT NULL,
+  tipoCorrelativa ENUM ("Materia", "Equivalente"),
+  idCorrelativa INT NOT NULL,
+
+  FOREIGN KEY (idMateria) REFERENCES materias(id),
+  FOREIGN KEY (idMateria) REFERENCES materiasEquivalentes(id),
+  FOREIGN KEY (idCorrelativa) REFERENCES materias(id),
+  FOREIGN KEY (idCorrelativa) REFERENCES materiasEquivalentes(id)
+);
+
 CREATE TABLE IF NOT EXISTS temasMateria (
   id INT AUTO_INCREMENT PRIMARY KEY,
   capitulo INT,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idMateria INT NOT NULL,
   idArchivo INT NOT NULL,
 
@@ -134,16 +157,16 @@ CREATE TABLE IF NOT EXISTS temasMateria (
 
 CREATE TABLE IF NOT EXISTS paginasCursos (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombrePagina VARCHAR(?)
+  nombrePagina VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS cursos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
   fechaCurso INT,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idPagina INT NOT NULL,
-  url VARCHAR(?),
+  url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
 
   FOREIGN KEY (idPagina) REFERENCES paginasCursos(id),
@@ -154,7 +177,7 @@ CREATE TABLE IF NOT EXISTS temasCurso (
   id INT AUTO_INCREMENT PRIMARY KEY,
   idCurso INT NOT NULL,
   capitulo INT,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   parte INT,
   idArchivo INT NOT NULL,
 
@@ -172,7 +195,7 @@ CREATE TABLE IF NOT EXISTS profesoresCurso (
 
 CREATE TABLE IF NOT EXISTS temasInvestigacion (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
 
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
@@ -188,20 +211,20 @@ CREATE TABLE IF NOT EXISTS subtemasInvestigacion (
 
 CREATE TABLE IF NOT EXISTS revistasDePapers (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?)
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS papers (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  titulo VARCHAR(?),
-  subtitulo VARCHAR(?),
+  titulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  subtitulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idRevista INT NOT NULL,
   volumenRevista INT,
   numeroRevista INT,
   paginaInicio INT,
   paginaFinal INT,
   anio INT,
-  url VARCHAR(?),
+  url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
 
   FOREIGN KEY (idRevista) REFERENCES revistasDePapers(id),
@@ -220,7 +243,7 @@ CREATE TABLE IF NOT EXISTS escritoresPaper (
 CREATE TABLE IF NOT EXISTS temasMatematica (
   id INT AUTO_INCREMENT PRIMARY KEY,
   numRepresentante INT,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
 
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
@@ -238,7 +261,7 @@ CREATE TABLE IF NOT EXISTS bloqueMatematica (
   id INT AUTO_INCREMENT PRIMARY KEY,
   idTema INT NOT NULL,
   numRepresentante INT,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   tipo ENUM ("Teorema", "Procposicion", "Observacion", "Definicion", "Colorario"),
   idArchivo INT NOT NULL,
 
@@ -256,12 +279,12 @@ CREATE TABLE IF NOT EXISTS colorarioBloque (
 
 CREATE TABLE IF NOT EXISTS gruposLegales (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?)
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS seccionesLegales (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idGrupo INT NOT NULL,
   idArchivo INT NOT NULL,
 
@@ -271,7 +294,7 @@ CREATE TABLE IF NOT EXISTS seccionesLegales (
 
 CREATE TABLE IF NOT EXISTS documentosLegales (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  abreviacion VARCHAR(?),
+  abreviacion VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   articulosTienenNombre bool,
   idSeccion INT NOT NULL,
 
@@ -281,7 +304,7 @@ CREATE TABLE IF NOT EXISTS documentosLegales (
 CREATE TABLE IF NOT EXISTS articulos (
   idSeccion INT NOT NULL,
   numero INT,
-  nombre VARCHAR(?),
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
 
   FOREIGN KEY (idSeccion) REFERENCES seccionesLegales(id)
 );
@@ -296,30 +319,30 @@ CREATE TABLE IF NOT EXISTS gruposDocumento (
 
 CREATE TABLE IF NOT EXISTS canalesYoutube (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?)
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS referenciasYoutube (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombreVideo VARCHAR(?),
+  nombreVideo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idCanal INT NOT NULL,
   fecha datetime,
-  url VARCHAR(?),
+  url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
 
   FOREIGN KEY (idCanal) REFERENCES canalesYoutube(id)
 );
 
 CREATE TABLE IF NOT EXISTS paginasWeb (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?)
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS referenciasWeb (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  titulo VARCHAR(?),
+  titulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idPagina INT NOT NULL,
   fecha datetime,
-  url VARCHAR(?),
+  url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
 
   FOREIGN KEY (idPagina) REFERENCES paginasWeb(id)
 );
@@ -334,23 +357,23 @@ CREATE TABLE IF NOT EXISTS articulosWebAutor (
 
 CREATE TABLE IF NOT EXISTS referenciasWiki (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombreArticulo VARCHAR(?),
+  nombreArticulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   fecha datetime,
-  url VARCHAR(?)
+  url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS nombresDiccionario (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?)
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS referenciasDiccionario (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  palabra VARCHAR(?),
+  palabra VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idDiccionario INT NOT NULL,
   idEditorial INT NOT NULL,
   fecha datetime,
-  url VARCHAR(?),
+  url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
 
   FOREIGN KEY (idDiccionario) REFERENCES nombresDiccionario(id),
   FOREIGN KEY (idEditorial) REFERENCES editoriales(id)

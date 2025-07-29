@@ -57,6 +57,7 @@ func datosParaTabla(info *InfoArchivos) []any {
 		255,            // nombre de una carrera
 		255,            // nombre del plan de una carrera
 		255,            // nombre de una materia
+		255,            // nombre de una materia equivalente
 		255,            // nombre del tema de una materia
 		255,            // nombre de la pagina del curso
 		255,            // nombre del curso
@@ -117,12 +118,11 @@ func CrearTablas(db *sql.DB, info *InfoArchivos) error {
 	pilaEliminar := l.NewPilaConCapacidad[string](cantidadTablas)
 	colaQuery := l.NewColaConCapacidad[string](cantidadTablas)
 
-	for query := range strings.SplitSeq(queryCrearTablas, ");") {
+	for query := range strings.SplitSeq(queryCrearTablas, ";") {
 		query = strings.TrimSpace(query)
 		if query == "" {
 			continue
 		}
-		query = fmt.Sprintf("%s);", query)
 		colaQuery.Encolar(query)
 
 		var _extra string

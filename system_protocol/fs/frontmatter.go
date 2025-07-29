@@ -1,8 +1,7 @@
 package fs
 
 import (
-	"fmt"
-	"strconv"
+	e "own_wiki/system_protocol/estructura"
 )
 
 type Frontmatter struct {
@@ -23,7 +22,7 @@ type Frontmatter struct {
 	NombreResumen       string     `yaml:"nombreResumen,omitempty"`
 	Anio                string     `yaml:"anio,omitempty"`
 	Tipo                string     `yaml:"tipo,omitempty"`
-	NombreAutores       []Autor    `yaml:"nombreAutores,omitempty"`
+	NombreAutores       []Persona  `yaml:"nombreAutores,omitempty"`
 	Estado              string     `yaml:"estado,omitempty"`
 	NombreCanal         string     `yaml:"nombreCanal,omitempty"`
 	NombreVideo         string     `yaml:"nombreVideo,omitempty"`
@@ -39,7 +38,7 @@ type Frontmatter struct {
 	Parte               int        `yaml:"parte,omitempty"`
 	Curso               string     `yaml:"curso,omitempty"`
 	Profesores          []int      `yaml:"profesores,omitempty"`
-	Autores             []Autor    `yaml:"autores,omitempty"`
+	Autores             []Persona  `yaml:"autores,omitempty"`
 	Editores            []string   `yaml:"editores,omitempty"`
 	NumeroInforme       string     `yaml:"numeroInforme,omitempty"`
 	TituloInforme       string     `yaml:"tituloInforme,omitempty"`
@@ -59,62 +58,15 @@ type Frontmatter struct {
 	Equivalencia        string     `yaml:"equivalencia,omitempty"`
 	NombreSubtema       string     `yaml:"nombreSubtema,omitempty"`
 }
-
-type Libro struct {
-	Titulo      string
-	Subtitulo   string
-	Anio        int
-	IdEditorial int64
-	Edicion     int
-	Volumen     int
-	Url         string
-	IdArchivo   int64
-}
-
-func NewLibro(titulo string, subtitulo string, anio string, idEditorial int64, edicion string, volumen string, url string, idArchivo int64) Libro {
-	return Libro{
-		Titulo:      titulo,
-		Subtitulo:   subtitulo,
-		Anio:        NumeroODefault(anio, 0),
-		IdEditorial: idEditorial,
-		Edicion:     NumeroODefault(edicion, 1),
-		Volumen:     NumeroODefault(volumen, 0),
-		Url:         url,
-		IdArchivo:   idArchivo,
-	}
-}
-
-func (l Libro) Valores() []any {
-	return []any{
-		l.Titulo,
-		l.Subtitulo,
-		l.Anio,
-		l.IdEditorial,
-		l.Edicion,
-		l.Volumen,
-		l.Url,
-		l.IdArchivo,
-	}
-}
-
 type Capitulo struct {
-	NumeroCapitulo string  `yaml:"numeroCapitulo"`
-	NombreCapitulo string  `yaml:"nombreCapitulo,omitempty"`
-	NumReferencia  int     `yaml:"numReferencia,omitempty"`
-	Editores       []Autor `yaml:"editores,omitempty"`
-	Paginas        Pagina  `yaml:"paginas,omitempty"`
+	NumeroCapitulo string    `yaml:"numeroCapitulo"`
+	NombreCapitulo string    `yaml:"nombreCapitulo,omitempty"`
+	NumReferencia  int       `yaml:"numReferencia,omitempty"`
+	Editores       []Persona `yaml:"editores,omitempty"`
+	Paginas        Pagina    `yaml:"paginas,omitempty"`
 }
 
-func (c Capitulo) Valores() []any {
-	return []any{
-		NumeroODefault(c.NumeroCapitulo, 1),
-		c.NombreCapitulo,
-		NumeroODefault(c.Paginas.Inicio, 0),
-		NumeroODefault(c.Paginas.Final, 0),
-	}
-}
-
-type Autor struct {
+type Persona struct {
 	Nombre   string `yaml:"nombre"`
 	Apellido string `yaml:"apellido"`
 }
@@ -134,93 +86,37 @@ type Articulo struct {
 	} `yaml:"textos,omitempty"`
 }
 
-type TipoDistribucion string
-
-const (
-	DISTRIBUCION_DISCRETA     = "Discreta"
-	DISTRIBUCION_CONTINUA     = "Continua"
-	DISTRIBUCION_MULTIVARIADA = "Multivariada"
-)
-
-type Distribucion struct {
-	Tipo   TipoDistribucion
-	Nombre string
-}
-
-func NewDistribucion(tipo TipoDistribucion, nombre string) Distribucion {
-	return Distribucion{
-		Tipo:   tipo,
-		Nombre: nombre,
+func (f *Frontmatter) CrearLibro(pathArchivo string) *e.Libro {
+	autores := make([]*e.Persona, len(f.Autores))
+	for i, autor := range f.Autores {
+		autores[i] = e.NewPersona(autor.Nombre, autor.Apellido)
 	}
-}
+	capitulos := make([]*e.Capitulo, len(f.Capitulos))
+	for i, capitulo := range f.Capitulos {
+		editores := make([]*e.Persona, len(capitulo.Editores))
+		for i, editor := range capitulo.Editores {
+			editores[i] = e.NewPersona(editor.Nombre, editor.Apellido)
+		}
 
-type Etapa string
-
-const (
-	ETAPA_SIN_EMPEZAR = "SinEmpezar"
-	ETAPA_EMPEZADO    = "Empezado"
-	ETAPA_AMPLIAR     = "Ampliar"
-	ETAPA_TERMINADO   = "Terminado"
-)
-
-type Carrera struct {
-	Nombre      string
-	Etapa       Etapa
-	TieneCodigo bool
-}
-
-func NewCarrera(nombre string, etapa Etapa, tieneCodigo string) Carrera {
-	return Carrera{
-		Nombre:      nombre,
-		Etapa:       etapa,
-		TieneCodigo: BooleanoODefault(tieneCodigo, false),
-	}
-}
-
-func (c Carrera) Valores() []any {
-	return []any{
-		c.Nombre,
-		c.Etapa,
-		c.TieneCodigo,
-	}
-}
-
-type Materia struct {
-}
-
-func NumeroODefault(representacion string, valorDefault int) int {
-	if nuevoValor, err := strconv.Atoi(representacion); err == nil {
-		return nuevoValor
-	} else {
-		return valorDefault
-	}
-}
-
-func BooleanoODefault(representacion string, valorDefault bool) bool {
-	switch representacion {
-	case "true":
-		return true
-	case "false":
-		return false
-	default:
-		return valorDefault
-	}
-}
-
-func ObtenerEtapa(representacionEtapa string) (Etapa, error) {
-	var etapa Etapa
-	switch representacionEtapa {
-	case "sin-empezar":
-		etapa = ETAPA_SIN_EMPEZAR
-	case "empezado":
-		etapa = ETAPA_EMPEZADO
-	case "ampliar":
-		etapa = ETAPA_AMPLIAR
-	case "terminado":
-		etapa = ETAPA_TERMINADO
-	default:
-		return ETAPA_SIN_EMPEZAR, fmt.Errorf("el tipo de etapa (%s) no es uno de los esperados", representacionEtapa)
+		capitulos[i] = e.NewCapitulo(
+			capitulo.NumeroCapitulo,
+			capitulo.NombreCapitulo,
+			editores,
+			capitulo.Paginas.Inicio,
+			capitulo.Paginas.Final,
+		)
 	}
 
-	return etapa, nil
+	return e.NewLibro(
+		pathArchivo,
+		f.TituloObra,
+		f.SubtituloObra,
+		f.Editorial,
+		f.Anio,
+		f.Edicion,
+		f.Volumen,
+		f.Url,
+		autores,
+		capitulos,
+	)
 }

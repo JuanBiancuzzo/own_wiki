@@ -4,10 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"own_wiki/system_protocol/db"
+	e "own_wiki/system_protocol/estructura"
 	fs "own_wiki/system_protocol/fs"
+	l "own_wiki/system_protocol/listas"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -44,18 +47,17 @@ func main() {
 		fmt.Println("Imprimiendo mensajes")
 		for {
 			mensaje := <-canal
-			fmt.Print(mensaje)
+			fmt.Println(strings.TrimSpace(mensaje))
 		}
 	}(canalMensajes)
 
 	canalInfo := make(chan db.InfoArchivos)
 	canalDirectorio := make(chan fs.Directorio)
 	go func(canalInfo chan db.InfoArchivos, canalMensajes chan string, dirOrigen string) {
-		var infoArchivos db.InfoArchivos
-		directorioRoot := fs.EstablecerDirectorio(dirOrigen, &infoArchivos, canalMensajes)
-
+		directorioRoot := fs.EstablecerDirectorio(dirOrigen, canalMensajes)
 		canalMensajes <- "Procesando los archivos\n"
 
+		var infoArchivos db.InfoArchivos
 		var waitArchivos sync.WaitGroup
 		directorioRoot.ProcesarArchivos(&waitArchivos, &infoArchivos, canalMensajes)
 		waitArchivos.Wait()
@@ -64,6 +66,8 @@ func main() {
 
 		// Ajustar valores de info de los archivos
 		infoArchivos.Incrementar()
+
+		directorioRoot.RelativizarPath(fmt.Sprintf("%s/", dirOrigen))
 
 		canalInfo <- infoArchivos
 		canalDirectorio <- *directorioRoot
@@ -90,51 +94,56 @@ func main() {
 		canalBDD <- bdd
 	}(canalBDD, canalInfo)
 
+	fmt.Println("Insertando datos en la base de datos")
+	canalProcesamiento := make(chan e.Cargable, 100)
+
+	go func(canal chan e.Cargable) {
+		directorioRoot := <-canalDirectorio
+		for archivo := range directorioRoot.IterarArchivos {
+			archivo.InsertarDatos(canal)
+		}
+		fmt.Println("Dejar de mandar archivos para procesar")
+		close(canal)
+	}(canalProcesamiento)
+
 	bdd := <-canalBDD
 	if bdd == nil {
 		return
 	}
 	defer bdd.Close()
+	// bdd.SetMaxOpenConns(10)
 
-	directorioRoot := <-canalDirectorio
-
-	fmt.Println("Insertando datos en la base de datos")
-	canalProcesamiento := make(chan func() bool)
-	var bddLock sync.Mutex
-
-	go func(bdd *sql.DB, canal chan func() bool, lock *sync.Mutex) {
-		directorioRoot.InsertarDatos(bdd, &bddLock, canal)
-		fmt.Println("Dejar de mandar archivos para procesar")
-		close(canal)
-	}(bdd, canalProcesamiento, &bddLock)
-
-	canalEnEspera := make(chan func() bool)
-	esperaNuevoProcesamiento := true
-	cantidadProcesamientoPendiente := 0
-
-	for esperaNuevoProcesamiento || cantidadProcesamientoPendiente > 0 {
-		var funcProcesar func() bool
-		select {
-		case procesar, ok := <-canalProcesamiento:
-			if !ok {
-				esperaNuevoProcesamiento = false
-				continue
-			}
-			funcProcesar = procesar
-
-		case procesar := <-canalEnEspera:
-			fmt.Println("Se intenta procesar de nuevo un archivo")
-			cantidadProcesamientoPendiente--
-			funcProcesar = procesar
+	colaProcesar := l.NewCola[e.Cargable]()
+	cantidadElementos := 0
+	for cargable := range canalProcesamiento {
+		if !cargable.CargarDatos(bdd, canalMensajes) {
+			fmt.Printf("Encolando\n")
+			cantidadElementos++
+			colaProcesar.Encolar(cargable)
 		}
+	}
 
-		bddLock.Lock()
-		if !funcProcesar() {
-			cantidadProcesamientoPendiente++
-			fmt.Println("No se pudo procesar un archivo")
-			canalEnEspera <- funcProcesar
+	fmt.Println("Procesando archivos, faltantes: ", cantidadElementos)
+	iteracion := 0
+	for !colaProcesar.Vacia() && iteracion < cantidadElementos {
+		cargable, err := colaProcesar.Desencolar()
+		if err != nil {
+			fmt.Printf("Error al desencolar el procesamiento, con error: %v\n", err)
+			break
 		}
-		bddLock.Unlock()
+		iteracion++
+
+		if !cargable.CargarDatos(bdd, canalMensajes) {
+			fmt.Println("Encolando en el loop")
+			colaProcesar.Encolar(cargable)
+		} else {
+			iteracion = 0
+			cantidadElementos--
+		}
+	}
+
+	if cantidadElementos > 0 {
+		fmt.Println("Hay un error, no se pudo procesar n°", cantidadElementos, " de archivos")
 	}
 
 	fmt.Println("Se termino de insertar los archivos")

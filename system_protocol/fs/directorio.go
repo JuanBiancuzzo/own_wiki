@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"slices"
@@ -9,6 +8,7 @@ import (
 	"sync"
 
 	"own_wiki/system_protocol/db"
+	e "own_wiki/system_protocol/estructura"
 	ls "own_wiki/system_protocol/listas"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -30,7 +30,7 @@ func NewDirectorio(path string) *Directorio {
 	}
 }
 
-func EstablecerDirectorio(root string, infoArchivos *db.InfoArchivos, canal chan string) *Directorio {
+func EstablecerDirectorio(root string, canal chan string) *Directorio {
 	directorioRoot := NewDirectorio(root)
 
 	colaDirectorios := ls.NewCola[*Directorio]()
@@ -52,26 +52,31 @@ func EstablecerDirectorio(root string, infoArchivos *db.InfoArchivos, canal chan
 
 		for _, archivo := range archivos {
 			archivoPath := fmt.Sprintf("%s/%s", directorio.Path, archivo.Name())
-			archivoValido := false
 
 			if archivo.IsDir() && !slices.Contains(DIRECTORIOS_IGNORAR, archivo.Name()) {
 				nuevoDirectorio := NewDirectorio(archivoPath)
 				directorio.AgregarSubdirectorio(nuevoDirectorio)
 				colaDirectorios.Encolar(nuevoDirectorio)
-				archivoValido = true
 
 			} else if !archivo.IsDir() {
 				directorio.AgregarArchivo(NewArchivo(archivoPath))
-				archivoValido = true
-			}
-
-			if archivoValido {
-				infoArchivos.MaxPath = max(infoArchivos.MaxPath, uint32(len(archivoPath)))
 			}
 		}
 	}
 
 	return directorioRoot
+}
+
+func (d *Directorio) RelativizarPath(path string) {
+	d.Path = strings.Replace(d.Path, path, "", 1)
+
+	for archivo := range d.Archivos.Iterar {
+		archivo.RelativizarPath(path)
+	}
+
+	for directorio := range d.Subdirectorios.Iterar {
+		directorio.RelativizarPath(path)
+	}
 }
 
 func (d *Directorio) AgregarSubdirectorio(directorio *Directorio) {
@@ -100,41 +105,22 @@ func (d *Directorio) ProcesarArchivos(wg *sync.WaitGroup, infoArchivos *db.InfoA
 	}
 }
 
-func (d *Directorio) InsertarDatos(db *sql.DB, dbLock *sync.Mutex, canal chan func() bool) {
-	for subdirectorio := range d.Subdirectorios.Iterar {
-		if subdirectorio.Vacio() {
-			continue
-		}
-		subdirectorio.InsertarDatos(db, dbLock, canal)
-	}
-
-	for archivo := range d.Archivos.Iterar {
-		archivo.InsertarDatos(db, dbLock, canal)
-	}
-}
-
 func (d *Directorio) Vacio() bool {
 	return d.Subdirectorios.Vacia() && d.Archivos.Vacia()
 }
 
-func (d *Directorio) Nombre() string {
-	separacion := strings.Split(d.Path, "/")
-	return separacion[len(separacion)-1]
-}
-
-func (d *Directorio) String() string {
-	resultado := fmt.Sprintf("> %s\n\t", d.Nombre())
+func (d *Directorio) IterarArchivos(yield func(*Archivo) bool) {
+	for archivo := range d.Archivos.Iterar {
+		if !yield(archivo) {
+			return
+		}
+	}
 
 	for subdirectorio := range d.Subdirectorios.Iterar {
-		lineas := strings.Split(subdirectorio.String(), "\n")
-		representacion := strings.Join(lineas, "\n\t| ")
-
-		resultado = fmt.Sprintf("%s%s", resultado, representacion)
+		subdirectorio.IterarArchivos(yield)
 	}
+}
 
-	for archivo := range d.Archivos.Iterar {
-		resultado = fmt.Sprintf("%s| %s\n\t", resultado, archivo.Nombre())
-	}
-
-	return resultado
+func (d *Directorio) Nombre() string {
+	return e.Nombre(d.Path)
 }
