@@ -125,20 +125,6 @@ func (d *Directorio) AgregarArchivo(archivo *Archivo) {
 	d.Archivos.Push(archivo)
 }
 
-func (d *Directorio) ProcesarArchivos(canal chan string) {
-	for subdirectorio := range d.Subdirectorios.Iterar {
-		if subdirectorio.Vacio() {
-			continue
-		}
-
-		subdirectorio.ProcesarArchivos(canal)
-	}
-
-	for archivo := range d.Archivos.Iterar {
-		archivo.Interprestarse(canal)
-	}
-}
-
 func (d *Directorio) Vacio() bool {
 	return d.Subdirectorios.Vacia() && d.Archivos.Vacia()
 }

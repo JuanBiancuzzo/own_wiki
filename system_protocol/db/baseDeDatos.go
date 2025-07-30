@@ -57,7 +57,9 @@ func datosParaTabla(info *InfoArchivos) []any {
 		255,            // nombre de una carrera
 		255,            // nombre del plan de una carrera
 		255,            // nombre de una materia
+		255,            // Codigo de materia
 		255,            // nombre de una materia equivalente
+		255,            // Codigo de materia
 		255,            // nombre del tema de una materia
 		255,            // nombre de la pagina del curso
 		255,            // nombre del curso

@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS materias (
   idCarrera INT NOT NULL,
   idPlan INT NOT NULL,
   idCuatrimestre INT NOT NULL,
-  codigo INT,
+  codigo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
@@ -123,8 +123,8 @@ CREATE TABLE IF NOT EXISTS materias (
 
 CREATE TABLE IF NOT EXISTS materiasEquivalentes (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  codigo INT,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  codigo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idMateria INT NOT NULL,
   idArchivo INT NOT NULL,
 

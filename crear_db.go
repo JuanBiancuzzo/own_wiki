@@ -68,7 +68,9 @@ func main() {
 		canalMensajes <- "Procesando los archivos\n"
 		directorioRoot.RelativizarPath(fmt.Sprintf("%s/", dirOrigen))
 
-		directorioRoot.ProcesarArchivos(canalMensajes)
+		for archivo := range directorioRoot.IterarArchivos {
+			archivo.Interprestarse(canalMensajes)
+		}
 
 		canalMensajes <- "Se termino de procesar los archivos\n"
 		canalDirectorio <- *directorioRoot

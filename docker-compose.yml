@@ -12,6 +12,7 @@ services:
       - "3306:3306"
     volumes:
       - my-db:/var/lib/mysql
+      - ./volumenes/output/bdd:/var/lib/output
     networks:
       - appnet
 

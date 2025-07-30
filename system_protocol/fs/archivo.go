@@ -24,7 +24,7 @@ func NewArchivo(padre *Directorio, path string, info *db.InfoArchivos) (*Archivo
 		Padre:          padre,
 		Path:           path,
 		Meta:           nil,
-		TiposDeArchivo: nil,
+		TiposDeArchivo: l.NewLista[e.Cargable](),
 	}
 
 	if !strings.Contains(path, ".md") {
@@ -75,15 +75,15 @@ func NewArchivo(padre *Directorio, path string, info *db.InfoArchivos) (*Archivo
 
 	// Distribuciones
 
-	return &Archivo{
-		Padre:          padre,
-		Path:           path,
-		Meta:           &meta,
-		TiposDeArchivo: l.NewLista[e.Cargable](),
-	}, nil
+	archivo.Meta = &meta
+	return &archivo, nil
 }
 
 func (a *Archivo) Interprestarse(canal chan string) {
+	if a.Meta == nil {
+		return
+	}
+
 	a.TiposDeArchivo.Push(e.NewArchivo(a.Path, a.Meta.Tags))
 	for _, tag := range a.Meta.Tags {
 		switch tag {
@@ -105,8 +105,16 @@ func (a *Archivo) Interprestarse(canal chan string) {
 			} else {
 				a.TiposDeArchivo.Push(materia)
 			}
+
+			/*
+				for _, correlativa := range a.Meta.Correlativas {
+					pathMateria := ObtenerWikiLink(correlativa)[0]
+					a.TiposDeArchivo.Push(e.NewMateriaEquivalente(a.Path, pathMateria, a.Meta.NombreMateria, a.Meta.Codigo))
+				}
+			*/
 		case "facultad/materia-equivalente":
-			// a.TiposDeArchivo.Push(ES_MATERIA_EQUIVALENTE)
+			pathMateria := ObtenerWikiLink(a.Meta.Equivalencia)[0]
+			a.TiposDeArchivo.Push(e.NewMateriaEquivalente(a.Path, pathMateria, a.Meta.NombreMateria, a.Meta.Codigo))
 		case "facultad/resumen":
 			// a.TiposDeArchivo.Push(ES_RESUMEN_MATERIA)
 		case "colección/distribuciones/distribución":
@@ -141,12 +149,15 @@ func (a *Archivo) Nombre() string {
 	return e.Nombre(a.Path)
 }
 
+func ObtenerWikiLink(link string) []string {
+	link = strings.TrimPrefix(link, "[[")
+	link = strings.TrimSuffix(link, "]]")
+	return strings.Split(link, "|")
+}
+
 /*
 	case ES_MATERIA:
 		for _, correlativa := range meta.Correlativas {
-			correlativa = strings.TrimPrefix(correlativa, "[[")
-			correlativa = strings.TrimSuffix(correlativa, "]]")
-			pathCorrelativa := strings.Split(correlativa, "|")[0]
 			canal <- func(bdd *sql.DB) bool { return CargarCorrelativas(bdd, pathArchivo, pathCorrelativa) }
 		}
 	case ES_MATERIA_EQUIVALENTE:

@@ -6,8 +6,8 @@ import (
 )
 
 const INSERTAR_MATERIA = "INSERT INTO materias (nombre, codigo, etapa, idCarrera, idPlan, idCuatrimestre, idArchivo) VALUES (?, ?, ?, ?, ?, ?, ?)"
-const QUERY_CARRERA_PATH = `SELECT res.id FROM (
-	SELECT carreras.id, archivos.path FROM archivos INNER JOIN carreras ON archivos.id = carreras.idArchivo
+const QUERY_MATERIA_PATH = `SELECT res.id FROM (
+	SELECT materias.id, archivos.path FROM archivos INNER JOIN materias ON archivos.id = materias.idArchivo
 ) AS res WHERE res.path = ?`
 
 const QUERY_PLANES = "SELECT id FROM planesCarrera WHERE nombre = ?"
@@ -29,7 +29,7 @@ type Materia struct {
 	PathArchivo string
 	PathCarrera string
 	Nombre      string
-	Codigo      int
+	Codigo      string
 	Plan        string
 	Anio        int
 	Cuatri      ParteCuatrimestre
@@ -48,7 +48,7 @@ func NewMateria(pathArchivo string, pathCarrera string, nombre string, codigo st
 			PathArchivo: pathArchivo,
 			PathCarrera: pathCarrera,
 			Nombre:      nombre,
-			Codigo:      NumeroODefault(codigo, 0),
+			Codigo:      codigo,
 			Anio:        anio,
 			Cuatri:      cuatri,
 			Etapa:       etapa,

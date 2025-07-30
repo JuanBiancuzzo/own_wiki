@@ -6,6 +6,9 @@ import (
 )
 
 const QUERY_CARRERA = "SELECT id FROM carreras WHERE nombre = ?"
+const QUERY_CARRERA_PATH = `SELECT res.id FROM (
+	SELECT carreras.id, archivos.path FROM archivos INNER JOIN carreras ON archivos.id = carreras.idArchivo
+) AS res WHERE res.path = ?`
 const INSERTAR_CARRERA = "INSERT INTO carreras (nombre, etapa, tieneCodigoMateria, idArchivo) VALUES (?, ?, ?, ?)"
 
 type Carrera struct {
