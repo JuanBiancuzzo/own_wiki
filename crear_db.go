@@ -54,22 +54,23 @@ func main() {
 	canalInfo := make(chan db.InfoArchivos)
 	canalDirectorio := make(chan fs.Directorio)
 	go func(canalInfo chan db.InfoArchivos, canalMensajes chan string, dirOrigen string) {
-		directorioRoot := fs.EstablecerDirectorio(dirOrigen, canalMensajes)
-		canalMensajes <- "Procesando los archivos\n"
-
 		var infoArchivos db.InfoArchivos
 		var waitArchivos sync.WaitGroup
-		directorioRoot.ProcesarArchivos(&waitArchivos, &infoArchivos, canalMensajes)
-		waitArchivos.Wait()
 
-		canalMensajes <- "Se termino de procesar los archivos\n"
+		canalMensajes <- "Creando estructura\n"
+		directorioRoot := fs.EstablecerDirectorio(dirOrigen, &waitArchivos, &infoArchivos, canalMensajes)
+		waitArchivos.Wait()
 
 		// Ajustar valores de info de los archivos
 		infoArchivos.Incrementar()
+		canalInfo <- infoArchivos
 
+		canalMensajes <- "Procesando los archivos\n"
 		directorioRoot.RelativizarPath(fmt.Sprintf("%s/", dirOrigen))
 
-		canalInfo <- infoArchivos
+		directorioRoot.ProcesarArchivos(canalMensajes)
+
+		canalMensajes <- "Se termino de procesar los archivos\n"
 		canalDirectorio <- *directorioRoot
 	}(canalInfo, canalMensajes, os.Args[1])
 

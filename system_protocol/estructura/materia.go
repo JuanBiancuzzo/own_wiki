@@ -6,9 +6,9 @@ import (
 )
 
 const INSERTAR_MATERIA = "INSERT INTO materias (nombre, codigo, etapa, idCarrera, idPlan, idCuatrimestre, idArchivo) VALUES (?, ?, ?, ?, ?, ?, ?)"
-const QUERY_CARRERA_EN_CARPETA = `SELECT res.id FROM (
+const QUERY_CARRERA_PATH = `SELECT res.id FROM (
 	SELECT carreras.id, archivos.path FROM archivos INNER JOIN carreras ON archivos.id = carreras.idArchivo
-) AS res WHERE res.path LIKE ?`
+) AS res WHERE res.path = ?`
 
 const QUERY_PLANES = "SELECT id FROM planesCarrera WHERE nombre = ?"
 const INSERTAR_PLAN = "INSERT INTO planesCarrera (nombre) VALUES (?)"
@@ -98,7 +98,7 @@ func (m *Materia) CargarDatos(bdd *sql.DB, canal chan string) bool {
 		return false
 
 	} else if idCarrera, existe := Obtener(
-		func() *sql.Row { return bdd.QueryRow(QUERY_CARRERA_EN_CARPETA, m.PathCarrera) },
+		func() *sql.Row { return bdd.QueryRow(QUERY_CARRERA_PATH, m.PathCarrera) },
 	); !existe {
 		return false
 

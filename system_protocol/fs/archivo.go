@@ -13,96 +13,46 @@ import (
 )
 
 type Archivo struct {
+	Padre          *Directorio
 	Path           string
+	Meta           *Frontmatter
 	TiposDeArchivo *l.Lista[e.Cargable]
 }
 
-func NewArchivo(path string) *Archivo {
-	return &Archivo{
+func NewArchivo(padre *Directorio, path string, info *db.InfoArchivos) (*Archivo, error) {
+	archivo := Archivo{
+		Padre:          padre,
 		Path:           path,
-		TiposDeArchivo: l.NewLista[e.Cargable](),
-	}
-}
-
-func (a *Archivo) Interprestarse(infoArchivos *db.InfoArchivos, canal chan string) {
-	if !strings.Contains(a.Path, ".md") {
-		return
+		Meta:           nil,
+		TiposDeArchivo: nil,
 	}
 
-	bytes, err := os.ReadFile(a.Path)
-	if err != nil {
-		canal <- fmt.Sprintf("Error al leer %s obteniendo el error: %v", a.Path, err)
-		return
+	if !strings.Contains(path, ".md") {
+		return &archivo, nil
 	}
-	contenido := string(bytes)
+
+	var contenido string
+	if bytes, err := os.ReadFile(path); err != nil {
+		return nil, fmt.Errorf("error al leer %s obteniendo el error: %v", path, err)
+	} else {
+		contenido = strings.TrimSpace(string(bytes))
+	}
 
 	if strings.Index(contenido, "---") != 0 {
-		return
+		return &archivo, nil
 	}
 
 	blob := contenido[3 : 3+strings.Index(contenido[3:], "---")]
 	decodificador := yaml.NewDecoder(strings.NewReader(blob))
 
-	meta := new(Frontmatter)
-	err = decodificador.Decode(meta)
-	if err != nil {
-		canal <- fmt.Sprintf("Error al decodificar en %s la metadata, con el error: %v\n", a.Path, err)
-		return
+	var meta Frontmatter
+	if err := decodificador.Decode(&meta); err != nil {
+		return nil, fmt.Errorf("error al decodificar en %s la metadata, con el error: %v", path, err)
 	}
 
 	// a.Contenido = contenido[3+strings.Index(contenido[3:], "---")+len("---"):]
 
-	a.EstablecerInfo(infoArchivos, meta)
-	if len(meta.Tags) == 0 {
-		return
-	}
-
-	a.TiposDeArchivo.Push(e.NewArchivo(a.Path, meta.Tags))
-	for _, tag := range meta.Tags {
-		switch tag {
-		case "facultad/carrera":
-			nombreCarrera := a.Nombre()
-			if carrera, err := e.NewCarrera(a.Path, nombreCarrera, meta.Etapa, meta.TieneCodigo); err == nil {
-				a.TiposDeArchivo.Push(carrera)
-
-			} else {
-				canal <- fmt.Sprintf("Error: %v\n", err)
-			}
-		case "facultad/materia":
-			seccionesPath := strings.Split(a.Path, "/")
-			carpetaPrevia := strings.Join(seccionesPath[:len(seccionesPath)-2], "/")
-			carpetaPrevia = fmt.Sprintf("%s/%s", carpetaPrevia, "%")
-
-			if materia, err := e.NewMateria(a.Path, carpetaPrevia, meta.NombreMateria, meta.Codigo, meta.Plan, meta.Cuatri, meta.Etapa); err == nil {
-				a.TiposDeArchivo.Push(materia)
-
-			} else {
-				canal <- fmt.Sprintf("Error: %v\n", err)
-			}
-		case "facultad/materia-equivalente":
-			// a.TiposDeArchivo.Push(ES_MATERIA_EQUIVALENTE)
-		case "facultad/resumen":
-			// a.TiposDeArchivo.Push(ES_RESUMEN_MATERIA)
-		case "colección/distribuciones/distribución":
-			if distribucion, err := e.NewDistribucion(a.Path, meta.NombreDistribuucion, meta.TipoDistribucion); err == nil {
-				a.TiposDeArchivo.Push(distribucion)
-
-			} else {
-				canal <- fmt.Sprintf("Error: %v\n", err)
-			}
-		case "colección/biblioteca/libro":
-			a.TiposDeArchivo.Push(meta.CrearLibro(a.Path))
-		}
-	}
-}
-
-func (a *Archivo) EstablecerInfo(info *db.InfoArchivos, meta *Frontmatter) {
-	// General
-	info.MaxPath = max(info.MaxPath, uint32(len(a.Path)))
-
-	if meta == nil {
-		return
-	}
+	info.MaxPath = max(info.MaxPath, uint32(len(path)))
 
 	for _, tag := range meta.Tags {
 		info.MaxTags = max(info.MaxTags, uint32(len(tag)))
@@ -124,6 +74,56 @@ func (a *Archivo) EstablecerInfo(info *db.InfoArchivos, meta *Frontmatter) {
 	info.MaxUrl = max(info.MaxUrl, uint32(len(meta.Url)))
 
 	// Distribuciones
+
+	return &Archivo{
+		Padre:          padre,
+		Path:           path,
+		Meta:           &meta,
+		TiposDeArchivo: l.NewLista[e.Cargable](),
+	}, nil
+}
+
+func (a *Archivo) Interprestarse(canal chan string) {
+	a.TiposDeArchivo.Push(e.NewArchivo(a.Path, a.Meta.Tags))
+	for _, tag := range a.Meta.Tags {
+		switch tag {
+		case "facultad/carrera":
+			nombreCarrera := a.Nombre()
+			if carrera, err := e.NewCarrera(a.Path, nombreCarrera, a.Meta.Etapa, a.Meta.TieneCodigo); err == nil {
+				a.TiposDeArchivo.Push(carrera)
+
+			} else {
+				canal <- fmt.Sprintf("Error: %v\n", err)
+			}
+		case "facultad/materia":
+			if carrera, err := a.Padre.ArchivoMasCercanoConTag("facultad/carrera"); err != nil {
+				canal <- fmt.Sprintf("Error al buscar carrera, con error: %v\n", err)
+
+			} else if materia, err := e.NewMateria(a.Path, carrera.Path, a.Meta.NombreMateria, a.Meta.Codigo, a.Meta.Plan, a.Meta.Cuatri, a.Meta.Etapa); err != nil {
+				canal <- fmt.Sprintf("Error: %v\n", err)
+
+			} else {
+				a.TiposDeArchivo.Push(materia)
+			}
+		case "facultad/materia-equivalente":
+			// a.TiposDeArchivo.Push(ES_MATERIA_EQUIVALENTE)
+		case "facultad/resumen":
+			// a.TiposDeArchivo.Push(ES_RESUMEN_MATERIA)
+		case "colección/distribuciones/distribución":
+			if distribucion, err := e.NewDistribucion(a.Path, a.Meta.NombreDistribuucion, a.Meta.TipoDistribucion); err == nil {
+				a.TiposDeArchivo.Push(distribucion)
+
+			} else {
+				canal <- fmt.Sprintf("Error: %v\n", err)
+			}
+		case "colección/biblioteca/libro":
+			a.TiposDeArchivo.Push(a.Meta.CrearLibro(a.Path))
+		}
+	}
+}
+
+func (a *Archivo) EstablecerInfo(info *db.InfoArchivos, meta *Frontmatter) {
+	// General
 
 }
 

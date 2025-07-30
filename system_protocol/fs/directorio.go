@@ -17,21 +17,32 @@ import (
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
 type Directorio struct {
+	Padre          *Directorio
 	Path           string
 	Subdirectorios *ls.Lista[*Directorio]
 	Archivos       *ls.Lista[*Archivo]
 }
 
-func NewDirectorio(path string) *Directorio {
+func NewRoot(path string) *Directorio {
 	return &Directorio{
+		Padre:          nil,
 		Path:           path,
 		Subdirectorios: ls.NewLista[*Directorio](),
 		Archivos:       ls.NewLista[*Archivo](),
 	}
 }
 
-func EstablecerDirectorio(root string, canal chan string) *Directorio {
-	directorioRoot := NewDirectorio(root)
+func NewDirectorio(padre *Directorio, path string) *Directorio {
+	return &Directorio{
+		Padre:          padre,
+		Path:           path,
+		Subdirectorios: ls.NewLista[*Directorio](),
+		Archivos:       ls.NewLista[*Archivo](),
+	}
+}
+
+func EstablecerDirectorio(root string, wg *sync.WaitGroup, infoArchivos *db.InfoArchivos, canal chan string) *Directorio {
+	directorioRoot := NewRoot(root)
 
 	colaDirectorios := ls.NewCola[*Directorio]()
 	colaDirectorios.Encolar(directorioRoot)
@@ -50,21 +61,48 @@ func EstablecerDirectorio(root string, canal chan string) *Directorio {
 			break
 		}
 
+		listaArchivos := ls.NewLista[string]()
 		for _, archivo := range archivos {
 			archivoPath := fmt.Sprintf("%s/%s", directorio.Path, archivo.Name())
 
 			if archivo.IsDir() && !slices.Contains(DIRECTORIOS_IGNORAR, archivo.Name()) {
-				nuevoDirectorio := NewDirectorio(archivoPath)
-				directorio.AgregarSubdirectorio(nuevoDirectorio)
-				colaDirectorios.Encolar(nuevoDirectorio)
+				subDirectorio := NewDirectorio(directorio, archivoPath)
+				directorio.AgregarSubdirectorio(subDirectorio)
+				colaDirectorios.Encolar(subDirectorio)
 
 			} else if !archivo.IsDir() {
-				directorio.AgregarArchivo(NewArchivo(archivoPath))
+				listaArchivos.Push(archivoPath)
 			}
 		}
+
+		wg.Add(1)
+		go func(lista *ls.Lista[string], directorio *Directorio, infoArchivo *db.InfoArchivos) {
+			for archivoPath := range lista.Iterar {
+				if archivo, err := NewArchivo(directorio, archivoPath, infoArchivos); err != nil {
+					canal <- fmt.Sprintf("Se tuvo un error al crear un archivo, con error: %v", err)
+
+				} else {
+					directorio.AgregarArchivo(archivo)
+				}
+			}
+			wg.Done()
+		}(listaArchivos, directorio, infoArchivos)
 	}
 
 	return directorioRoot
+}
+
+func (d *Directorio) ArchivoMasCercanoConTag(tag string) (*Archivo, error) {
+	for archivo := range d.Archivos.Iterar {
+		if slices.Contains(archivo.Meta.Tags, tag) {
+			return archivo, nil
+		}
+	}
+
+	if d.Padre == nil {
+		return nil, fmt.Errorf("se llegó al root y no se encontró archivo con tag: %s", tag)
+	}
+	return d.Padre.ArchivoMasCercanoConTag(tag)
 }
 
 func (d *Directorio) RelativizarPath(path string) {
@@ -87,21 +125,17 @@ func (d *Directorio) AgregarArchivo(archivo *Archivo) {
 	d.Archivos.Push(archivo)
 }
 
-func (d *Directorio) ProcesarArchivos(wg *sync.WaitGroup, infoArchivos *db.InfoArchivos, canal chan string) {
+func (d *Directorio) ProcesarArchivos(canal chan string) {
 	for subdirectorio := range d.Subdirectorios.Iterar {
 		if subdirectorio.Vacio() {
 			continue
 		}
 
-		wg.Add(1)
-		go func(directorio *Directorio, wg *sync.WaitGroup) {
-			directorio.ProcesarArchivos(wg, infoArchivos, canal)
-			wg.Done()
-		}(subdirectorio, wg)
+		subdirectorio.ProcesarArchivos(canal)
 	}
 
 	for archivo := range d.Archivos.Iterar {
-		archivo.Interprestarse(infoArchivos, canal)
+		archivo.Interprestarse(canal)
 	}
 }
 
