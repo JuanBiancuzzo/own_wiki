@@ -136,12 +136,7 @@ CREATE TABLE IF NOT EXISTS materiasCorrelativas (
   tipoMateria ENUM ("Materia", "Equivalente"),
   idMateria INT NOT NULL,
   tipoCorrelativa ENUM ("Materia", "Equivalente"),
-  idCorrelativa INT NOT NULL,
-
-  FOREIGN KEY (idMateria) REFERENCES materias(id),
-  FOREIGN KEY (idMateria) REFERENCES materiasEquivalentes(id),
-  FOREIGN KEY (idCorrelativa) REFERENCES materias(id),
-  FOREIGN KEY (idCorrelativa) REFERENCES materiasEquivalentes(id)
+  idCorrelativa INT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS temasMateria (

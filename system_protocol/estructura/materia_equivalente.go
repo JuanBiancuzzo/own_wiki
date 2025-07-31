@@ -36,7 +36,7 @@ func (me *MateriaEquivalente) Insertar(idMateria int64, idArchivo int64) []any {
 }
 
 func (me *MateriaEquivalente) CargarDatos(bdd *sql.DB, canal chan string) bool {
-	canal <- fmt.Sprintf("Insertar Materia Correlativas: %s => %s", me.Nombre, me.PathMateria)
+	canal <- fmt.Sprintf("Insertar Materia Equivalentes: %s => %s", me.Nombre, Nombre(me.PathMateria))
 
 	if idArchivo, existe := Obtener(
 		func() *sql.Row { return bdd.QueryRow(QUERY_ARCHIVO, me.PathArchivo) },
@@ -48,7 +48,7 @@ func (me *MateriaEquivalente) CargarDatos(bdd *sql.DB, canal chan string) bool {
 	); !existe {
 		return false
 
-	} else if _, err := bdd.Exec(INSERTAR_MATERIA_CORRELATIVA, me.Insertar(idMateria, idArchivo)...); err != nil {
+	} else if _, err := bdd.Exec(INSERTAR_MATERIA_EQUIVALENTES, me.Insertar(idMateria, idArchivo)...); err != nil {
 		canal <- fmt.Sprintf("error al insertar una materia equivalente, con error: %v", err)
 	}
 

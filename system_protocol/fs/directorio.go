@@ -19,7 +19,7 @@ var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidi
 type Directorio struct {
 	Padre          *Directorio
 	Path           string
-	Subdirectorios *ls.Lista[*Directorio]
+	Subdirectorios map[string]*Directorio
 	Archivos       *ls.Lista[*Archivo]
 }
 
@@ -27,7 +27,7 @@ func NewRoot(path string) *Directorio {
 	return &Directorio{
 		Padre:          nil,
 		Path:           path,
-		Subdirectorios: ls.NewLista[*Directorio](),
+		Subdirectorios: make(map[string]*Directorio),
 		Archivos:       ls.NewLista[*Archivo](),
 	}
 }
@@ -36,7 +36,7 @@ func NewDirectorio(padre *Directorio, path string) *Directorio {
 	return &Directorio{
 		Padre:          padre,
 		Path:           path,
-		Subdirectorios: ls.NewLista[*Directorio](),
+		Subdirectorios: make(map[string]*Directorio),
 		Archivos:       ls.NewLista[*Archivo](),
 	}
 }
@@ -63,11 +63,12 @@ func EstablecerDirectorio(root string, wg *sync.WaitGroup, infoArchivos *db.Info
 
 		listaArchivos := ls.NewLista[string]()
 		for _, archivo := range archivos {
-			archivoPath := fmt.Sprintf("%s/%s", directorio.Path, archivo.Name())
+			nombreArchivo := archivo.Name()
+			archivoPath := fmt.Sprintf("%s/%s", directorio.Path, nombreArchivo)
 
-			if archivo.IsDir() && !slices.Contains(DIRECTORIOS_IGNORAR, archivo.Name()) {
+			if archivo.IsDir() && !slices.Contains(DIRECTORIOS_IGNORAR, nombreArchivo) {
 				subDirectorio := NewDirectorio(directorio, archivoPath)
-				directorio.AgregarSubdirectorio(subDirectorio)
+				directorio.AgregarSubdirectorio(nombreArchivo, subDirectorio)
 				colaDirectorios.Encolar(subDirectorio)
 
 			} else if !archivo.IsDir() {
@@ -92,52 +93,89 @@ func EstablecerDirectorio(root string, wg *sync.WaitGroup, infoArchivos *db.Info
 	return directorioRoot
 }
 
-func (d *Directorio) ArchivoMasCercanoConTag(tag string) (*Archivo, error) {
-	for archivo := range d.Archivos.Iterar {
-		if slices.Contains(archivo.Meta.Tags, tag) {
-			return archivo, nil
+/*
+	path := "hola/tanto/tiempo/archivo.md"
+
+	carpetas :=
+		root
+		  |-> hola
+			  |-> tanto
+				  |-> tiempo
+					  |-> archivo.md
+		  |-> chau
+			  |-> chua2
+
+	(*chua2).EncontrarArchivo(path)
+*/
+
+func (d *Directorio) EncontrarArchivo(path string) (*Archivo, error) {
+	if strings.Contains(path, d.Path) {
+		pathRelativo := path[len(d.Path)+1:]
+		indiceSlash := strings.Index(pathRelativo, "/")
+		if indiceSlash >= 0 {
+			if subdirectorio, ok := d.Subdirectorios[pathRelativo[:indiceSlash]]; !ok {
+				return nil, fmt.Errorf("no existe la carpeta dada por %s", pathRelativo[:indiceSlash])
+			} else {
+				return subdirectorio.EncontrarArchivo(path)
+			}
 		}
+
+		for archivo := range d.Archivos.Iterar {
+			if archivo.Path == path {
+				return archivo, nil
+			}
+		}
+
+	} else if d.Padre != nil {
+		return d.Padre.EncontrarArchivo(path)
 	}
 
-	if d.Padre == nil {
-		return nil, fmt.Errorf("se llegó al root y no se encontró archivo con tag: %s", tag)
-	}
-	return d.Padre.ArchivoMasCercanoConTag(tag)
+	return nil, fmt.Errorf("no existe el archivo con ese path")
 }
 
 func (d *Directorio) RelativizarPath(path string) {
-	d.Path = strings.Replace(d.Path, path, "", 1)
+	if d.Padre == nil {
+		d.Path = "/"
+	} else {
+		d.Path = strings.Replace(d.Path, path, "", 1)
+	}
 
 	for archivo := range d.Archivos.Iterar {
 		archivo.RelativizarPath(path)
 	}
 
-	for directorio := range d.Subdirectorios.Iterar {
-		directorio.RelativizarPath(path)
+	for _, subdirectorio := range d.Subdirectorios {
+		subdirectorio.RelativizarPath(path)
 	}
 }
 
-func (d *Directorio) AgregarSubdirectorio(directorio *Directorio) {
-	d.Subdirectorios.Push(directorio)
+func (d *Directorio) AgregarSubdirectorio(nombreDirectorio string, directorio *Directorio) {
+	d.Subdirectorios[nombreDirectorio] = directorio
 }
 
 func (d *Directorio) AgregarArchivo(archivo *Archivo) {
 	d.Archivos.Push(archivo)
 }
 
-func (d *Directorio) Vacio() bool {
-	return d.Subdirectorios.Vacia() && d.Archivos.Vacia()
-}
-
 func (d *Directorio) IterarArchivos(yield func(*Archivo) bool) {
-	for archivo := range d.Archivos.Iterar {
-		if !yield(archivo) {
+	directorios := ls.NewCola[*Directorio]()
+	directorios.Encolar(d)
+
+	for !directorios.Vacia() {
+		directorio, err := directorios.Desencolar()
+		if err != nil {
 			return
 		}
-	}
 
-	for subdirectorio := range d.Subdirectorios.Iterar {
-		subdirectorio.IterarArchivos(yield)
+		for archivo := range directorio.Archivos.Iterar {
+			if !yield(archivo) {
+				return
+			}
+		}
+
+		for _, subdirectorio := range directorio.Subdirectorios {
+			directorios.Encolar(subdirectorio)
+		}
 	}
 }
 

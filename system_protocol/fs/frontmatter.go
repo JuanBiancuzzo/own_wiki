@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"own_wiki/system_protocol/db"
 	e "own_wiki/system_protocol/estructura"
 )
 
@@ -86,7 +87,7 @@ type Articulo struct {
 	} `yaml:"textos,omitempty"`
 }
 
-func (f *Frontmatter) CrearLibro(pathArchivo string) *e.Libro {
+func (f *Frontmatter) CrearLibro() *e.ConstructorLibro {
 	autores := make([]*e.Persona, len(f.Autores))
 	for i, autor := range f.Autores {
 		autores[i] = e.NewPersona(autor.Nombre, autor.Apellido)
@@ -107,8 +108,7 @@ func (f *Frontmatter) CrearLibro(pathArchivo string) *e.Libro {
 		)
 	}
 
-	return e.NewLibro(
-		pathArchivo,
+	return e.NewConstructorLibro(
 		f.TituloObra,
 		f.SubtituloObra,
 		f.Editorial,
@@ -119,4 +119,27 @@ func (f *Frontmatter) CrearLibro(pathArchivo string) *e.Libro {
 		autores,
 		capitulos,
 	)
+}
+
+func CargarInfo(info *db.InfoArchivos, meta *Frontmatter) {
+	for _, tag := range meta.Tags {
+		info.MaxTags = max(info.MaxTags, uint32(len(tag)))
+	}
+
+	// Libros
+	for _, autor := range meta.Autores {
+		info.MaxNombre = max(info.MaxNombre, uint32(len(autor.Nombre)))
+		info.MaxApellido = max(info.MaxApellido, uint32(len(autor.Apellido)))
+	}
+
+	info.MaxNombreLibro = max(info.MaxNombreLibro, uint32(len(meta.TituloObra)))
+	info.MaxNombreLibro = max(info.MaxNombreLibro, uint32(len(meta.SubtituloObra)))
+	for _, capitulo := range meta.Capitulos {
+		info.MaxNombreLibro = max(info.MaxNombreLibro, uint32(len(capitulo.NombreCapitulo)))
+	}
+
+	info.MaxEditorial = max(info.MaxEditorial, uint32(len(meta.Editorial)))
+	info.MaxUrl = max(info.MaxUrl, uint32(len(meta.Url)))
+
+	// Distribuciones
 }

@@ -5,8 +5,6 @@ import (
 	"fmt"
 )
 
-const INSERTAR_DISTRIBUCION = "INSERT INTO distribuciones (nombre, tipo, idArchivo) VALUES (?, ?, ?)"
-
 type TipoDistribucion string
 
 const (
@@ -15,24 +13,59 @@ const (
 	DISTRIBUCION_MULTIVARIADA = "Multivariada"
 )
 
-type Distribucion struct {
-	PathArchivo string
-	Tipo        TipoDistribucion
-	Nombre      string
+const INSERTAR_DISTRIBUCION = "INSERT INTO distribuciones (nombre, tipo, idArchivo) VALUES (?, ?, ?)"
+
+type ConstructorDistribucion struct {
+	Tipo   TipoDistribucion
+	Nombre string
 }
 
-func NewDistribucion(pathArchivo string, nombre string, repTipo string) (*Distribucion, error) {
+func NewConstructorDistribucion(nombre string, repTipo string) (*ConstructorDistribucion, error) {
 	if tipo, err := ObtenerTipoDistribucion(repTipo); err != nil {
 		return nil, fmt.Errorf("error al crear distribucion con error: %v", err)
 
 	} else {
-		return &Distribucion{
-			PathArchivo: pathArchivo,
-			Tipo:        tipo,
-			Nombre:      nombre,
+		return &ConstructorDistribucion{
+			Tipo:   tipo,
+			Nombre: nombre,
 		}, nil
 	}
 }
+
+func (cd *ConstructorDistribucion) CumpleDependencia(id int64) (Cargable, bool) {
+	return &Distribucion{
+		Nombre:    cd.Nombre,
+		Tipo:      cd.Tipo,
+		IdArchivo: id,
+	}, true
+}
+
+type Distribucion struct {
+	Nombre    string
+	Tipo      TipoDistribucion
+	IdArchivo int64
+}
+
+func (d *Distribucion) Insertar() []any {
+	return []any{
+		d.Nombre,
+		d.Tipo,
+		d.IdArchivo,
+	}
+}
+
+func (d *Distribucion) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+	canal <- "Insertar Distribucion"
+	return Insertar(
+		func() (sql.Result, error) { return bdd.Exec(INSERTAR_DISTRIBUCION, d.Insertar()...) },
+	)
+}
+
+func (d *Distribucion) ResolverDependencias(id int64) []Cargable {
+	return []Cargable{}
+}
+
+func (d *Distribucion) CargarDependencia(dependencia Dependencia) {}
 
 func ObtenerTipoDistribucion(representacion string) (TipoDistribucion, error) {
 	var tipoDistribucion TipoDistribucion
@@ -48,27 +81,4 @@ func ObtenerTipoDistribucion(representacion string) (TipoDistribucion, error) {
 	}
 
 	return tipoDistribucion, nil
-}
-
-func (d *Distribucion) Insertar(idArchivo int64) []any {
-	return []any{
-		d.Nombre,
-		d.Tipo,
-		idArchivo,
-	}
-}
-
-func (d *Distribucion) CargarDatos(bdd *sql.DB, canal chan string) bool {
-	canal <- "Insertar Distribucion"
-
-	if idArchivo, existe := Obtener(
-		func() *sql.Row { return bdd.QueryRow(QUERY_ARCHIVO, d.PathArchivo) },
-	); !existe {
-		return false
-
-	} else if _, err := bdd.Exec(INSERTAR_DISTRIBUCION, d.Insertar(idArchivo)...); err != nil {
-		canal <- fmt.Sprintf("error al insertar una distribucion, con error: %v", err)
-	}
-
-	return true
 }

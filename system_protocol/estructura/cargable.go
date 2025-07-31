@@ -6,7 +6,16 @@ import (
 )
 
 type Cargable interface {
-	CargarDatos(bdd *sql.DB, canal chan string) bool
+	CargarDatos(bdd *sql.DB, canal chan string) (int64, error)
+
+	CargarDependencia(dependencia Dependencia)
+
+	ResolverDependencias(id int64) []Cargable
+}
+
+func CargableDefault() Cargable {
+	var cargable Cargable
+	return cargable
 }
 
 func ObtenerOInsertar(query func() *sql.Row, insert func() (sql.Result, error)) (int64, error) {

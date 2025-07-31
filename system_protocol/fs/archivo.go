@@ -5,26 +5,34 @@ import (
 	"os"
 	"own_wiki/system_protocol/db"
 	e "own_wiki/system_protocol/estructura"
-	l "own_wiki/system_protocol/listas"
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"gopkg.in/yaml.v2"
 )
 
+const TAG_CARRERA = "facultad/carrera"
+const TAG_MATERIA = "facultad/materia"
+const TAG_MATERIA_EQUIVALENTE = "facultad/materia-equivalente"
+const TAG_RESUMEN_MATERIA = "facultad/resumen"
+const TAG_DISTRIBUCION = "colección/distribuciones/distribución"
+const TAG_LIBRO = "colección/biblioteca/libro"
+
 type Archivo struct {
-	Padre          *Directorio
-	Path           string
-	Meta           *Frontmatter
-	TiposDeArchivo *l.Lista[e.Cargable]
+	Padre        *Directorio
+	Path         string
+	Archivo      *e.Archivo
+	Distribucion *e.ConstructorDistribucion
+	libro        *e.ConstructorLibro
 }
 
 func NewArchivo(padre *Directorio, path string, info *db.InfoArchivos) (*Archivo, error) {
 	archivo := Archivo{
-		Padre:          padre,
-		Path:           path,
-		Meta:           nil,
-		TiposDeArchivo: l.NewLista[e.Cargable](),
+		Padre:        padre,
+		Path:         path,
+		Archivo:      nil,
+		Distribucion: nil,
+		libro:        nil,
 	}
 
 	if !strings.Contains(path, ".md") {
@@ -52,42 +60,36 @@ func NewArchivo(padre *Directorio, path string, info *db.InfoArchivos) (*Archivo
 
 	// a.Contenido = contenido[3+strings.Index(contenido[3:], "---")+len("---"):]
 
-	info.MaxPath = max(info.MaxPath, uint32(len(path)))
-
+	archivo.Archivo = e.NewArchivo(path, meta.Tags)
 	for _, tag := range meta.Tags {
-		info.MaxTags = max(info.MaxTags, uint32(len(tag)))
+		switch tag {
+		case TAG_DISTRIBUCION:
+			if constructor, err := e.NewConstructorDistribucion(meta.NombreDistribuucion, meta.TipoDistribucion); err == nil {
+				archivo.Distribucion = constructor
+
+			} else {
+				// canal <- fmt.Sprintf("Error: %v\n", err)
+			}
+
+		case TAG_LIBRO:
+			archivo.libro = meta.CrearLibro()
+		}
 	}
 
-	// Libros
-	for _, autor := range meta.Autores {
-		info.MaxNombre = max(info.MaxNombre, uint32(len(autor.Nombre)))
-		info.MaxApellido = max(info.MaxApellido, uint32(len(autor.Apellido)))
-	}
+	info.MaxPath = max(info.MaxPath, uint32(len(path)))
+	CargarInfo(info, &meta)
 
-	info.MaxNombreLibro = max(info.MaxNombreLibro, uint32(len(meta.TituloObra)))
-	info.MaxNombreLibro = max(info.MaxNombreLibro, uint32(len(meta.SubtituloObra)))
-	for _, capitulo := range meta.Capitulos {
-		info.MaxNombreLibro = max(info.MaxNombreLibro, uint32(len(capitulo.NombreCapitulo)))
-	}
-
-	info.MaxEditorial = max(info.MaxEditorial, uint32(len(meta.Editorial)))
-	info.MaxUrl = max(info.MaxUrl, uint32(len(meta.Url)))
-
-	// Distribuciones
-
-	archivo.Meta = &meta
 	return &archivo, nil
 }
 
+/*
 func (a *Archivo) Interprestarse(canal chan string) {
-	if a.Meta == nil {
-		return
-	}
+
 
 	a.TiposDeArchivo.Push(e.NewArchivo(a.Path, a.Meta.Tags))
 	for _, tag := range a.Meta.Tags {
-		switch tag {
-		case "facultad/carrera":
+		switch tag {}
+		case TAG_CARRERA:
 			nombreCarrera := a.Nombre()
 			if carrera, err := e.NewCarrera(a.Path, nombreCarrera, a.Meta.Etapa, a.Meta.TieneCodigo); err == nil {
 				a.TiposDeArchivo.Push(carrera)
@@ -95,8 +97,8 @@ func (a *Archivo) Interprestarse(canal chan string) {
 			} else {
 				canal <- fmt.Sprintf("Error: %v\n", err)
 			}
-		case "facultad/materia":
-			if carrera, err := a.Padre.ArchivoMasCercanoConTag("facultad/carrera"); err != nil {
+		case TAG_MATERIA:
+			if carrera, err := a.Padre.ArchivoMasCercanoConTag(TAG_CARRERA); err != nil {
 				canal <- fmt.Sprintf("Error al buscar carrera, con error: %v\n", err)
 
 			} else if materia, err := e.NewMateria(a.Path, carrera.Path, a.Meta.NombreMateria, a.Meta.Codigo, a.Meta.Plan, a.Meta.Cuatri, a.Meta.Etapa); err != nil {
@@ -106,43 +108,59 @@ func (a *Archivo) Interprestarse(canal chan string) {
 				a.TiposDeArchivo.Push(materia)
 			}
 
-			/*
-				for _, correlativa := range a.Meta.Correlativas {
-					pathMateria := ObtenerWikiLink(correlativa)[0]
-					a.TiposDeArchivo.Push(e.NewMateriaEquivalente(a.Path, pathMateria, a.Meta.NombreMateria, a.Meta.Codigo))
+			for _, correlativa := range a.Meta.Correlativas {
+				pathCorrelativa := ObtenerWikiLink(correlativa)[0]
+				if archivo, err := a.Padre.EncontrarArchivo(pathCorrelativa); err != nil {
+					canal <- fmt.Sprintf("No existe el archivo: %s, con error: %v", pathCorrelativa, err)
+
+				} else {
+					var tipoCorrelativa e.TipoMateria = e.MATERIA_REAL
+					if slices.Contains(archivo.Meta.Tags, TAG_MATERIA_EQUIVALENTE) {
+						tipoCorrelativa = e.MATERIA_EQUIVALENTE
+					}
+
+					a.TiposDeArchivo.Push(e.NewMateriasCorrelativas(a.Path, e.MATERIA_REAL, pathCorrelativa, tipoCorrelativa))
 				}
-			*/
-		case "facultad/materia-equivalente":
+			}
+		case TAG_MATERIA_EQUIVALENTE:
 			pathMateria := ObtenerWikiLink(a.Meta.Equivalencia)[0]
 			a.TiposDeArchivo.Push(e.NewMateriaEquivalente(a.Path, pathMateria, a.Meta.NombreMateria, a.Meta.Codigo))
-		case "facultad/resumen":
-			// a.TiposDeArchivo.Push(ES_RESUMEN_MATERIA)
-		case "colección/distribuciones/distribución":
-			if distribucion, err := e.NewDistribucion(a.Path, a.Meta.NombreDistribuucion, a.Meta.TipoDistribucion); err == nil {
-				a.TiposDeArchivo.Push(distribucion)
 
-			} else {
-				canal <- fmt.Sprintf("Error: %v\n", err)
+			for _, correlativa := range a.Meta.Correlativas {
+				pathCorrelativa := ObtenerWikiLink(correlativa)[0]
+
+				if archivo, err := a.Padre.EncontrarArchivo(pathCorrelativa); err != nil {
+					canal <- fmt.Sprintf("No existe el archivo: %s, con error: %v", pathCorrelativa, err)
+
+				} else {
+					var tipoCorrelativa e.TipoMateria = e.MATERIA_REAL
+					if slices.Contains(archivo.Meta.Tags, TAG_MATERIA_EQUIVALENTE) {
+						tipoCorrelativa = e.MATERIA_EQUIVALENTE
+					}
+
+					a.TiposDeArchivo.Push(e.NewMateriasCorrelativas(a.Path, e.MATERIA_EQUIVALENTE, pathCorrelativa, tipoCorrelativa))
+				}
 			}
-		case "colección/biblioteca/libro":
-			a.TiposDeArchivo.Push(a.Meta.CrearLibro(a.Path))
 		}
 	}
 }
-
-func (a *Archivo) EstablecerInfo(info *db.InfoArchivos, meta *Frontmatter) {
-	// General
-
-}
+*/
 
 func (a *Archivo) RelativizarPath(path string) {
 	a.Path = strings.Replace(a.Path, path, "", 1)
 }
 
+// Cambiar a establecer conexiones
 func (a *Archivo) InsertarDatos(canal chan e.Cargable) {
-	for tipoArchivo := range a.TiposDeArchivo.Iterar {
-		canal <- tipoArchivo
+	if a.libro != nil {
+		a.Archivo.CargarDependencia(a.libro)
 	}
+
+	if a.Distribucion != nil {
+		a.Archivo.CargarDependencia(a.Distribucion)
+	}
+
+	canal <- a.Archivo
 }
 
 func (a *Archivo) Nombre() string {
@@ -154,27 +172,3 @@ func ObtenerWikiLink(link string) []string {
 	link = strings.TrimSuffix(link, "]]")
 	return strings.Split(link, "|")
 }
-
-/*
-	case ES_MATERIA:
-		for _, correlativa := range meta.Correlativas {
-			canal <- func(bdd *sql.DB) bool { return CargarCorrelativas(bdd, pathArchivo, pathCorrelativa) }
-		}
-	case ES_MATERIA_EQUIVALENTE:
-		canal <- func(bdd *sql.DB) bool {
-			fmt.Println("Insertando materia: ", nombreArchivo)
-			if idCarrera, existe := ExisteArchivoCarpetaPrevia(bdd, "carreras", pathArchivo); !existe {
-				return false
-			} else if err = CargarDatosDeLaMateria(bdd, idArchivo, idCarrera, meta); err != nil {
-				fmt.Printf("Error al insertar una materia en el archivo: %s, con error: %v\n", nombreArchivo, err)
-			}
-			return true
-		}
-		for _, correlativa := range meta.Correlativas {
-			correlativa = strings.TrimPrefix(correlativa, "[[")
-			correlativa = strings.TrimSuffix(correlativa, "]]")
-			pathCorrelativa := strings.Split(correlativa, "|")[0]
-			canal <- func(bdd *sql.DB) bool { return CargarCorrelativas(bdd, pathArchivo, pathCorrelativa) }
-		}
-	}
-*/
