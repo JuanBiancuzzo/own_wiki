@@ -47,6 +47,7 @@ type Frontmatter struct {
 	TieneCodigo         string     `yaml:"tieneCodigo,omitempty"`
 	NombreMateria       string     `yaml:"nombreMateria,omitempty"`
 	NombreReducido      string     `yaml:"nombreReducido,omitempty"`
+	PathCarrera         string     `yaml:"pathCarrera,omitempty"`
 	Plan                string     `yaml:"plan,omitempty"`
 	Codigo              string     `yaml:"codigo,omitempty"`
 	Correlativas        []string   `yaml:"correlativas,omitempty"`

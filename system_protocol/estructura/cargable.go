@@ -3,6 +3,7 @@ package estructura
 import (
 	"database/sql"
 	"fmt"
+	l "own_wiki/system_protocol/listas"
 )
 
 type Cargable interface {
@@ -14,6 +15,20 @@ type Cargable interface {
 func CargableDefault() Cargable {
 	var cargable Cargable
 	return cargable
+}
+
+func ResolverDependencias(id int64, dependencias *l.Lista[Dependencia]) []Cargable {
+	cantidadCumple := 0
+	cargables := make([]Cargable, dependencias.Largo)
+
+	for cumpleDependencia := range dependencias.Iterar {
+		if cargable, cumple := cumpleDependencia(id); cumple {
+			cargables[cantidadCumple] = cargable
+			cantidadCumple++
+		}
+	}
+
+	return cargables[:cantidadCumple]
 }
 
 func ObtenerOInsertar(query func() *sql.Row, insert func() (sql.Result, error)) (int64, error) {

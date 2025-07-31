@@ -19,11 +19,12 @@ const TAG_DISTRIBUCION = "colección/distribuciones/distribución"
 const TAG_LIBRO = "colección/biblioteca/libro"
 
 type Archivo struct {
-	Padre   *Directorio
-	Path    string
-	Archivo *e.Archivo
-	Carrera *e.ConstructorCarrera
-	Materia *e.ConstructorMateria
+	Padre              *Directorio
+	Path               string
+	Archivo            *e.Archivo
+	Carrera            *e.ConstructorCarrera
+	Materia            *e.ConstructorMateria
+	MateriaEquivalente *e.ConstructorMateriaEquivalente
 }
 
 func NewArchivo(padre *Directorio, path string, info *db.InfoArchivos, canal chan string) (*Archivo, error) {
@@ -78,12 +79,17 @@ func NewArchivo(padre *Directorio, path string, info *db.InfoArchivos, canal cha
 			}
 
 		case TAG_MATERIA:
-			if constructor, err := e.NewConstructorMateria(meta.NombreMateria, meta.Codigo, meta.Plan, meta.Cuatri, meta.Etapa); err == nil {
+			if constructor, err := e.NewConstructorMateria(meta.PathCarrera, meta.NombreMateria, meta.Codigo, meta.Plan, meta.Cuatri, meta.Etapa); err == nil {
 				archivo.Archivo.CargarDependencia(constructor.CumpleDependenciaArchivo)
 
 			} else {
 				canal <- fmt.Sprintf("Error: %v\n", err)
 			}
+
+		case TAG_MATERIA_EQUIVALENTE:
+			pathMateria := ObtenerWikiLink(meta.Equivalencia)[0]
+			constructor := e.NewConstructorMateriaEquivalente(pathMateria, meta.NombreMateria, meta.Codigo)
+			archivo.Archivo.CargarDependencia(constructor.CumpleDependenciaArchivo)
 
 		case TAG_LIBRO:
 			constructor := meta.CrearLibro()
@@ -105,15 +111,6 @@ func (a *Archivo) Interprestarse(canal chan string) {
 	for _, tag := range a.Meta.Tags {
 		switch tag {}
 		case TAG_MATERIA:
-			if carrera, err := a.Padre.ArchivoMasCercanoConTag(TAG_CARRERA); err != nil {
-				canal <- fmt.Sprintf("Error al buscar carrera, con error: %v\n", err)
-
-			} else if materia, err := e.NewMateria(a.Path, carrera.Path, a.Meta.NombreMateria, a.Meta.Codigo, a.Meta.Plan, a.Meta.Cuatri, a.Meta.Etapa); err != nil {
-				canal <- fmt.Sprintf("Error: %v\n", err)
-
-			} else {
-				a.TiposDeArchivo.Push(materia)
-			}
 
 			for _, correlativa := range a.Meta.Correlativas {
 				pathCorrelativa := ObtenerWikiLink(correlativa)[0]
@@ -130,8 +127,6 @@ func (a *Archivo) Interprestarse(canal chan string) {
 				}
 			}
 		case TAG_MATERIA_EQUIVALENTE:
-			pathMateria := ObtenerWikiLink(a.Meta.Equivalencia)[0]
-			a.TiposDeArchivo.Push(e.NewMateriaEquivalente(a.Path, pathMateria, a.Meta.NombreMateria, a.Meta.Codigo))
 
 			for _, correlativa := range a.Meta.Correlativas {
 				pathCorrelativa := ObtenerWikiLink(correlativa)[0]
@@ -158,12 +153,29 @@ func (a *Archivo) RelativizarPath(path string) {
 }
 
 // Cambiar a establecer conexiones
-func (a *Archivo) InsertarDatos(canal chan e.Cargable) {
+func (a *Archivo) InsertarDatos(canal chan e.Cargable, canalMensajes chan string) {
 	if a.Materia != nil {
-		// Buscar carrera
-		// (esto es un ejemplo)
-		a.Carrera.CargarDependencia(a.Materia.CumpleDependenciaCarrera)
+		if archivo, err := a.Padre.EncontrarArchivo(a.Materia.PathCarrera); err != nil {
+			canalMensajes <- fmt.Sprintf("Error al buscar carrera en '%s' en la materia '%s', con error %v", a.Materia.PathCarrera, a.Materia.Nombre, err)
 
+		} else if archivo.Carrera == nil {
+			canalMensajes <- fmt.Sprintf("Error el archivo de carrera '%s' no tiene la estructura de carrera, con error %v", a.Materia.PathCarrera, err)
+
+		} else {
+			archivo.Carrera.CargarDependencia(a.Materia.CumpleDependenciaCarrera)
+		}
+	}
+
+	if a.MateriaEquivalente != nil {
+		if archivo, err := a.Padre.EncontrarArchivo(a.MateriaEquivalente.PathMateria); err != nil {
+			canalMensajes <- fmt.Sprintf("Error al buscar materia en '%s' en la materia equivalente '%s', con error %v", a.MateriaEquivalente.PathMateria, a.MateriaEquivalente.Nombre, err)
+
+		} else if archivo.Materia == nil {
+			canalMensajes <- fmt.Sprintf("Error el archivo de materia '%s' no tiene la estructura de materi, con error %v", a.MateriaEquivalente.PathMateria, err)
+
+		} else {
+			archivo.Materia.CargarDependencia(a.MateriaEquivalente.CumpleDependenciaMateria)
+		}
 	}
 
 	canal <- a.Archivo

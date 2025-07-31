@@ -110,14 +110,14 @@ func main() {
 	fmt.Println("Insertando datos en la base de datos")
 	canalIndependientes := make(chan e.Cargable, 100)
 
-	go func(canal chan e.Cargable) {
+	go func(canal chan e.Cargable, canalMensajes chan string) {
 		directorioRoot := <-canalDirectorio
 		for archivo := range directorioRoot.IterarArchivos {
-			archivo.InsertarDatos(canal)
+			archivo.InsertarDatos(canal, canalMensajes)
 		}
 		fmt.Println("Dejar de mandar archivos para procesar")
 		close(canal)
-	}(canalIndependientes)
+	}(canalIndependientes, canalMensajes)
 
 	bdd := <-canalBDD
 	if bdd == nil {

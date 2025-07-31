@@ -43,17 +43,7 @@ func (a *Archivo) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 }
 
 func (a *Archivo) ResolverDependencias(id int64) []Cargable {
-	cantidadCumple := 0
-	cargables := make([]Cargable, a.ListaDependencias.Largo)
-
-	for cumpleDependencia := range a.ListaDependencias.Iterar {
-		if cargable, cumple := cumpleDependencia(id); cumple {
-			cargables[cantidadCumple] = cargable
-			cantidadCumple++
-		}
-	}
-
-	return cargables[:cantidadCumple]
+	return ResolverDependencias(id, a.ListaDependencias)
 }
 
 func (a *Archivo) CargarDependencia(dependencia Dependencia) {

@@ -26,27 +26,10 @@ const (
 	CUATRIMESTRE_SEGUNDO = "Segundo"
 )
 
-type Opcional[T any] struct {
-	Valor T
-	Esta  bool
-}
-
-func NewOpcional[T any]() Opcional[T] {
-	var valor T
-	return Opcional[T]{
-		Valor: valor,
-		Esta:  false,
-	}
-}
-
-func (o Opcional[T]) Asignar(valor T) {
-	o.Valor = valor
-	o.Esta = true
-}
-
 type ConstructorMateria struct {
 	IdArchivo         Opcional[int64]
 	IdCarrera         Opcional[int64]
+	PathCarrera       string
 	Nombre            string
 	Codigo            string
 	Plan              string
@@ -56,7 +39,7 @@ type ConstructorMateria struct {
 	ListaDependencias *l.Lista[Dependencia]
 }
 
-func NewConstructorMateria(nombre string, codigo string, plan string, repCuatri string, repEtapa string) (*ConstructorMateria, error) {
+func NewConstructorMateria(pathCarrera string, nombre string, codigo string, plan string, repCuatri string, repEtapa string) (*ConstructorMateria, error) {
 	if etapa, err := ObtenerEtapa(repEtapa); err != nil {
 		return nil, fmt.Errorf("error al crear materia con error: %v", err)
 
@@ -67,6 +50,7 @@ func NewConstructorMateria(nombre string, codigo string, plan string, repCuatri 
 		return &ConstructorMateria{
 			IdArchivo:         NewOpcional[int64](),
 			IdCarrera:         NewOpcional[int64](),
+			PathCarrera:       pathCarrera,
 			Nombre:            nombre,
 			Codigo:            codigo,
 			Anio:              anio,
@@ -147,17 +131,7 @@ func (m *Materia) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 }
 
 func (m *Materia) ResolverDependencias(id int64) []Cargable {
-	cantidadCumple := 0
-	cargables := make([]Cargable, m.ListaDependencias.Largo)
-
-	for cumpleDependencia := range m.ListaDependencias.Iterar {
-		if cargable, cumple := cumpleDependencia(id); cumple {
-			cargables[cantidadCumple] = cargable
-			cantidadCumple++
-		}
-	}
-
-	return cargables[:cantidadCumple]
+	return ResolverDependencias(id, m.ListaDependencias)
 }
 
 func ObtenerCuatrimestreParte(representacionCuatri string) (int, ParteCuatrimestre, error) {
