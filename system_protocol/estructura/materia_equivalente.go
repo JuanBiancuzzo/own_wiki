@@ -30,6 +30,7 @@ func NewConstructorMateriaEquivalente(pathMateria string, nombre string, codigo 
 		ListaDependencias: l.NewLista[Dependencia](),
 	}
 }
+
 func (cme *ConstructorMateriaEquivalente) CumpleDependencia() (*MateriaEquivalente, bool) {
 	if cme.IdArchivo.Esta && cme.IdMateria.Esta {
 		return &MateriaEquivalente{
