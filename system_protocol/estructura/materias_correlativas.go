@@ -15,9 +15,9 @@ const (
 )
 
 type ConstructorMateriasCorrelativas struct {
-	IdMateria         Opcional[int64]
+	IdMateria         *Opcional[int64]
 	TipoMateria       TipoMateria
-	IdCorrelativa     Opcional[int64]
+	IdCorrelativa     *Opcional[int64]
 	PathCorrelativa   string
 	TipoCorrelativa   TipoMateria
 	ListaDependencias *l.Lista[Dependencia]
@@ -35,17 +35,21 @@ func NewConstructorMateriasCorrelativas(tipoMateria TipoMateria, pathCorrelativa
 }
 
 func (cmc *ConstructorMateriasCorrelativas) CumpleDependencia() (*MateriasCorrelativas, bool) {
-	if cmc.IdMateria.Esta && cmc.IdCorrelativa.Esta {
+	if idMateria, existe := cmc.IdMateria.Obtener(); !existe {
+		return nil, false
+
+	} else if idCorrelativa, existe := cmc.IdCorrelativa.Obtener(); !existe {
+		return nil, false
+
+	} else {
 		return &MateriasCorrelativas{
-			IdMateria:         cmc.IdMateria.Valor,
+			IdMateria:         idMateria,
 			TipoArchivo:       cmc.TipoMateria,
-			IdCorrelativa:     cmc.IdCorrelativa.Valor,
+			IdCorrelativa:     idCorrelativa,
 			TipoCorrelativa:   cmc.TipoCorrelativa,
 			ListaDependencias: cmc.ListaDependencias,
 		}, true
 	}
-
-	return nil, false
 }
 
 func (cmc *ConstructorMateriasCorrelativas) CumpleDependenciaCorrelativa(id int64) (Cargable, bool) {
@@ -82,5 +86,5 @@ func (mc *MateriasCorrelativas) CargarDatos(bdd *sql.DB, canal chan string) (int
 }
 
 func (mc *MateriasCorrelativas) ResolverDependencias(id int64) []Cargable {
-	return ResolverDependencias(id, mc.ListaDependencias)
+	return ResolverDependencias(id, mc.ListaDependencias.Items())
 }

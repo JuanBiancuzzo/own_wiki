@@ -55,7 +55,7 @@ func (d *Distribucion) Insertar() []any {
 }
 
 func (d *Distribucion) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- "Insertar Distribucion"
+	// canal <- "Insertar Distribucion"
 	return Insertar(
 		func() (sql.Result, error) { return bdd.Exec(INSERTAR_DISTRIBUCION, d.Insertar()...) },
 	)

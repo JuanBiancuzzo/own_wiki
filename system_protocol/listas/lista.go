@@ -110,14 +110,16 @@ func (l *Lista[T]) SacarEn(en uint32) (T, error) {
 }
 
 func (l *Lista[T]) Vaciar() {
-	for i := 0; i < int(l.Largo); i++ {
+	largo := l.Largo
+	l.Largo = 0
+	for i := 0; i < int(largo); i++ {
 		l.Elementos[i] = valor_default[T]()
 	}
-	l.Largo = 0
 }
 
 func (l *Lista[T]) Iterar(yield func(T) bool) {
-	for i := 0; i < int(l.Largo); i++ {
+	largo := l.Largo
+	for i := 0; i < int(largo); i++ {
 		if !yield(l.Elementos[i]) {
 			return
 		}
@@ -125,8 +127,9 @@ func (l *Lista[T]) Iterar(yield func(T) bool) {
 }
 
 func (l *Lista[T]) Items() []T {
-	slice := make([]T, l.Largo)
-	for i := 0; i < int(l.Largo); i++ {
+	largo := l.Largo
+	slice := make([]T, largo)
+	for i := 0; i < int(largo); i++ {
 		slice[i] = l.Elementos[i]
 	}
 	return slice

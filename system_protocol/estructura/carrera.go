@@ -71,15 +71,5 @@ func (c *Carrera) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 }
 
 func (c *Carrera) ResolverDependencias(id int64) []Cargable {
-	cantidadCumple := 0
-	cargables := make([]Cargable, c.ListaDependencias.Largo)
-
-	for cumpleDependencia := range c.ListaDependencias.Iterar {
-		if cargable, cumple := cumpleDependencia(id); cumple {
-			cargables[cantidadCumple] = cargable
-			cantidadCumple++
-		}
-	}
-
-	return cargables[:cantidadCumple]
+	return ResolverDependencias(id, c.ListaDependencias.Items())
 }

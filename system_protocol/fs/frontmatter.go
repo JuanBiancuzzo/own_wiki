@@ -88,7 +88,7 @@ type Articulo struct {
 	} `yaml:"textos,omitempty"`
 }
 
-func (f *Frontmatter) CrearLibro() *e.ConstructorLibro {
+func (f *Frontmatter) CrearConstructorLibro() *e.ConstructorLibro {
 	autores := make([]*e.Persona, len(f.Autores))
 	for i, autor := range f.Autores {
 		autores[i] = e.NewPersona(autor.Nombre, autor.Apellido)

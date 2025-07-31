@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 
 	"own_wiki/system_protocol/db"
 	e "own_wiki/system_protocol/estructura"
@@ -39,20 +38,15 @@ func ImprimirMensajes(canal chan string) {
 	}
 }
 
-func ProcesarArchivos(canalInfo chan db.InfoArchivos, canalDirectorio chan fs.Directorio, dirOrigen string, canalMensajes chan string) {
+func ProcesarArchivos(canalInfo chan db.InfoArchivos, canalDirectorio chan fs.Root, dirOrigen string, canalMensajes chan string) {
 	var infoArchivos db.InfoArchivos
-	var waitArchivos sync.WaitGroup
 
 	canalMensajes <- "Creando estructura\n"
-	directorioRoot := fs.EstablecerDirectorio(dirOrigen, &waitArchivos, &infoArchivos, canalMensajes)
-	waitArchivos.Wait()
+	directorioRoot := fs.EstablecerDirectorio(dirOrigen, &infoArchivos, canalMensajes)
 
 	// Ajustar valores de info de los archivos
 	infoArchivos.Incrementar()
 	canalInfo <- infoArchivos
-
-	canalMensajes <- "Procesando los archivos\n"
-	directorioRoot.RelativizarPath(fmt.Sprintf("%s/", dirOrigen))
 
 	canalMensajes <- "Se termino de procesar los archivos\n"
 	canalDirectorio <- *directorioRoot
@@ -79,12 +73,13 @@ func ConstruirBaseDeDatos(canalBDD chan *sql.DB, canalInfo chan db.InfoArchivos,
 }
 
 func EvaluarCargable(bdd *sql.DB, canalMensajes chan string, cargable e.Cargable, cola *l.Cola[e.Cargable]) {
-	if id, err := cargable.CargarDatos(bdd, canalMensajes); err != nil {
-		canalMensajes <- fmt.Sprintf("Error al cargar: %v", err)
-	} else {
+	if id, err := cargable.CargarDatos(bdd, canalMensajes); err == nil {
 		for _, cargable := range cargable.ResolverDependencias(id) {
 			cola.Encolar(cargable)
 		}
+
+	} else {
+		canalMensajes <- fmt.Sprintf("Error al cargar: %v", err)
 	}
 }
 
@@ -97,11 +92,11 @@ func main() {
 		return
 	}
 
-	canalMensajes := make(chan string)
+	canalMensajes := make(chan string, 100)
 	go ImprimirMensajes(canalMensajes)
 
 	canalInfo := make(chan db.InfoArchivos)
-	canalDirectorio := make(chan fs.Directorio)
+	canalDirectorio := make(chan fs.Root)
 	go ProcesarArchivos(canalInfo, canalDirectorio, os.Args[1], canalMensajes)
 
 	canalBDD := make(chan *sql.DB)
@@ -111,8 +106,8 @@ func main() {
 	canalIndependientes := make(chan e.Cargable, 100)
 
 	go func(canal chan e.Cargable, canalMensajes chan string) {
-		directorioRoot := <-canalDirectorio
-		for archivo := range directorioRoot.IterarArchivos {
+		root := <-canalDirectorio
+		for _, archivo := range root.Archivos {
 			archivo.InsertarDatos(canal, canalMensajes)
 		}
 		fmt.Println("Dejar de mandar archivos para procesar")
@@ -126,10 +121,14 @@ func main() {
 	defer bdd.Close()
 	// bdd.SetMaxOpenConns(10)
 
+	canalMensajes <- "Cargando los archivos sin dependencias"
+
 	cargablesListos := l.NewCola[e.Cargable]()
 	for cargable := range canalIndependientes {
 		EvaluarCargable(bdd, canalMensajes, cargable, cargablesListos)
 	}
+
+	canalMensajes <- "Cargados todos los archivos sin dependencias, ahora procesando los que tengan dependencias"
 
 	for !cargablesListos.Vacia() {
 		if cargable, err := cargablesListos.Desencolar(); err != nil {

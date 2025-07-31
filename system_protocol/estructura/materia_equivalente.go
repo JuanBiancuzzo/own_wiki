@@ -12,8 +12,8 @@ const QUERY_MATERIA_EQUIVALENTES_PATH = `SELECT res.id FROM (
 ) AS res WHERE res.path = ?`
 
 type ConstructorMateriaEquivalente struct {
-	IdArchivo         Opcional[int64]
-	IdMateria         Opcional[int64]
+	IdArchivo         *Opcional[int64]
+	IdMateria         *Opcional[int64]
 	PathMateria       string
 	Nombre            string
 	Codigo            string
@@ -32,17 +32,21 @@ func NewConstructorMateriaEquivalente(pathMateria string, nombre string, codigo 
 }
 
 func (cme *ConstructorMateriaEquivalente) CumpleDependencia() (*MateriaEquivalente, bool) {
-	if cme.IdArchivo.Esta && cme.IdMateria.Esta {
+	if idArchivo, existe := cme.IdArchivo.Obtener(); !existe {
+		return nil, false
+
+	} else if idMateria, existe := cme.IdMateria.Obtener(); !existe {
+		return nil, false
+
+	} else {
 		return &MateriaEquivalente{
-			IdArchivo:         cme.IdArchivo.Valor,
-			IdMateria:         cme.IdMateria.Valor,
+			IdArchivo:         idArchivo,
+			IdMateria:         idMateria,
 			Nombre:            cme.Nombre,
 			Codigo:            cme.Codigo,
 			ListaDependencias: cme.ListaDependencias,
 		}, true
 	}
-
-	return nil, false
 }
 
 func (cme *ConstructorMateriaEquivalente) CumpleDependenciaMateria(id int64) (Cargable, bool) {
@@ -79,5 +83,7 @@ func (me *MateriaEquivalente) CargarDatos(bdd *sql.DB, canal chan string) (int64
 }
 
 func (me *MateriaEquivalente) ResolverDependencias(id int64) []Cargable {
-	return ResolverDependencias(id, me.ListaDependencias)
+	res := ResolverDependencias(id, me.ListaDependencias.Items())
+	fmt.Printf("Para la materia equivalente: %s, se tienen que resolver: %d dependencias y se lograron resolver: %d de ellas\n", me.Nombre, me.ListaDependencias.Largo, len(res))
+	return res
 }

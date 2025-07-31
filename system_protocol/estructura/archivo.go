@@ -43,7 +43,7 @@ func (a *Archivo) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 }
 
 func (a *Archivo) ResolverDependencias(id int64) []Cargable {
-	return ResolverDependencias(id, a.ListaDependencias)
+	return ResolverDependencias(id, a.ListaDependencias.Items())
 }
 
 func (a *Archivo) CargarDependencia(dependencia Dependencia) {

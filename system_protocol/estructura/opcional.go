@@ -5,19 +5,19 @@ type Opcional[T any] struct {
 	Esta  bool
 }
 
-func NewOpcional[T any]() Opcional[T] {
-	var valor T
-	return Opcional[T]{
-		Valor: valor,
+func NewOpcional[T any]() *Opcional[T] {
+	var valorDefault T
+	return &Opcional[T]{
+		Valor: valorDefault,
 		Esta:  false,
 	}
 }
 
-func (o Opcional[T]) Asignar(valor T) {
+func (o *Opcional[T]) Asignar(valor T) {
 	o.Valor = valor
 	o.Esta = true
 }
 
-func (o Opcional[T]) Obtener() (T, bool) {
+func (o *Opcional[T]) Obtener() (T, bool) {
 	return o.Valor, o.Esta
 }

@@ -73,14 +73,7 @@ func NewCapitulo(capitulo string, nombre string, editores []*Persona, paginaInic
 }
 
 func (c *Capitulo) Insertar(idLibro int64, idArchivo int64) []any {
-	return []any{
-		c.Capitulo,
-		c.Nombre,
-		c.PaginaInicial,
-		c.PaginaFinal,
-		idLibro,
-		idArchivo,
-	}
+	return []any{c.Capitulo, c.Nombre, c.PaginaInicial, c.PaginaFinal, idLibro, idArchivo}
 }
 
 type Libro struct {
@@ -101,7 +94,7 @@ func (l *Libro) Insertar(idEditorial int64) []any {
 }
 
 func (l *Libro) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- "Insertar Libro"
+	// canal <- "Insertar Libro"
 
 	var idLibro int64
 

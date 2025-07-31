@@ -27,8 +27,8 @@ const (
 )
 
 type ConstructorMateria struct {
-	IdArchivo         Opcional[int64]
-	IdCarrera         Opcional[int64]
+	IdArchivo         *Opcional[int64]
+	IdCarrera         *Opcional[int64]
 	PathCarrera       string
 	Nombre            string
 	Codigo            string
@@ -62,7 +62,13 @@ func NewConstructorMateria(pathCarrera string, nombre string, codigo string, pla
 }
 
 func (cm *ConstructorMateria) CumpleDependencia() (*Materia, bool) {
-	if cm.IdArchivo.Esta && cm.IdCarrera.Esta {
+	if idArchivo, existe := cm.IdArchivo.Obtener(); !existe {
+		return nil, false
+
+	} else if idCarrera, existe := cm.IdCarrera.Obtener(); !existe {
+		return nil, false
+
+	} else {
 		return &Materia{
 			Nombre:            cm.Nombre,
 			Codigo:            cm.Codigo,
@@ -70,12 +76,11 @@ func (cm *ConstructorMateria) CumpleDependencia() (*Materia, bool) {
 			Anio:              cm.Anio,
 			Cuatri:            cm.Cuatri,
 			Etapa:             cm.Etapa,
-			IdCarrera:         cm.IdCarrera.Valor,
-			IdArchivo:         cm.IdArchivo.Valor,
+			IdCarrera:         idCarrera,
+			IdArchivo:         idArchivo,
 			ListaDependencias: cm.ListaDependencias,
 		}, true
 	}
-	return nil, false
 }
 
 func (cm *ConstructorMateria) CumpleDependenciaCarrera(id int64) (Cargable, bool) {
@@ -131,7 +136,9 @@ func (m *Materia) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 }
 
 func (m *Materia) ResolverDependencias(id int64) []Cargable {
-	return ResolverDependencias(id, m.ListaDependencias)
+	res := ResolverDependencias(id, m.ListaDependencias.Items())
+	fmt.Printf("Para la materia equivalente: %s, se tienen que resolver: %d dependencias y se lograron resolver: %d de ellas\n", m.Nombre, m.ListaDependencias.Largo, len(res))
+	return res
 }
 
 func ObtenerCuatrimestreParte(representacionCuatri string) (int, ParteCuatrimestre, error) {
