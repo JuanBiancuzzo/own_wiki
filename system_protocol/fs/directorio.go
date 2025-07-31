@@ -1,8 +1,6 @@
 package fs
 
 import (
-	"strings"
-
 	e "own_wiki/system_protocol/estructura"
 	ls "own_wiki/system_protocol/listas"
 
@@ -33,22 +31,6 @@ func NewDirectorio(padre *Directorio, path string) *Directorio {
 		Path:           path,
 		Subdirectorios: make(map[string]*Directorio),
 		Archivos:       ls.NewLista[*Archivo](),
-	}
-}
-
-func (d *Directorio) RelativizarPath(path string) {
-	if d.Padre == nil {
-		d.Path = "/"
-	} else {
-		d.Path = strings.Replace(d.Path, path, "", 1)
-	}
-
-	for archivo := range d.Archivos.Iterar {
-		archivo.RelativizarPath(path)
-	}
-
-	for _, subdirectorio := range d.Subdirectorios {
-		subdirectorio.RelativizarPath(path)
 	}
 }
 

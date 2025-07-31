@@ -12,20 +12,22 @@ import (
 type Root struct {
 	DirectorioRoot *Directorio
 	Archivos       map[string]*Archivo
+	Path           string
 }
 
 func EstablecerDirectorio(dirOrigen string, infoArchivos *db.InfoArchivos, canal chan string) *Root {
 	var waitArchivos sync.WaitGroup
 
-	directorioRoot := NewRoot(dirOrigen)
+	directorioRoot := NewRoot("")
 	root := &Root{
 		DirectorioRoot: directorioRoot,
 		Archivos:       make(map[string]*Archivo),
+		Path:           dirOrigen,
 	}
 
 	colaDirectorios := ls.NewCola[*Directorio]()
 	colaDirectorios.Encolar(directorioRoot)
-	canal <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", directorioRoot.Path)
+	canal <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", root.Path)
 
 	for !colaDirectorios.Vacia() {
 		directorio, err := colaDirectorios.Desencolar()
@@ -34,7 +36,7 @@ func EstablecerDirectorio(dirOrigen string, infoArchivos *db.InfoArchivos, canal
 			break
 		}
 
-		archivos, err := os.ReadDir(directorio.Path)
+		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", root.Path, directorio.Path))
 		if err != nil {
 			canal <- fmt.Sprintf("Se tuvo un error al leer el directorio dando el error: %v", err)
 			break
@@ -58,6 +60,7 @@ func EstablecerDirectorio(dirOrigen string, infoArchivos *db.InfoArchivos, canal
 		waitArchivos.Add(1)
 		go func(lista *ls.Lista[string], root *Root, directorio *Directorio, infoArchivo *db.InfoArchivos, wg *sync.WaitGroup) {
 			for archivoPath := range lista.Iterar {
+				archivoPath = archivoPath[1:]
 				if archivo, err := NewArchivo(root, archivoPath, infoArchivos, canal); err != nil {
 					canal <- fmt.Sprintf("Se tuvo un error al crear un archivo, con error: %v", err)
 
@@ -70,8 +73,6 @@ func EstablecerDirectorio(dirOrigen string, infoArchivos *db.InfoArchivos, canal
 	}
 
 	waitArchivos.Wait()
-	directorioRoot.RelativizarPath(fmt.Sprintf("%s/", dirOrigen))
-
 	for archivo := range directorioRoot.IterarArchivos {
 		root.Archivos[archivo.Path] = archivo
 	}

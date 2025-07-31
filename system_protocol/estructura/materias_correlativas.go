@@ -18,18 +18,16 @@ type ConstructorMateriasCorrelativas struct {
 	IdMateria         *Opcional[int64]
 	TipoMateria       TipoMateria
 	IdCorrelativa     *Opcional[int64]
-	PathCorrelativa   string
 	TipoCorrelativa   TipoMateria
 	ListaDependencias *l.Lista[Dependencia]
 }
 
-func NewConstructorMateriasCorrelativas(tipoMateria TipoMateria, pathCorrelativa string) *ConstructorMateriasCorrelativas {
+func NewConstructorMateriasCorrelativas(tipoMateria TipoMateria, tipoCorrelativa TipoMateria) *ConstructorMateriasCorrelativas {
 	return &ConstructorMateriasCorrelativas{
 		IdMateria:         NewOpcional[int64](),
 		TipoMateria:       tipoMateria,
 		IdCorrelativa:     NewOpcional[int64](),
-		PathCorrelativa:   pathCorrelativa,
-		TipoCorrelativa:   "",
+		TipoCorrelativa:   tipoCorrelativa,
 		ListaDependencias: l.NewLista[Dependencia](),
 	}
 }
@@ -52,14 +50,18 @@ func (cmc *ConstructorMateriasCorrelativas) CumpleDependencia() (*MateriasCorrel
 	}
 }
 
-func (cmc *ConstructorMateriasCorrelativas) CumpleDependenciaCorrelativa(id int64) (Cargable, bool) {
-	cmc.IdCorrelativa.Asignar(id)
-	return cmc.CumpleDependencia()
+func (cmc *ConstructorMateriasCorrelativas) CrearDependenciaCorrelativa(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		cmc.IdCorrelativa.Asignar(id)
+		return cmc.CumpleDependencia()
+	})
 }
 
-func (cmc *ConstructorMateriasCorrelativas) CumpleDependenciaMateria(id int64) (Cargable, bool) {
-	cmc.IdMateria.Asignar(id)
-	return cmc.CumpleDependencia()
+func (cmc *ConstructorMateriasCorrelativas) CrearDependenciaMateria(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		cmc.IdMateria.Asignar(id)
+		return cmc.CumpleDependencia()
+	})
 }
 
 func (cmc *ConstructorMateriasCorrelativas) CargarDependencia(dependencia Dependencia) {

@@ -19,23 +19,33 @@ const TAG_RESUMEN_MATERIA = "facultad/resumen"
 const TAG_DISTRIBUCION = "colección/distribuciones/distribución"
 const TAG_LIBRO = "colección/biblioteca/libro"
 
+type PathTipo struct {
+	Path string
+	Tipo e.TipoDependible
+}
+
+func NewPathTipo(path string, tipo e.TipoDependible) PathTipo {
+	return PathTipo{
+		Path: path,
+		Tipo: tipo,
+	}
+}
+
 type Archivo struct {
-	Root                             *Root
-	Path                             string
-	Archivo                          *e.Archivo
-	Carrera                          *e.ConstructorCarrera
-	Materia                          *e.ConstructorMateria
-	MateriaEquivalente               *e.ConstructorMateriaEquivalente
-	MateriasCorrelativas             *l.Lista[*e.ConstructorMateriasCorrelativas]
-	MateriasEquivalentesCorrelativas *l.Lista[*e.ConstructorMateriasCorrelativas]
+	Root           *Root
+	Path           string
+	Cargables      *l.Lista[e.Cargable]
+	FnDependencias map[PathTipo]*l.Lista[e.FnVincular]
+	Dependibles    map[e.TipoDependible]*l.Lista[e.Dependible]
 }
 
 func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan string) (*Archivo, error) {
 	archivo := Archivo{
-		Root:                             root,
-		Path:                             path,
-		MateriasCorrelativas:             l.NewLista[*e.ConstructorMateriasCorrelativas](),
-		MateriasEquivalentesCorrelativas: l.NewLista[*e.ConstructorMateriasCorrelativas](),
+		Root:           root,
+		Path:           path,
+		Cargables:      l.NewLista[e.Cargable](),
+		FnDependencias: make(map[PathTipo]*l.Lista[e.FnVincular]),
+		Dependibles:    make(map[e.TipoDependible]*l.Lista[e.Dependible]),
 	}
 
 	if !strings.Contains(path, ".md") {
@@ -43,7 +53,7 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 	}
 
 	var contenido string
-	if bytes, err := os.ReadFile(path); err != nil {
+	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", root.Path, path)); err != nil {
 		return nil, fmt.Errorf("error al leer %s obteniendo el error: %v", path, err)
 	} else {
 		contenido = strings.TrimSpace(string(bytes))
@@ -62,13 +72,16 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 	}
 
 	// a.Contenido = contenido[3+strings.Index(contenido[3:], "---")+len("---"):]
+	archivoCargable := e.NewArchivo(path, meta.Tags)
 
-	archivo.Archivo = e.NewArchivo(path, meta.Tags)
+	archivo.Cargables.Push(archivoCargable)
+	archivo.CargarDependible(e.DEP_ARCHIVO, archivoCargable)
+
 	for _, tag := range meta.Tags {
 		switch tag {
 		case TAG_DISTRIBUCION:
 			if constructor, err := e.NewConstructorDistribucion(meta.NombreDistribuucion, meta.TipoDistribucion); err == nil {
-				archivo.Archivo.CargarDependencia(constructor.CumpleDependencia)
+				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 
 			} else {
 				canal <- fmt.Sprintf("Error: %v\n", err)
@@ -76,44 +89,59 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 		case TAG_CARRERA:
 			nombreCarrera := archivo.Nombre()
 			if constructor, err := e.NewConstructorCarrera(nombreCarrera, meta.Etapa, meta.TieneCodigo); err == nil {
-				archivo.Archivo.CargarDependencia(constructor.CumpleDependencia)
-				archivo.Carrera = constructor
+				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 
+				archivo.CargarDependible(e.DEP_CARRERA, constructor)
 			} else {
 				canal <- fmt.Sprintf("Error: %v\n", err)
 			}
 
 		case TAG_MATERIA:
-			pathCarrera := ObtenerWikiLink(meta.PathCarrera)[0]
-			if constructor, err := e.NewConstructorMateria(pathCarrera, meta.NombreMateria, meta.Codigo, meta.Plan, meta.Cuatri, meta.Etapa); err == nil {
-				archivo.Archivo.CargarDependencia(constructor.CumpleDependenciaArchivo)
-				archivo.Materia = constructor
+			if constructor, err := e.NewConstructorMateria(meta.NombreMateria, meta.Codigo, meta.Plan, meta.Cuatri, meta.Etapa); err == nil {
+				pathCarrera := ObtenerWikiLink(meta.PathCarrera)[0]
+				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+				archivo.CargarDependencia(pathCarrera, e.DEP_CARRERA, constructor.CrearDependenciaCarrera)
 
+				archivo.CargarDependible(e.DEP_MATERIA, constructor)
 			} else {
 				canal <- fmt.Sprintf("Error: %v\n", err)
 			}
 
 			for _, correlativa := range meta.Correlativas {
-				pathCorrelativa := ObtenerWikiLink(correlativa)[0]
-				constructor := e.NewConstructorMateriasCorrelativas(e.MATERIA_REAL, pathCorrelativa)
-				archivo.MateriasCorrelativas.Push(constructor)
+				constructor := e.NewConstructorMateriasCorrelativas(e.MATERIA_REAL, correlativa.Tipo)
+
+				archivo.CargarDependencia(path, e.DEP_MATERIA, constructor.CrearDependenciaMateria)
+				switch correlativa.Tipo {
+				case e.MATERIA_REAL:
+					archivo.CargarDependencia(correlativa.Path, e.DEP_MATERIA, constructor.CrearDependenciaCorrelativa)
+				case e.MATERIA_EQUIVALENTE:
+					archivo.CargarDependencia(correlativa.Path, e.DEP_MATERIA_EQUIVALENTE, constructor.CrearDependenciaCorrelativa)
+				}
 			}
 
 		case TAG_MATERIA_EQUIVALENTE:
 			pathMateria := ObtenerWikiLink(meta.Equivalencia)[0]
 			constructor := e.NewConstructorMateriaEquivalente(pathMateria, meta.NombreMateria, meta.Codigo)
-			archivo.Archivo.CargarDependencia(constructor.CumpleDependenciaArchivo)
-			archivo.MateriaEquivalente = constructor
+			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+			archivo.CargarDependencia(pathMateria, e.DEP_MATERIA, constructor.CrearDependenciaMateria)
+
+			archivo.CargarDependible(e.DEP_MATERIA_EQUIVALENTE, constructor)
 
 			for _, correlativa := range meta.Correlativas {
-				pathCorrelativa := ObtenerWikiLink(correlativa)[0]
-				constructor := e.NewConstructorMateriasCorrelativas(e.MATERIA_EQUIVALENTE, pathCorrelativa)
-				archivo.MateriasEquivalentesCorrelativas.Push(constructor)
+				constructor := e.NewConstructorMateriasCorrelativas(e.MATERIA_EQUIVALENTE, correlativa.Tipo)
+
+				archivo.CargarDependencia(path, e.DEP_MATERIA_EQUIVALENTE, constructor.CrearDependenciaMateria)
+				switch correlativa.Tipo {
+				case e.MATERIA_REAL:
+					archivo.CargarDependencia(correlativa.Path, e.DEP_MATERIA, constructor.CrearDependenciaCorrelativa)
+				case e.MATERIA_EQUIVALENTE:
+					archivo.CargarDependencia(correlativa.Path, e.DEP_MATERIA_EQUIVALENTE, constructor.CrearDependenciaCorrelativa)
+				}
 			}
 
 		case TAG_LIBRO:
 			constructor := meta.CrearConstructorLibro()
-			archivo.Archivo.CargarDependencia(constructor.CumpleDependencia)
+			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 		}
 	}
 
@@ -123,77 +151,45 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 	return &archivo, nil
 }
 
-func (a *Archivo) RelativizarPath(path string) {
-	a.Path = strings.Replace(a.Path, path, "", 1)
+func (a *Archivo) CargarDependible(tipo e.TipoDependible, dependible e.Dependible) {
+	lista, ok := a.Dependibles[tipo]
+	if !ok {
+		lista = l.NewLista[e.Dependible]()
+	}
+	lista.Push(dependible)
+	a.Dependibles[tipo] = lista
+}
+
+func (a *Archivo) CargarDependencia(path string, tipo e.TipoDependible, relacion e.FnVincular) {
+	pathTipo := NewPathTipo(path, tipo)
+	lista, ok := a.FnDependencias[pathTipo]
+	if !ok {
+		lista = l.NewLista[e.FnVincular]()
+	}
+	lista.Push(relacion)
+	a.FnDependencias[pathTipo] = lista
 }
 
 // Cambiar a establecer conexiones
-func (a *Archivo) InsertarDatos(canal chan e.Cargable, canalMensajes chan string) {
-	if a.Materia != nil {
-		if archivo, err := a.Root.EncontrarArchivo(a.Materia.PathCarrera); err != nil {
-			canalMensajes <- fmt.Sprintf("Error al buscar carrera en '%s' en la materia '%s', con error %v", a.Materia.PathCarrera, a.Materia.Nombre, err)
+func (a *Archivo) EstablecerDependencias(canal chan e.Cargable, canalMensajes chan string) {
+	for pathTipo, listaRelacion := range a.FnDependencias {
+		if archivo, err := a.Root.EncontrarArchivo(pathTipo.Path); err != nil {
+			canalMensajes <- fmt.Sprintf("No se encontró el archivo '%s' para el archivo: '%s'", pathTipo.Path, a.Nombre())
 
-		} else if archivo.Carrera == nil {
-			canalMensajes <- fmt.Sprintf("Error el archivo de carrera '%s' no tiene la estructura de carrera, con error %v", a.Materia.PathCarrera, err)
+		} else if listaDependible, ok := archivo.Dependibles[pathTipo.Tipo]; !ok {
+			canalMensajes <- fmt.Sprintf("No se encontró el tipo '%d' para el archivo: '%s'", pathTipo.Tipo, a.Nombre())
 
 		} else {
-			// canalMensajes <- fmt.Sprintf("Cargando dep en carrera '%s'", a.Materia.PathCarrera)
-			archivo.Carrera.CargarDependencia(a.Materia.CumpleDependenciaCarrera)
-		}
-
-		for correlativa := range a.MateriasCorrelativas.Iterar {
-			if archivo, err := a.Root.EncontrarArchivo(correlativa.PathCorrelativa); err != nil {
-				canalMensajes <- fmt.Sprintf("Error al buscar correlativa en '%s' en la materia '%s', con error %v", correlativa.PathCorrelativa, a.Materia.Nombre, err)
-
-			} else if archivo.Materia != nil {
-				correlativa.TipoCorrelativa = e.MATERIA_REAL
-				a.Materia.CargarDependencia(correlativa.CumpleDependenciaMateria)
-				archivo.Materia.CargarDependencia(correlativa.CumpleDependenciaCorrelativa)
-
-			} else if archivo.MateriaEquivalente != nil {
-				correlativa.TipoCorrelativa = e.MATERIA_EQUIVALENTE
-				a.Materia.CargarDependencia(correlativa.CumpleDependenciaMateria)
-				archivo.MateriaEquivalente.CargarDependencia(correlativa.CumpleDependenciaCorrelativa)
-
-			} else {
-				canalMensajes <- fmt.Sprintf("Error el archivo de materia '%s' no tiene la estructura de materi, con error %v", archivo.Path, err)
+			for dependible := range listaDependible.Iterar {
+				for relacion := range listaRelacion.Iterar {
+					relacion(dependible)
+				}
 			}
 		}
 	}
 
-	if a.MateriaEquivalente != nil {
-		if archivo, err := a.Root.EncontrarArchivo(a.MateriaEquivalente.PathMateria); err != nil {
-			canalMensajes <- fmt.Sprintf("Error al buscar materia en '%s' en la materia equivalente '%s', con error %v", a.MateriaEquivalente.PathMateria, a.MateriaEquivalente.Nombre, err)
-
-		} else if archivo.Materia == nil {
-			canalMensajes <- fmt.Sprintf("Error el archivo de materia '%s' no tiene la estructura de materi, con error %v", a.MateriaEquivalente.PathMateria, err)
-
-		} else {
-			archivo.Materia.CargarDependencia(a.MateriaEquivalente.CumpleDependenciaMateria)
-		}
-
-		for correlativa := range a.MateriasEquivalentesCorrelativas.Iterar {
-			if archivo, err := a.Root.EncontrarArchivo(correlativa.PathCorrelativa); err != nil {
-				canalMensajes <- fmt.Sprintf("Error al buscar correlativa en '%s' en la materia '%s', con error %v", correlativa.PathCorrelativa, a.Materia.Nombre, err)
-
-			} else if archivo.Materia != nil {
-				correlativa.TipoCorrelativa = e.MATERIA_REAL
-				a.MateriaEquivalente.CargarDependencia(correlativa.CumpleDependenciaMateria)
-				archivo.Materia.CargarDependencia(correlativa.CumpleDependenciaCorrelativa)
-
-			} else if archivo.MateriaEquivalente != nil {
-				correlativa.TipoCorrelativa = e.MATERIA_EQUIVALENTE
-				a.MateriaEquivalente.CargarDependencia(correlativa.CumpleDependenciaMateria)
-				archivo.MateriaEquivalente.CargarDependencia(correlativa.CumpleDependenciaCorrelativa)
-
-			} else {
-				canalMensajes <- fmt.Sprintf("Error el archivo de materia '%s' no tiene la estructura de materi, con error %v", archivo.Path, err)
-			}
-		}
-	}
-
-	if a.Archivo != nil {
-		canal <- a.Archivo
+	for cargable := range a.Cargables.Iterar {
+		canal <- cargable
 	}
 }
 

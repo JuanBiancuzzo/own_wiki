@@ -36,14 +36,16 @@ func (cd *ConstructorCarrera) CargarDependencia(dependencia Dependencia) {
 	cd.ListaDependencias.Push(dependencia)
 }
 
-func (cd *ConstructorCarrera) CumpleDependencia(id int64) (Cargable, bool) {
-	return &Carrera{
-		Nombre:            cd.Nombre,
-		Etapa:             cd.Etapa,
-		TieneCodigo:       cd.TieneCodigo,
-		IdArchivo:         id,
-		ListaDependencias: cd.ListaDependencias,
-	}, true
+func (cd *ConstructorCarrera) CrearDependenciaArchivo(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		return &Carrera{
+			Nombre:            cd.Nombre,
+			Etapa:             cd.Etapa,
+			TieneCodigo:       cd.TieneCodigo,
+			IdArchivo:         id,
+			ListaDependencias: cd.ListaDependencias,
+		}, true
+	})
 }
 
 type Carrera struct {

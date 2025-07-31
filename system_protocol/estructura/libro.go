@@ -39,19 +39,21 @@ func NewConstructorLibro(titulo string, subtitulo string, editorial string, anio
 	}
 }
 
-func (cl *ConstructorLibro) CumpleDependencia(id int64) (Cargable, bool) {
-	return &Libro{
-		Titulo:    cl.Titulo,
-		Subtitulo: cl.Subtitulo,
-		Editorial: cl.Editorial,
-		Anio:      cl.Anio,
-		Edicion:   cl.Edicion,
-		Volumen:   cl.Volumen,
-		Url:       cl.Url,
-		Autores:   cl.Autores,
-		Capitulos: cl.Capitulos,
-		IdArchivo: id,
-	}, true
+func (cl *ConstructorLibro) CrearDependenciaArchivo(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		return &Libro{
+			Titulo:    cl.Titulo,
+			Subtitulo: cl.Subtitulo,
+			Editorial: cl.Editorial,
+			Anio:      cl.Anio,
+			Edicion:   cl.Edicion,
+			Volumen:   cl.Volumen,
+			Url:       cl.Url,
+			Autores:   cl.Autores,
+			Capitulos: cl.Capitulos,
+			IdArchivo: id,
+		}, true
+	})
 }
 
 type Capitulo struct {

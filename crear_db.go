@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"own_wiki/system_protocol/db"
 	e "own_wiki/system_protocol/estructura"
@@ -32,10 +33,11 @@ Estructura de arbol -> Esto hace las colecciones, las facultad, las investigacio
   - Esto tambien puede ser una seccion para crear
 */
 
-func ImprimirMensajes(canal chan string) {
+func ImprimirMensajes(canal chan string, wg *sync.WaitGroup) {
 	for mensaje := range canal {
 		fmt.Println(strings.TrimSpace(mensaje))
 	}
+	wg.Done()
 }
 
 func ProcesarArchivos(canalInfo chan db.InfoArchivos, canalDirectorio chan fs.Root, dirOrigen string, canalMensajes chan string) {
@@ -93,7 +95,9 @@ func main() {
 	}
 
 	canalMensajes := make(chan string, 100)
-	go ImprimirMensajes(canalMensajes)
+	var waitMensajes sync.WaitGroup
+	waitMensajes.Add(1)
+	go ImprimirMensajes(canalMensajes, &waitMensajes)
 
 	canalInfo := make(chan db.InfoArchivos)
 	canalDirectorio := make(chan fs.Root)
@@ -108,9 +112,9 @@ func main() {
 	go func(canal chan e.Cargable, canalMensajes chan string) {
 		root := <-canalDirectorio
 		for _, archivo := range root.Archivos {
-			archivo.InsertarDatos(canal, canalMensajes)
+			archivo.EstablecerDependencias(canal, canalMensajes)
 		}
-		fmt.Println("Dejar de mandar archivos para procesar")
+		canalMensajes <- "Dejar de mandar archivos para procesar"
 		close(canal)
 	}(canalIndependientes, canalMensajes)
 
@@ -141,6 +145,8 @@ func main() {
 	}
 
 	close(canalMensajes)
+	waitMensajes.Wait()
+
 	if cargablesListos.Lista.Largo > 0 {
 		fmt.Println("Hubo un error, no se procesaron: ", cargablesListos.Lista.Largo, " cargables")
 	}

@@ -29,7 +29,6 @@ const (
 type ConstructorMateria struct {
 	IdArchivo         *Opcional[int64]
 	IdCarrera         *Opcional[int64]
-	PathCarrera       string
 	Nombre            string
 	Codigo            string
 	Plan              string
@@ -39,7 +38,7 @@ type ConstructorMateria struct {
 	ListaDependencias *l.Lista[Dependencia]
 }
 
-func NewConstructorMateria(pathCarrera string, nombre string, codigo string, plan string, repCuatri string, repEtapa string) (*ConstructorMateria, error) {
+func NewConstructorMateria(nombre string, codigo string, plan string, repCuatri string, repEtapa string) (*ConstructorMateria, error) {
 	if etapa, err := ObtenerEtapa(repEtapa); err != nil {
 		return nil, fmt.Errorf("error al crear materia con error: %v", err)
 
@@ -50,7 +49,6 @@ func NewConstructorMateria(pathCarrera string, nombre string, codigo string, pla
 		return &ConstructorMateria{
 			IdArchivo:         NewOpcional[int64](),
 			IdCarrera:         NewOpcional[int64](),
-			PathCarrera:       pathCarrera,
 			Nombre:            nombre,
 			Codigo:            codigo,
 			Anio:              anio,
@@ -83,14 +81,18 @@ func (cm *ConstructorMateria) CumpleDependencia() (*Materia, bool) {
 	}
 }
 
-func (cm *ConstructorMateria) CumpleDependenciaCarrera(id int64) (Cargable, bool) {
-	cm.IdCarrera.Asignar(id)
-	return cm.CumpleDependencia()
+func (cm *ConstructorMateria) CrearDependenciaCarrera(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		cm.IdCarrera.Asignar(id)
+		return cm.CumpleDependencia()
+	})
 }
 
-func (cm *ConstructorMateria) CumpleDependenciaArchivo(id int64) (Cargable, bool) {
-	cm.IdArchivo.Asignar(id)
-	return cm.CumpleDependencia()
+func (cm *ConstructorMateria) CrearDependenciaArchivo(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		cm.IdArchivo.Asignar(id)
+		return cm.CumpleDependencia()
+	})
 }
 
 func (cm *ConstructorMateria) CargarDependencia(dependencia Dependencia) {
@@ -136,9 +138,7 @@ func (m *Materia) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 }
 
 func (m *Materia) ResolverDependencias(id int64) []Cargable {
-	res := ResolverDependencias(id, m.ListaDependencias.Items())
-	fmt.Printf("Para la materia equivalente: %s, se tienen que resolver: %d dependencias y se lograron resolver: %d de ellas\n", m.Nombre, m.ListaDependencias.Largo, len(res))
-	return res
+	return ResolverDependencias(id, m.ListaDependencias.Items())
 }
 
 func ObtenerCuatrimestreParte(representacionCuatri string) (int, ParteCuatrimestre, error) {

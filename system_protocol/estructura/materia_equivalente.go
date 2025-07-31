@@ -49,14 +49,18 @@ func (cme *ConstructorMateriaEquivalente) CumpleDependencia() (*MateriaEquivalen
 	}
 }
 
-func (cme *ConstructorMateriaEquivalente) CumpleDependenciaMateria(id int64) (Cargable, bool) {
-	cme.IdMateria.Asignar(id)
-	return cme.CumpleDependencia()
+func (cme *ConstructorMateriaEquivalente) CrearDependenciaMateria(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		cme.IdMateria.Asignar(id)
+		return cme.CumpleDependencia()
+	})
 }
 
-func (cme *ConstructorMateriaEquivalente) CumpleDependenciaArchivo(id int64) (Cargable, bool) {
-	cme.IdArchivo.Asignar(id)
-	return cme.CumpleDependencia()
+func (cme *ConstructorMateriaEquivalente) CrearDependenciaArchivo(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		cme.IdArchivo.Asignar(id)
+		return cme.CumpleDependencia()
+	})
 }
 
 func (cme *ConstructorMateriaEquivalente) CargarDependencia(dependencia Dependencia) {
@@ -83,7 +87,5 @@ func (me *MateriaEquivalente) CargarDatos(bdd *sql.DB, canal chan string) (int64
 }
 
 func (me *MateriaEquivalente) ResolverDependencias(id int64) []Cargable {
-	res := ResolverDependencias(id, me.ListaDependencias.Items())
-	fmt.Printf("Para la materia equivalente: %s, se tienen que resolver: %d dependencias y se lograron resolver: %d de ellas\n", me.Nombre, me.ListaDependencias.Largo, len(res))
-	return res
+	return ResolverDependencias(id, me.ListaDependencias.Items())
 }

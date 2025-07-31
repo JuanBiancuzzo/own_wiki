@@ -32,12 +32,14 @@ func NewConstructorDistribucion(nombre string, repTipo string) (*ConstructorDist
 	}
 }
 
-func (cd *ConstructorDistribucion) CumpleDependencia(id int64) (Cargable, bool) {
-	return &Distribucion{
-		Nombre:    cd.Nombre,
-		Tipo:      cd.Tipo,
-		IdArchivo: id,
-	}, true
+func (cd *ConstructorDistribucion) CrearDependenciaArchivo(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		return &Distribucion{
+			Nombre:    cd.Nombre,
+			Tipo:      cd.Tipo,
+			IdArchivo: id,
+		}, true
+	})
 }
 
 type Distribucion struct {

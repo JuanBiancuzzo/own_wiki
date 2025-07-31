@@ -6,3 +6,14 @@ type Dependible interface {
 }
 
 type Dependencia func(id int64) (Cargable, bool)
+
+type FnVincular func(dependible Dependible)
+
+type TipoDependible byte
+
+const (
+	DEP_ARCHIVO = iota
+	DEP_CARRERA
+	DEP_MATERIA
+	DEP_MATERIA_EQUIVALENTE
+)
