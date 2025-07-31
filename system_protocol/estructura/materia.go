@@ -3,6 +3,7 @@ package estructura
 import (
 	"database/sql"
 	"fmt"
+	l "own_wiki/system_protocol/listas"
 )
 
 const INSERTAR_MATERIA = "INSERT INTO materias (nombre, codigo, etapa, idCarrera, idPlan, idCuatrimestre, idArchivo) VALUES (?, ?, ?, ?, ?, ?, ?)"
@@ -25,18 +26,37 @@ const (
 	CUATRIMESTRE_SEGUNDO = "Segundo"
 )
 
-type Materia struct {
-	PathArchivo string
-	PathCarrera string
-	Nombre      string
-	Codigo      string
-	Plan        string
-	Anio        int
-	Cuatri      ParteCuatrimestre
-	Etapa       Etapa
+type Opcional[T any] struct {
+	Valor T
+	Esta  bool
 }
 
-func NewMateria(pathArchivo string, pathCarrera string, nombre string, codigo string, plan string, repCuatri string, repEtapa string) (*Materia, error) {
+func NewOpcional[T any]() Opcional[T] {
+	var valor T
+	return Opcional[T]{
+		Valor: valor,
+		Esta:  false,
+	}
+}
+
+func (o Opcional[T]) Asignar(valor T) {
+	o.Valor = valor
+	o.Esta = true
+}
+
+type ConstructorMateria struct {
+	IdArchivo         Opcional[int64]
+	IdCarrera         Opcional[int64]
+	Nombre            string
+	Codigo            string
+	Plan              string
+	Anio              int
+	Cuatri            ParteCuatrimestre
+	Etapa             Etapa
+	ListaDependencias *l.Lista[Dependencia]
+}
+
+func NewConstructorMateria(nombre string, codigo string, plan string, repCuatri string, repEtapa string) (*ConstructorMateria, error) {
 	if etapa, err := ObtenerEtapa(repEtapa); err != nil {
 		return nil, fmt.Errorf("error al crear materia con error: %v", err)
 
@@ -44,28 +64,100 @@ func NewMateria(pathArchivo string, pathCarrera string, nombre string, codigo st
 		return nil, fmt.Errorf("error al crear materia con error: %v", err)
 
 	} else {
-		return &Materia{
-			PathArchivo: pathArchivo,
-			PathCarrera: pathCarrera,
-			Nombre:      nombre,
-			Codigo:      codigo,
-			Anio:        anio,
-			Cuatri:      cuatri,
-			Etapa:       etapa,
+		return &ConstructorMateria{
+			IdArchivo:         NewOpcional[int64](),
+			IdCarrera:         NewOpcional[int64](),
+			Nombre:            nombre,
+			Codigo:            codigo,
+			Anio:              anio,
+			Cuatri:            cuatri,
+			Etapa:             etapa,
+			ListaDependencias: l.NewLista[Dependencia](),
 		}, nil
 	}
 }
 
-func (m *Materia) Insertar(idCarrea int64, idPlan int64, idCuatrimestre int64, idArchivo int64) []any {
-	return []any{
-		m.Nombre,
-		m.Codigo,
-		m.Etapa,
-		idCarrea,
-		idPlan,
-		idCuatrimestre,
-		idArchivo,
+func (cm *ConstructorMateria) CumpleDependencia() (*Materia, bool) {
+	if cm.IdArchivo.Esta && cm.IdCarrera.Esta {
+		return &Materia{
+			Nombre:            cm.Nombre,
+			Codigo:            cm.Codigo,
+			Plan:              cm.Plan,
+			Anio:              cm.Anio,
+			Cuatri:            cm.Cuatri,
+			Etapa:             cm.Etapa,
+			IdCarrera:         cm.IdCarrera.Valor,
+			IdArchivo:         cm.IdArchivo.Valor,
+			ListaDependencias: cm.ListaDependencias,
+		}, true
 	}
+	return nil, false
+}
+
+func (cm *ConstructorMateria) CumpleDependenciaCarrera(id int64) (Cargable, bool) {
+	cm.IdCarrera.Asignar(id)
+	return cm.CumpleDependencia()
+}
+
+func (cm *ConstructorMateria) CumpleDependenciaArchivo(id int64) (Cargable, bool) {
+	cm.IdArchivo.Asignar(id)
+	return cm.CumpleDependencia()
+}
+
+func (cm *ConstructorMateria) CargarDependencia(dependencia Dependencia) {
+	cm.ListaDependencias.Push(dependencia)
+}
+
+type Materia struct {
+	Nombre            string
+	Codigo            string
+	Plan              string
+	Anio              int
+	Cuatri            ParteCuatrimestre
+	Etapa             Etapa
+	IdCarrera         int64
+	IdArchivo         int64
+	ListaDependencias *l.Lista[Dependencia]
+}
+
+func (m *Materia) Insertar(idPlan int64, idCuatrimestre int64) []any {
+	return []any{m.Nombre, m.Codigo, m.Etapa, m.IdCarrera, idPlan, idCuatrimestre, m.IdArchivo}
+}
+
+func (m *Materia) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+	canal <- fmt.Sprintf("Insertar Materia: %s", m.Nombre)
+
+	if idPlan, err := ObtenerOInsertar(
+		func() *sql.Row { return bdd.QueryRow(QUERY_PLANES, m.Plan) },
+		func() (sql.Result, error) { return bdd.Exec(INSERTAR_PLAN, m.Plan) },
+	); err != nil {
+		return 0, fmt.Errorf("error al hacer una querry del plan %s con error: %v", m.Plan, err)
+
+	} else if idCuatrimestre, err := ObtenerOInsertar(
+		func() *sql.Row { return bdd.QueryRow(QUERY_CUATRIMESTRES, m.Anio, m.Cuatri) },
+		func() (sql.Result, error) { return bdd.Exec(INSERTAR_CUATRIMESTRE, m.Anio, m.Cuatri) },
+	); err != nil {
+		return 0, fmt.Errorf("error al hacer una querry del cuatri %s parte de %d con error: %v", m.Cuatri, m.Anio, err)
+
+	} else {
+		return Insertar(
+			func() (sql.Result, error) { return bdd.Exec(INSERTAR_MATERIA, m.Insertar(idPlan, idCuatrimestre)...) },
+		)
+	}
+}
+
+func (m *Materia) ResolverDependencias(id int64) []Cargable {
+	cantidadCumple := 0
+	cargables := make([]Cargable, m.ListaDependencias.Largo)
+
+	for cumpleDependencia := range m.ListaDependencias.Iterar {
+		if cargable, cumple := cumpleDependencia(id); cumple {
+			cargables[cantidadCumple] = cargable
+			cantidadCumple++
+		}
+	}
+
+	return cargables[:cantidadCumple]
 }
 
 func ObtenerCuatrimestreParte(representacionCuatri string) (int, ParteCuatrimestre, error) {
@@ -88,73 +180,3 @@ func ObtenerCuatrimestreParte(representacionCuatri string) (int, ParteCuatrimest
 
 	return anio, cuatri, nil
 }
-
-func (m *Materia) CargarDatos(bdd *sql.DB, canal chan string) bool {
-	canal <- fmt.Sprintf("Insertar Materia: %s", m.Nombre)
-
-	if idArchivo, existe := Obtener(
-		func() *sql.Row { return bdd.QueryRow(QUERY_ARCHIVO, m.PathArchivo) },
-	); !existe {
-		return false
-
-	} else if idCarrera, existe := Obtener(
-		func() *sql.Row { return bdd.QueryRow(QUERY_CARRERA_PATH, m.PathCarrera) },
-	); !existe {
-		return false
-
-	} else if idPlan, err := ObtenerOInsertar(
-		func() *sql.Row { return bdd.QueryRow(QUERY_PLANES, m.Plan) },
-		func() (sql.Result, error) { return bdd.Exec(INSERTAR_PLAN, m.Plan) },
-	); err != nil {
-		canal <- fmt.Sprintf("error al hacer una querry del plan %s con error: %v", m.Plan, err)
-
-	} else if idCuatrimestre, err := ObtenerOInsertar(
-		func() *sql.Row { return bdd.QueryRow(QUERY_CUATRIMESTRES, m.Anio, m.Cuatri) },
-		func() (sql.Result, error) { return bdd.Exec(INSERTAR_CUATRIMESTRE, m.Anio, m.Cuatri) },
-	); err != nil {
-		canal <- fmt.Sprintf("error al hacer una querry del cuatri %s parte de %d con error: %v", m.Cuatri, m.Anio, err)
-
-	} else if _, err := bdd.Exec(INSERTAR_MATERIA, m.Insertar(idCarrera, idPlan, idCuatrimestre, idArchivo)...); err != nil {
-		canal <- fmt.Sprintf("error al insertar una materia, con error: %v", err)
-
-	}
-
-	return true
-}
-
-/*
-func ExisteArchivoCarpetaPrevia(bdd *sql.DB, tabla string, pathArchivo string) (int64, bool) {
-
-	query := fmt.Sprintf(`
-		SELECT res.id FROM (
-			SELECT %s.id, archivos.path FROM archivos INNER JOIN %s ON archivos.id = %s.idArchivo
-		) AS res WHERE res.path LIKE "%s/%s"
-	`, tabla, tabla, tabla, carpetaPrevia, "%")
-
-	return Obtener(func() *sql.Row { return bdd.QueryRow(query) })
-}
-
-func CargarCorrelativas(bdd *sql.DB, pathMateria string, pathCorrelativa string) bool {
-	query := `SELECT res.id FROM (
-			SELECT materias.id, archivos.path FROM archivos INNER JOIN materias ON archivos.id = materias.idArchivo
-		) AS res WHERE res.path LIKE "%s%s"`
-
-	if idMateria, existe := Obtener(
-		func() *sql.Row { return bdd.QueryRow(fmt.Sprintf(query, "%", pathMateria)) },
-	); !existe {
-		fmt.Printf("No se pudo encontrar materia: %s\n", pathMateria)
-		return false
-	} else if idCorrelativa, existe := Obtener(
-		func() *sql.Row { return bdd.QueryRow(fmt.Sprintf(query, "%", pathCorrelativa)) },
-	); !existe {
-		fmt.Printf("No se pudo encontrar correlativa: %s\n", pathCorrelativa)
-		return false
-	} else if _, err := Insertar(
-		func() (sql.Result, error) { return bdd.Exec(INSERTAR_CORRELATIVAS, idMateria, idCorrelativa) },
-	); err != nil {
-		fmt.Printf("Error al insertar materias correlativas, con error: %v\n", err)
-	}
-
-	return true
-}
-*/

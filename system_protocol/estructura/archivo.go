@@ -46,8 +46,8 @@ func (a *Archivo) ResolverDependencias(id int64) []Cargable {
 	cantidadCumple := 0
 	cargables := make([]Cargable, a.ListaDependencias.Largo)
 
-	for dependencia := range a.ListaDependencias.Iterar {
-		if cargable, cumple := dependencia.CumpleDependencia(id); cumple {
+	for cumpleDependencia := range a.ListaDependencias.Iterar {
+		if cargable, cumple := cumpleDependencia(id); cumple {
 			cargables[cantidadCumple] = cargable
 			cantidadCumple++
 		}

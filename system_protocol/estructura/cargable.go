@@ -8,8 +8,6 @@ import (
 type Cargable interface {
 	CargarDatos(bdd *sql.DB, canal chan string) (int64, error)
 
-	CargarDependencia(dependencia Dependencia)
-
 	ResolverDependencias(id int64) []Cargable
 }
 

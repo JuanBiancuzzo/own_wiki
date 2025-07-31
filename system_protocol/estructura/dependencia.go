@@ -1,10 +1,8 @@
 package estructura
 
 // Es una estructura que es capaz de tener dependencias
-type Dependibles interface {
+type Dependible interface {
 	CargarDependencia(dependencia Dependencia)
 }
 
-type Dependencia interface {
-	CumpleDependencia(id int64) (Cargable, bool)
-}
+type Dependencia func(id int64) (Cargable, bool)

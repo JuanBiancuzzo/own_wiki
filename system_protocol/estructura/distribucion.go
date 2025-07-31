@@ -65,8 +65,6 @@ func (d *Distribucion) ResolverDependencias(id int64) []Cargable {
 	return []Cargable{}
 }
 
-func (d *Distribucion) CargarDependencia(dependencia Dependencia) {}
-
 func ObtenerTipoDistribucion(representacion string) (TipoDistribucion, error) {
 	var tipoDistribucion TipoDistribucion
 	switch representacion {

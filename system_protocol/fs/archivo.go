@@ -19,20 +19,18 @@ const TAG_DISTRIBUCION = "colección/distribuciones/distribución"
 const TAG_LIBRO = "colección/biblioteca/libro"
 
 type Archivo struct {
-	Padre        *Directorio
-	Path         string
-	Archivo      *e.Archivo
-	Distribucion *e.ConstructorDistribucion
-	libro        *e.ConstructorLibro
+	Padre   *Directorio
+	Path    string
+	Archivo *e.Archivo
+	Carrera *e.ConstructorCarrera
+	Materia *e.ConstructorMateria
 }
 
-func NewArchivo(padre *Directorio, path string, info *db.InfoArchivos) (*Archivo, error) {
+func NewArchivo(padre *Directorio, path string, info *db.InfoArchivos, canal chan string) (*Archivo, error) {
 	archivo := Archivo{
-		Padre:        padre,
-		Path:         path,
-		Archivo:      nil,
-		Distribucion: nil,
-		libro:        nil,
+		Padre:   padre,
+		Path:    path,
+		Archivo: nil,
 	}
 
 	if !strings.Contains(path, ".md") {
@@ -65,14 +63,31 @@ func NewArchivo(padre *Directorio, path string, info *db.InfoArchivos) (*Archivo
 		switch tag {
 		case TAG_DISTRIBUCION:
 			if constructor, err := e.NewConstructorDistribucion(meta.NombreDistribuucion, meta.TipoDistribucion); err == nil {
-				archivo.Distribucion = constructor
+				archivo.Archivo.CargarDependencia(constructor.CumpleDependencia)
 
 			} else {
-				// canal <- fmt.Sprintf("Error: %v\n", err)
+				canal <- fmt.Sprintf("Error: %v\n", err)
+			}
+		case TAG_CARRERA:
+			nombreCarrera := archivo.Nombre()
+			if constructor, err := e.NewConstructorCarrera(nombreCarrera, meta.Etapa, meta.TieneCodigo); err == nil {
+				archivo.Archivo.CargarDependencia(constructor.CumpleDependencia)
+
+			} else {
+				canal <- fmt.Sprintf("Error: %v\n", err)
+			}
+
+		case TAG_MATERIA:
+			if constructor, err := e.NewConstructorMateria(meta.NombreMateria, meta.Codigo, meta.Plan, meta.Cuatri, meta.Etapa); err == nil {
+				archivo.Archivo.CargarDependencia(constructor.CumpleDependenciaArchivo)
+
+			} else {
+				canal <- fmt.Sprintf("Error: %v\n", err)
 			}
 
 		case TAG_LIBRO:
-			archivo.libro = meta.CrearLibro()
+			constructor := meta.CrearLibro()
+			archivo.Archivo.CargarDependencia(constructor.CumpleDependencia)
 		}
 	}
 
@@ -89,14 +104,6 @@ func (a *Archivo) Interprestarse(canal chan string) {
 	a.TiposDeArchivo.Push(e.NewArchivo(a.Path, a.Meta.Tags))
 	for _, tag := range a.Meta.Tags {
 		switch tag {}
-		case TAG_CARRERA:
-			nombreCarrera := a.Nombre()
-			if carrera, err := e.NewCarrera(a.Path, nombreCarrera, a.Meta.Etapa, a.Meta.TieneCodigo); err == nil {
-				a.TiposDeArchivo.Push(carrera)
-
-			} else {
-				canal <- fmt.Sprintf("Error: %v\n", err)
-			}
 		case TAG_MATERIA:
 			if carrera, err := a.Padre.ArchivoMasCercanoConTag(TAG_CARRERA); err != nil {
 				canal <- fmt.Sprintf("Error al buscar carrera, con error: %v\n", err)
@@ -152,12 +159,11 @@ func (a *Archivo) RelativizarPath(path string) {
 
 // Cambiar a establecer conexiones
 func (a *Archivo) InsertarDatos(canal chan e.Cargable) {
-	if a.libro != nil {
-		a.Archivo.CargarDependencia(a.libro)
-	}
+	if a.Materia != nil {
+		// Buscar carrera
+		// (esto es un ejemplo)
+		a.Carrera.CargarDependencia(a.Materia.CumpleDependenciaCarrera)
 
-	if a.Distribucion != nil {
-		a.Archivo.CargarDependencia(a.Distribucion)
 	}
 
 	canal <- a.Archivo

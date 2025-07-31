@@ -79,7 +79,7 @@ func EstablecerDirectorio(root string, wg *sync.WaitGroup, infoArchivos *db.Info
 		wg.Add(1)
 		go func(lista *ls.Lista[string], directorio *Directorio, infoArchivo *db.InfoArchivos) {
 			for archivoPath := range lista.Iterar {
-				if archivo, err := NewArchivo(directorio, archivoPath, infoArchivos); err != nil {
+				if archivo, err := NewArchivo(directorio, archivoPath, infoArchivos, canal); err != nil {
 					canal <- fmt.Sprintf("Se tuvo un error al crear un archivo, con error: %v", err)
 
 				} else {
