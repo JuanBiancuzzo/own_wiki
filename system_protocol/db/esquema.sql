@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS subtemasInvestigacion (
 
 CREATE TABLE IF NOT EXISTS revistasDePapers (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+  nombre VARCHAR(?)  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 );
 
 CREATE TABLE IF NOT EXISTS papers (

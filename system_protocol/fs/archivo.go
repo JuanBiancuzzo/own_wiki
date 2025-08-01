@@ -21,6 +21,7 @@ const TAG_CURSO_PRESENCIA = "cursos/curso-presencial"
 const TAG_RESUMEN_CURSO = "cursos/resumen"
 const TAG_DISTRIBUCION = "colección/distribuciones/distribución"
 const TAG_LIBRO = "colección/biblioteca/libro"
+const TAG_PAPER = "colección/biblioteca/paper"
 
 type PathTipo struct {
 	Path string
@@ -176,6 +177,14 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 		case TAG_LIBRO:
 			constructor := meta.CrearConstructorLibro()
 			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+
+		case TAG_PAPER:
+			if constructor, err := meta.CrearConstructorPaper(); err == nil {
+				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+
+			} else {
+				canal <- fmt.Sprintf("Error: %v\n", err)
+			}
 
 		case TAG_DISTRIBUCION:
 			if constructor, err := e.NewConstructorDistribucion(meta.NombreDistribuucion, meta.TipoDistribucion); err == nil {

@@ -44,9 +44,13 @@ type Frontmatter struct {
 	TipoCurso           e.TipoCurso   `yaml:"tipoCurso,omitempty"`
 	Profesores          []int         `yaml:"profesores,omitempty"`
 	Autores             []Persona     `yaml:"autores,omitempty"`
-	Editores            []string      `yaml:"editores,omitempty"`
+	Editores            []Persona     `yaml:"editores,omitempty"`
 	NumeroInforme       string        `yaml:"numeroInforme,omitempty"`
 	TituloInforme       string        `yaml:"tituloInforme,omitempty"`
+	SubtituloInforme    string        `yaml:"subtituloInforme,omitempty"`
+	NombreRevista       string        `yaml:"nombreRevista,omitempty"`
+	VolumenInforme      string        `yaml:"volumenRevista,omitempty"`
+	Paginas             Pagina        `yaml:"paginas,omitempty"`
 	Planes              []string      `yaml:"planes,omitempty"`
 	TieneCodigo         string        `yaml:"tieneCodigo,omitempty"`
 	NombreMateria       string        `yaml:"nombreMateria,omitempty"`
@@ -98,6 +102,7 @@ type Articulo struct {
 }
 
 func (f *Frontmatter) CrearConstructorLibro() *e.ConstructorLibro {
+
 	autores := make([]*e.Persona, len(f.Autores))
 	for i, autor := range f.Autores {
 		autores[i] = e.NewPersona(autor.Nombre, autor.Apellido)
@@ -128,6 +133,35 @@ func (f *Frontmatter) CrearConstructorLibro() *e.ConstructorLibro {
 		f.Url,
 		autores,
 		capitulos,
+	)
+}
+
+func (f *Frontmatter) CrearConstructorPaper() (*e.ConstructorPaper, error) {
+	if f.NombreRevista == "" {
+		f.NombreRevista = "No fue ingresado"
+	}
+
+	autores := make([]*e.Persona, len(f.Autores))
+	for i, autor := range f.Autores {
+		autores[i] = e.NewPersona(autor.Nombre, autor.Apellido)
+	}
+	editores := make([]*e.Persona, len(f.Editores))
+	for i, editor := range f.Editores {
+		editores[i] = e.NewPersona(editor.Nombre, editor.Apellido)
+	}
+
+	return e.NewConstructorPaper(
+		f.TituloInforme,
+		f.SubtituloInforme,
+		f.NombreRevista,
+		f.VolumenInforme,
+		f.NumeroInforme,
+		f.Paginas.Inicio,
+		f.Paginas.Final,
+		f.Anio,
+		f.Url,
+		autores,
+		editores,
 	)
 }
 
