@@ -154,6 +154,9 @@ func main() {
 	}
 
 	tiempoFinal := time.Since(tiempoInicio)
-	fmt.Printf("Se termino de insertar los archivos, en: %2.f minutos, %2.f segundos \n", tiempoFinal.Minutes(), tiempoFinal.Seconds())
+	minutos := tiempoFinal.Minutes()
+	segundos := tiempoFinal.Seconds() - 60*minutos
+
+	fmt.Printf("Se termino de insertar los archivos, en: %2.f minutos, %2.f segundos \n", minutos, segundos)
 	fmt.Println("Fin")
 }

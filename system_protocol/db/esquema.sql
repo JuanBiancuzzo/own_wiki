@@ -158,9 +158,9 @@ CREATE TABLE IF NOT EXISTS paginasCursos (
 
 CREATE TABLE IF NOT EXISTS cursos (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
-  fechaCurso INT,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
+  anioCurso INT,
   idPagina INT NOT NULL,
   url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
@@ -379,14 +379,4 @@ CREATE TABLE IF NOT EXISTS referencias (
   id INT AUTO_INCREMENT PRIMARY KEY,
   tipo ENUM ("Libro", "CapituloLibro", "Paper", "Curso", "TemaCurso", "Youtube", "Web", "Wiki", "Diccionario"),
   idReferencia INT NOT NULL,
-
-  FOREIGN KEY (idReferencia) REFERENCES libros(id),
-  FOREIGN KEY (idReferencia) REFERENCES capitulos(id),
-  FOREIGN KEY (idReferencia) REFERENCES papers(id),
-  FOREIGN KEY (idReferencia) REFERENCES cursos(id),
-  FOREIGN KEY (idReferencia) REFERENCES temasCurso(id),
-  FOREIGN KEY (idReferencia) REFERENCES referenciasYoutube(id),
-  FOREIGN KEY (idReferencia) REFERENCES referenciasWeb(id),
-  FOREIGN KEY (idReferencia) REFERENCES referenciasWiki(id),
-  FOREIGN KEY (idReferencia) REFERENCES referenciasDiccionario(id)
 );

@@ -39,6 +39,8 @@ type Frontmatter struct {
 	NombreTema          string        `yaml:"nombreTema,omitempty"`
 	Parte               string        `yaml:"parte,omitempty"`
 	Curso               string        `yaml:"curso,omitempty"`
+	NombreCurso         string        `yaml:"nombreCurso,omitempty"`
+	FechaCurso          string        `yaml:"fechaCurso,omitempty"`
 	Profesores          []int         `yaml:"profesores,omitempty"`
 	Autores             []Persona     `yaml:"autores,omitempty"`
 	Editores            []string      `yaml:"editores,omitempty"`
@@ -125,6 +127,22 @@ func (f *Frontmatter) CrearConstructorLibro() *e.ConstructorLibro {
 		f.Url,
 		autores,
 		capitulos,
+	)
+}
+
+func (f *Frontmatter) CrearConstructorCurso() (*e.ConstructorCurso, error) {
+	profesores := make([]*e.Persona, len(f.NombreAutores))
+	for i, profesor := range f.NombreAutores {
+		profesores[i] = e.NewPersona(profesor.Nombre, profesor.Apellido)
+	}
+
+	return e.NewConstructorCurso(
+		f.NombreCurso,
+		f.Etapa,
+		f.FechaCurso,
+		f.NombrePagina,
+		f.Url,
+		profesores,
 	)
 }
 

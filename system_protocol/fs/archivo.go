@@ -16,6 +16,7 @@ const TAG_CARRERA = "facultad/carrera"
 const TAG_MATERIA = "facultad/materia"
 const TAG_MATERIA_EQUIVALENTE = "facultad/materia-equivalente"
 const TAG_RESUMEN_MATERIA = "facultad/resumen"
+const TAG_CURSO = "cursos/curso"
 const TAG_DISTRIBUCION = "colección/distribuciones/distribución"
 const TAG_LIBRO = "colección/biblioteca/libro"
 
@@ -79,13 +80,6 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 
 	for _, tag := range meta.Tags {
 		switch tag {
-		case TAG_DISTRIBUCION:
-			if constructor, err := e.NewConstructorDistribucion(meta.NombreDistribuucion, meta.TipoDistribucion); err == nil {
-				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-
-			} else {
-				canal <- fmt.Sprintf("Error: %v\n", err)
-			}
 		case TAG_CARRERA:
 			nombreCarrera := archivo.Nombre()
 			if constructor, err := e.NewConstructorCarrera(nombreCarrera, meta.Etapa, meta.TieneCodigo); err == nil {
@@ -145,9 +139,26 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 
 			archivo.CargarDependible(e.DEP_TEMA_MATERIA, constructor)
 
+		case TAG_CURSO:
+			if constructor, err := meta.CrearConstructorCurso(); err == nil {
+				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+
+				archivo.CargarDependible(e.DEP_CURSO, constructor)
+			} else {
+				canal <- fmt.Sprintf("Error: %v\n", err)
+			}
+
 		case TAG_LIBRO:
 			constructor := meta.CrearConstructorLibro()
 			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+
+		case TAG_DISTRIBUCION:
+			if constructor, err := e.NewConstructorDistribucion(meta.NombreDistribuucion, meta.TipoDistribucion); err == nil {
+				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+
+			} else {
+				canal <- fmt.Sprintf("Error: %v\n", err)
+			}
 		}
 	}
 
