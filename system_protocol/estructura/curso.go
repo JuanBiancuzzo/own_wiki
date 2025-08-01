@@ -12,7 +12,7 @@ const INSERTAR_CURSO = "INSERT INTO cursos (nombre, etapa, anioCurso, idPagina, 
 const QUERY_PAGINA_CURSO = "SELECT id FROM paginasCursos WHERE nombrePagina = ?"
 const INSERTAR_PAGINA_CURSO = "INSERT INTO paginasCursos (nombrePagina) VALUES (?)"
 
-const INSERTAR_PROFESOR_CURSO = "INSERT INTO profesoresCurso (idCurso, idPersona) VALUES (?, ?)"
+const INSERTAR_PROFESOR_CURSO = "INSERT INTO profesoresCurso (idCurso, tipoCurso, idPersona) VALUES (?, ?, ?)"
 
 type ConstructorCurso struct {
 	Nombre            string
@@ -102,7 +102,7 @@ func (c *Curso) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 		); err != nil {
 			canal <- fmt.Sprintf("error al hacer una querry del profesor: %s %s con error: %v", profesor.Nombre, profesor.Apellido, err)
 
-		} else if _, err := bdd.Exec(INSERTAR_PROFESOR_CURSO, idCurso, idAutor); err != nil {
+		} else if _, err := bdd.Exec(INSERTAR_PROFESOR_CURSO, idCurso, CURSO_ONLINE, idAutor); err != nil {
 			canal <- fmt.Sprintf("error al insertar par idCurso-idProfesor, con error: %v", err)
 		}
 	}

@@ -169,23 +169,33 @@ CREATE TABLE IF NOT EXISTS cursos (
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
 );
 
-CREATE TABLE IF NOT EXISTS temasCurso (
+CREATE TABLE IF NOT EXISTS cursosPresencial (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  idCurso INT NOT NULL,
-  capitulo INT,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  parte INT,
+  etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
+  anioCurso INT,
   idArchivo INT NOT NULL,
 
-  FOREIGN KEY (idCurso) REFERENCES cursos(id),
+  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
+);
+
+CREATE TABLE IF NOT EXISTS temasCurso (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  capitulo INT,
+  parte INT,
+  tipoCurso ENUM ("Online", "Presencial"),
+  idCurso INT NOT NULL,
+  idArchivo INT NOT NULL,
+
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
 );
 
 CREATE TABLE IF NOT EXISTS profesoresCurso (
   idCurso INT NOT NULL,
+  tipoCurso ENUM ("Online", "Presencial"),
   idPersona INT NOT NULL,
 
-  FOREIGN KEY (idCurso) REFERENCES cursos(id),
   FOREIGN KEY (idPersona) REFERENCES personas(id)
 );
 
@@ -378,5 +388,5 @@ CREATE TABLE IF NOT EXISTS referenciasDiccionario (
 CREATE TABLE IF NOT EXISTS referencias (
   id INT AUTO_INCREMENT PRIMARY KEY,
   tipo ENUM ("Libro", "CapituloLibro", "Paper", "Curso", "TemaCurso", "Youtube", "Web", "Wiki", "Diccionario"),
-  idReferencia INT NOT NULL,
+  idReferencia INT NOT NULL
 );

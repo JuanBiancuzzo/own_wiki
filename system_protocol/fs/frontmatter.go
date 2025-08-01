@@ -41,6 +41,7 @@ type Frontmatter struct {
 	Curso               string        `yaml:"curso,omitempty"`
 	NombreCurso         string        `yaml:"nombreCurso,omitempty"`
 	FechaCurso          string        `yaml:"fechaCurso,omitempty"`
+	TipoCurso           e.TipoCurso   `yaml:"tipoCurso,omitempty"`
 	Profesores          []int         `yaml:"profesores,omitempty"`
 	Autores             []Persona     `yaml:"autores,omitempty"`
 	Editores            []string      `yaml:"editores,omitempty"`
@@ -142,6 +143,20 @@ func (f *Frontmatter) CrearConstructorCurso() (*e.ConstructorCurso, error) {
 		f.FechaCurso,
 		f.NombrePagina,
 		f.Url,
+		profesores,
+	)
+}
+
+func (f *Frontmatter) CrearConstructorCursoPresencial() (*e.ConstructorCursoPresencial, error) {
+	profesores := make([]*e.Persona, len(f.NombreAutores))
+	for i, profesor := range f.NombreAutores {
+		profesores[i] = e.NewPersona(profesor.Nombre, profesor.Apellido)
+	}
+
+	return e.NewConstructorCursoPresencial(
+		f.NombreCurso,
+		f.Etapa,
+		f.FechaCurso,
 		profesores,
 	)
 }

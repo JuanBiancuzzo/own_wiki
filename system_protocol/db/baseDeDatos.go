@@ -64,6 +64,7 @@ func datosParaTabla(info *InfoArchivos) []any {
 		255,            // nombre de la pagina del curso
 		255,            // nombre del curso
 		info.MaxUrl,    // url del curso
+		255,            // Nombre del curso presencial
 		255,            // nombre del tema del curso
 		255,            // nombre del tema de investigacion
 		255,            // nombre de revista de papers

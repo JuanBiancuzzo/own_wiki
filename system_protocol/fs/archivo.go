@@ -17,6 +17,8 @@ const TAG_MATERIA = "facultad/materia"
 const TAG_MATERIA_EQUIVALENTE = "facultad/materia-equivalente"
 const TAG_RESUMEN_MATERIA = "facultad/resumen"
 const TAG_CURSO = "cursos/curso"
+const TAG_CURSO_PRESENCIA = "cursos/curso-presencial"
+const TAG_RESUMEN_CURSO = "cursos/resumen"
 const TAG_DISTRIBUCION = "colección/distribuciones/distribución"
 const TAG_LIBRO = "colección/biblioteca/libro"
 
@@ -147,6 +149,29 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			} else {
 				canal <- fmt.Sprintf("Error: %v\n", err)
 			}
+
+		case TAG_CURSO_PRESENCIA:
+			if constructor, err := meta.CrearConstructorCursoPresencial(); err == nil {
+				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+
+				archivo.CargarDependible(e.DEP_CURSO_PRESENCIAL, constructor)
+			} else {
+				canal <- fmt.Sprintf("Error: %v\n", err)
+			}
+
+		case TAG_RESUMEN_CURSO:
+			constructor := e.NewConstructorTemaCurso(meta.NombreResumen, meta.Capitulo, meta.Parte, meta.TipoCurso)
+			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+
+			pathCurso := ObtenerWikiLink(meta.Curso)[0]
+			switch meta.TipoCurso {
+			case e.CURSO_ONLINE:
+				archivo.CargarDependencia(pathCurso, e.DEP_CURSO, constructor.CrearDependenciaCurso)
+			case e.CURSO_PRESENCIAL:
+				archivo.CargarDependencia(pathCurso, e.DEP_CURSO_PRESENCIAL, constructor.CrearDependenciaCurso)
+			}
+
+			archivo.CargarDependible(e.DEP_TEMA_CURSO, constructor)
 
 		case TAG_LIBRO:
 			constructor := meta.CrearConstructorLibro()
