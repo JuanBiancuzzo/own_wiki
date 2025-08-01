@@ -120,10 +120,9 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			}
 
 		case TAG_MATERIA_EQUIVALENTE:
-			pathMateria := ObtenerWikiLink(meta.Equivalencia)[0]
-			constructor := e.NewConstructorMateriaEquivalente(pathMateria, meta.NombreMateria, meta.Codigo)
+			constructor := e.NewConstructorMateriaEquivalente(meta.NombreMateria, meta.Codigo)
 			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-			archivo.CargarDependencia(pathMateria, e.DEP_MATERIA, constructor.CrearDependenciaMateria)
+			archivo.CargarDependencia(ObtenerWikiLink(meta.Equivalencia)[0], e.DEP_MATERIA, constructor.CrearDependenciaMateria)
 
 			archivo.CargarDependible(e.DEP_MATERIA_EQUIVALENTE, constructor)
 
@@ -138,6 +137,13 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 					archivo.CargarDependencia(correlativa.Path, e.DEP_MATERIA_EQUIVALENTE, constructor.CrearDependenciaCorrelativa)
 				}
 			}
+
+		case TAG_RESUMEN_MATERIA:
+			constructor := e.NewConstructorTemaMateria(meta.NombreResumen, meta.Capitulo, meta.Parte)
+			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+			archivo.CargarDependencia(meta.MateriaResumen, e.DEP_MATERIA, constructor.CrearDependenciaMateria)
+
+			archivo.CargarDependible(e.DEP_TEMA_MATERIA, constructor)
 
 		case TAG_LIBRO:
 			constructor := meta.CrearConstructorLibro()

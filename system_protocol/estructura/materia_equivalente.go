@@ -14,17 +14,15 @@ const QUERY_MATERIA_EQUIVALENTES_PATH = `SELECT res.id FROM (
 type ConstructorMateriaEquivalente struct {
 	IdArchivo         *Opcional[int64]
 	IdMateria         *Opcional[int64]
-	PathMateria       string
 	Nombre            string
 	Codigo            string
 	ListaDependencias *l.Lista[Dependencia]
 }
 
-func NewConstructorMateriaEquivalente(pathMateria string, nombre string, codigo string) *ConstructorMateriaEquivalente {
+func NewConstructorMateriaEquivalente(nombre string, codigo string) *ConstructorMateriaEquivalente {
 	return &ConstructorMateriaEquivalente{
 		IdArchivo:         NewOpcional[int64](),
 		IdMateria:         NewOpcional[int64](),
-		PathMateria:       pathMateria,
 		Nombre:            nombre,
 		Codigo:            codigo,
 		ListaDependencias: l.NewLista[Dependencia](),

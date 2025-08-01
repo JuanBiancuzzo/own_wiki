@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"own_wiki/system_protocol/db"
 	e "own_wiki/system_protocol/estructura"
@@ -93,6 +94,7 @@ func main() {
 		fmt.Println("No tiene la cantidad suficiente de argumentos, necesitas pasar el directorio de output")
 		return
 	}
+	tiempoInicio := time.Now()
 
 	canalMensajes := make(chan string, 100)
 	var waitMensajes sync.WaitGroup
@@ -151,6 +153,7 @@ func main() {
 		fmt.Println("Hubo un error, no se procesaron: ", cargablesListos.Lista.Largo, " cargables")
 	}
 
-	fmt.Println("Se termino de insertar los archivos")
+	tiempoFinal := time.Since(tiempoInicio)
+	fmt.Printf("Se termino de insertar los archivos, en: %2.f minutos, %2.f segundos \n", tiempoFinal.Minutes(), tiempoFinal.Seconds())
 	fmt.Println("Fin")
 }

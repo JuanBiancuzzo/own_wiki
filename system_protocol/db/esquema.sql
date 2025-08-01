@@ -141,8 +141,9 @@ CREATE TABLE IF NOT EXISTS materiasCorrelativas (
 
 CREATE TABLE IF NOT EXISTS temasMateria (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  capitulo INT,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  capitulo INT,
+  parte INT,
   idMateria INT NOT NULL,
   idArchivo INT NOT NULL,
 

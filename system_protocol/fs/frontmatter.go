@@ -21,6 +21,7 @@ type Frontmatter struct {
 	Capitulo            string        `yaml:"capitulo,omitempty"`
 	Fecha               string        `yaml:"fecha,omitempty"`
 	NombreResumen       string        `yaml:"nombreResumen,omitempty"`
+	MateriaResumen      string        `yaml:"materiaResumen,omitempty"`
 	Anio                string        `yaml:"anio,omitempty"`
 	Tipo                string        `yaml:"tipo,omitempty"`
 	NombreAutores       []Persona     `yaml:"nombreAutores,omitempty"`
@@ -36,7 +37,7 @@ type Frontmatter struct {
 	Cover               string        `yaml:"cover,omitempty"`
 	Volumen             string        `yaml:"volumen,omitempty"`
 	NombreTema          string        `yaml:"nombreTema,omitempty"`
-	Parte               int           `yaml:"parte,omitempty"`
+	Parte               string        `yaml:"parte,omitempty"`
 	Curso               string        `yaml:"curso,omitempty"`
 	Profesores          []int         `yaml:"profesores,omitempty"`
 	Autores             []Persona     `yaml:"autores,omitempty"`
