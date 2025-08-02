@@ -4,14 +4,17 @@ FROM golang:1.24.5
 WORKDIR /app
 
 # Copy go mod and sum files
-COPY go.mod go.sum ./
+COPY src/go.mod src/go.sum ./
 RUN go mod download
 
+# Copy variables
+COPY .env .env
+
 # Copy source code
-COPY . .
+COPY src/ .
 
 # Build the Go app
-RUN go build -o own_wiki crear_db.go
+RUN go build -o own_wiki main.go
 
 # Run the app
 CMD ["./own_wiki"]

@@ -16,9 +16,9 @@ services:
     networks:
       - appnet
 
-  app:
+  app_encoder:
     build: .
-    container_name: own_wiki_go
+    container_name: encodear_archivos
     depends_on:
       - db
     environment:
@@ -34,8 +34,28 @@ services:
       - ./volumenes/output:/var/lib/output
     networks:
       - appnet
-    command: ["./own_wiki", "/var/lib/datos", "/var/lib/output"] 
+    command: ["./own_wiki", "-e", "/var/lib/datos", "/var/lib/output"] 
 
+  app_process:
+    build: .
+    container_name: manerar_archivos
+    depends_on:
+      app_encoder:
+        condition: service_completed_successfully
+
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./volumenes/output:/var/lib/datos
+    networks:
+      - appnet
+    command: ["./own_wiki", "-p", "/var/lib/datos"] 
 volumes:
   my-db: 
 
