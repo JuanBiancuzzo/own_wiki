@@ -101,7 +101,7 @@ type Articulo struct {
 	} `yaml:"textos,omitempty"`
 }
 
-func (f *Frontmatter) CrearConstructorLibro() *e.ConstructorLibro {
+func (f *Frontmatter) CrearLibro() *e.Libro {
 
 	autores := make([]*e.Persona, len(f.Autores))
 	for i, autor := range f.Autores {
@@ -123,7 +123,7 @@ func (f *Frontmatter) CrearConstructorLibro() *e.ConstructorLibro {
 		)
 	}
 
-	return e.NewConstructorLibro(
+	return e.NewLibro(
 		f.TituloObra,
 		f.SubtituloObra,
 		f.Editorial,
@@ -136,7 +136,7 @@ func (f *Frontmatter) CrearConstructorLibro() *e.ConstructorLibro {
 	)
 }
 
-func (f *Frontmatter) CrearConstructorPaper() (*e.ConstructorPaper, error) {
+func (f *Frontmatter) CrearPaper() (*e.Paper, error) {
 	if f.NombreRevista == "" {
 		f.NombreRevista = "No fue ingresado"
 	}
@@ -150,7 +150,7 @@ func (f *Frontmatter) CrearConstructorPaper() (*e.ConstructorPaper, error) {
 		editores[i] = e.NewPersona(editor.Nombre, editor.Apellido)
 	}
 
-	return e.NewConstructorPaper(
+	return e.NewPaper(
 		f.TituloInforme,
 		f.SubtituloInforme,
 		f.NombreRevista,
@@ -165,13 +165,13 @@ func (f *Frontmatter) CrearConstructorPaper() (*e.ConstructorPaper, error) {
 	)
 }
 
-func (f *Frontmatter) CrearConstructorCurso() (*e.ConstructorCurso, error) {
+func (f *Frontmatter) CrearCurso() (*e.Curso, error) {
 	profesores := make([]*e.Persona, len(f.NombreAutores))
 	for i, profesor := range f.NombreAutores {
 		profesores[i] = e.NewPersona(profesor.Nombre, profesor.Apellido)
 	}
 
-	return e.NewConstructorCurso(
+	return e.NewCurso(
 		f.NombreCurso,
 		f.Etapa,
 		f.FechaCurso,
@@ -181,13 +181,13 @@ func (f *Frontmatter) CrearConstructorCurso() (*e.ConstructorCurso, error) {
 	)
 }
 
-func (f *Frontmatter) CrearConstructorCursoPresencial() (*e.ConstructorCursoPresencial, error) {
+func (f *Frontmatter) CrearCursoPresencial() (*e.CursoPresencial, error) {
 	profesores := make([]*e.Persona, len(f.NombreAutores))
 	for i, profesor := range f.NombreAutores {
 		profesores[i] = e.NewPersona(profesor.Nombre, profesor.Apellido)
 	}
 
-	return e.NewConstructorCursoPresencial(
+	return e.NewCursoPresencial(
 		f.NombreCurso,
 		f.Etapa,
 		f.FechaCurso,

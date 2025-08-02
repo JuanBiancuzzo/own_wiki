@@ -13,7 +13,8 @@ const INSERTAR_CAPITULO = "INSERT INTO capitulos (capitulo, nombre, paginaInicia
 const INSERTAR_AUTOR_LIBRO = "INSERT INTO autoresLibro (idLibro, idPersona) VALUES (?, ?)"
 const INSERTAR_EDITOR_CAPITULO = "INSERT INTO editoresCapitulo (idCapitulo, idPersona) VALUES (?, ?)"
 
-type ConstructorLibro struct {
+type Libro struct {
+	IdArchivo *Opcional[int64]
 	Titulo    string
 	Subtitulo string
 	Editorial string
@@ -25,8 +26,9 @@ type ConstructorLibro struct {
 	Capitulos []*Capitulo
 }
 
-func NewConstructorLibro(titulo string, subtitulo string, editorial string, anio string, edicion string, volumen string, url string, autores []*Persona, capitulos []*Capitulo) *ConstructorLibro {
-	return &ConstructorLibro{
+func NewLibro(titulo string, subtitulo string, editorial string, anio string, edicion string, volumen string, url string, autores []*Persona, capitulos []*Capitulo) *Libro {
+	return &Libro{
+		IdArchivo: NewOpcional[int64](),
 		Titulo:    titulo,
 		Subtitulo: subtitulo,
 		Editorial: editorial,
@@ -39,20 +41,10 @@ func NewConstructorLibro(titulo string, subtitulo string, editorial string, anio
 	}
 }
 
-func (cl *ConstructorLibro) CrearDependenciaArchivo(dependible Dependible) {
+func (l *Libro) CrearDependenciaArchivo(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		return &Libro{
-			Titulo:    cl.Titulo,
-			Subtitulo: cl.Subtitulo,
-			Editorial: cl.Editorial,
-			Anio:      cl.Anio,
-			Edicion:   cl.Edicion,
-			Volumen:   cl.Volumen,
-			Url:       cl.Url,
-			Autores:   cl.Autores,
-			Capitulos: cl.Capitulos,
-			IdArchivo: id,
-		}, true
+		l.IdArchivo.Asignar(id)
+		return l, true
 	})
 }
 
@@ -74,42 +66,37 @@ func NewCapitulo(capitulo string, nombre string, editores []*Persona, paginaInic
 	}
 }
 
-func (c *Capitulo) Insertar(idLibro int64, idArchivo int64) []any {
-	return []any{c.Capitulo, c.Nombre, c.PaginaInicial, c.PaginaFinal, idLibro, idArchivo}
+func (c *Capitulo) Insertar(idLibro int64, OpIdArchivo *Opcional[int64]) ([]any, error) {
+	if idArchivo, existe := OpIdArchivo.Obtener(); !existe {
+		return []any{}, fmt.Errorf("capitulo no tiene todavia el idArchivo")
+	} else {
+		return []any{c.Capitulo, c.Nombre, c.PaginaInicial, c.PaginaFinal, idLibro, idArchivo}, nil
+	}
 }
 
-type Libro struct {
-	Titulo    string
-	Subtitulo string
-	Editorial string
-	Anio      int
-	Edicion   int
-	Volumen   int
-	Url       string
-	Autores   []*Persona
-	Capitulos []*Capitulo
-	IdArchivo int64
-}
-
-func (l *Libro) Insertar(idEditorial int64) []any {
-	return []any{l.Titulo, l.Subtitulo, idEditorial, l.Anio, l.Edicion, l.Volumen, l.Url, l.IdArchivo}
+func (l *Libro) Insertar(idEditorial int64) ([]any, error) {
+	if idArchivo, existe := l.IdArchivo.Obtener(); !existe {
+		return []any{}, fmt.Errorf("libro no tiene todavia el idArchivo")
+	} else {
+		return []any{l.Titulo, l.Subtitulo, idEditorial, l.Anio, l.Edicion, l.Volumen, l.Url, idArchivo}, nil
+	}
 }
 
 func (l *Libro) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	// canal <- "Insertar Libro"
+	canal <- "Insertar Libro"
 
 	var idLibro int64
-
 	if idEditorial, err := ObtenerOInsertar(
 		func() *sql.Row { return bdd.QueryRow(QUERY_EDITORIAL, l.Editorial) },
 		func() (sql.Result, error) { return bdd.Exec(INSERTAR_EDITORIAL, l.Editorial) },
 	); err != nil {
 		return 0, fmt.Errorf("error al hacer una querry de la editorial %s con error: %v", l.Editorial, err)
 
-	} else if idLibro, err = Insertar(func() (sql.Result, error) {
-		return bdd.Exec(INSERTAR_LIBRO, l.Insertar(idEditorial)...)
-	}); err != nil {
-		return 0, fmt.Errorf("error al insertar un libro, con error: %v", err)
+	} else if datos, err := l.Insertar(idEditorial); err != nil {
+		return 0, err
+
+	} else if idLibro, err = InsertarDirecto(bdd, INSERTAR_LIBRO, datos...); err != nil {
+		return 0, err
 	}
 
 	for _, autor := range l.Autores {
@@ -125,9 +112,10 @@ func (l *Libro) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 	}
 
 	for _, capitulo := range l.Capitulos {
-		if idCapitulo, err := Insertar(func() (sql.Result, error) {
-			return bdd.Exec(INSERTAR_CAPITULO, capitulo.Insertar(idLibro, l.IdArchivo)...)
-		}); err != nil {
+		if datos, err := capitulo.Insertar(idLibro, l.IdArchivo); err != nil {
+			canal <- fmt.Sprintf("error al insertar un capitulo, con error: %v", err)
+
+		} else if idCapitulo, err := InsertarDirecto(bdd, INSERTAR_CAPITULO, datos...); err != nil {
 			canal <- fmt.Sprintf("error al insertar un capitulo, con error: %v", err)
 		} else {
 			for _, autor := range capitulo.Editores {

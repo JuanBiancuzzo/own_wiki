@@ -58,3 +58,7 @@ func Insertar(insert func() (sql.Result, error)) (int64, error) {
 		return id, nil
 	}
 }
+
+func InsertarDirecto(bdd *sql.DB, query string, datos ...any) (int64, error) {
+	return Insertar(func() (sql.Result, error) { return bdd.Exec(query, datos...) })
+}

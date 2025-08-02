@@ -26,7 +26,7 @@ const (
 	CUATRIMESTRE_SEGUNDO = "Segundo"
 )
 
-type ConstructorMateria struct {
+type Materia struct {
 	IdArchivo         *Opcional[int64]
 	IdCarrera         *Opcional[int64]
 	Nombre            string
@@ -38,7 +38,7 @@ type ConstructorMateria struct {
 	ListaDependencias *l.Lista[Dependencia]
 }
 
-func NewConstructorMateria(nombre string, codigo string, plan string, repCuatri string, repEtapa string) (*ConstructorMateria, error) {
+func NewMateria(nombre string, codigo string, plan string, repCuatri string, repEtapa string) (*Materia, error) {
 	if etapa, err := ObtenerEtapa(repEtapa); err != nil {
 		return nil, fmt.Errorf("error al crear materia con error: %v", err)
 
@@ -46,7 +46,7 @@ func NewConstructorMateria(nombre string, codigo string, plan string, repCuatri 
 		return nil, fmt.Errorf("error al crear materia con error: %v", err)
 
 	} else {
-		return &ConstructorMateria{
+		return &Materia{
 			IdArchivo:         NewOpcional[int64](),
 			IdCarrera:         NewOpcional[int64](),
 			Nombre:            nombre,
@@ -59,60 +59,34 @@ func NewConstructorMateria(nombre string, codigo string, plan string, repCuatri 
 	}
 }
 
-func (cm *ConstructorMateria) CumpleDependencia() (*Materia, bool) {
-	if idArchivo, existe := cm.IdArchivo.Obtener(); !existe {
-		return nil, false
+func (m *Materia) CrearDependenciaCarrera(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		m.IdCarrera.Asignar(id)
+		return m, CumpleAll(m.IdArchivo, m.IdCarrera)
+	})
+}
 
-	} else if idCarrera, existe := cm.IdCarrera.Obtener(); !existe {
-		return nil, false
+func (m *Materia) CrearDependenciaArchivo(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		m.IdArchivo.Asignar(id)
+		return m, CumpleAll(m.IdArchivo, m.IdCarrera)
+	})
+}
+
+func (m *Materia) CargarDependencia(dependencia Dependencia) {
+	m.ListaDependencias.Push(dependencia)
+}
+
+func (m *Materia) Insertar(idPlan int64, idCuatrimestre int64) ([]any, error) {
+	if idArchivo, existe := m.IdArchivo.Obtener(); !existe {
+		return []any{}, fmt.Errorf("materia no tiene todavia el idArchivo")
+
+	} else if idCarrera, existe := m.IdCarrera.Obtener(); !existe {
+		return []any{}, fmt.Errorf("materia no tiene todavia el idCarrera")
 
 	} else {
-		return &Materia{
-			Nombre:            cm.Nombre,
-			Codigo:            cm.Codigo,
-			Plan:              cm.Plan,
-			Anio:              cm.Anio,
-			Cuatri:            cm.Cuatri,
-			Etapa:             cm.Etapa,
-			IdCarrera:         idCarrera,
-			IdArchivo:         idArchivo,
-			ListaDependencias: cm.ListaDependencias,
-		}, true
+		return []any{m.Nombre, m.Codigo, m.Etapa, idCarrera, idPlan, idCuatrimestre, idArchivo}, nil
 	}
-}
-
-func (cm *ConstructorMateria) CrearDependenciaCarrera(dependible Dependible) {
-	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		cm.IdCarrera.Asignar(id)
-		return cm.CumpleDependencia()
-	})
-}
-
-func (cm *ConstructorMateria) CrearDependenciaArchivo(dependible Dependible) {
-	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		cm.IdArchivo.Asignar(id)
-		return cm.CumpleDependencia()
-	})
-}
-
-func (cm *ConstructorMateria) CargarDependencia(dependencia Dependencia) {
-	cm.ListaDependencias.Push(dependencia)
-}
-
-type Materia struct {
-	Nombre            string
-	Codigo            string
-	Plan              string
-	Anio              int
-	Cuatri            ParteCuatrimestre
-	Etapa             Etapa
-	IdCarrera         int64
-	IdArchivo         int64
-	ListaDependencias *l.Lista[Dependencia]
-}
-
-func (m *Materia) Insertar(idPlan int64, idCuatrimestre int64) []any {
-	return []any{m.Nombre, m.Codigo, m.Etapa, m.IdCarrera, idPlan, idCuatrimestre, m.IdArchivo}
 }
 
 func (m *Materia) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
@@ -130,10 +104,11 @@ func (m *Materia) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 	); err != nil {
 		return 0, fmt.Errorf("error al hacer una querry del cuatri %s parte de %d con error: %v", m.Cuatri, m.Anio, err)
 
+	} else if datos, err := m.Insertar(idPlan, idCuatrimestre); err != nil {
+		return 0, err
+
 	} else {
-		return Insertar(
-			func() (sql.Result, error) { return bdd.Exec(INSERTAR_MATERIA, m.Insertar(idPlan, idCuatrimestre)...) },
-		)
+		return InsertarDirecto(bdd, INSERTAR_MATERIA, datos...)
 	}
 }
 

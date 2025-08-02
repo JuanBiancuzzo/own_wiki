@@ -8,19 +8,19 @@ import (
 
 const INSERTAR_MATERIA_EQUIVALENTES = "INSERT INTO materiasEquivalentes (nombre, codigo, idCarrera, idMateria, idArchivo) VALUES (?, ?, ?, ?, ?)"
 
-type ConstructorMateriaEquivalente struct {
+type MateriaEquivalente struct {
 	IdArchivo         *Opcional[int64]
-	idCarrera         *Opcional[int64]
+	IdCarrera         *Opcional[int64]
 	IdMateria         *Opcional[int64]
 	Nombre            string
 	Codigo            string
 	ListaDependencias *l.Lista[Dependencia]
 }
 
-func NewConstructorMateriaEquivalente(nombre string, codigo string) *ConstructorMateriaEquivalente {
-	return &ConstructorMateriaEquivalente{
+func NewMateriaEquivalente(nombre string, codigo string) *MateriaEquivalente {
+	return &MateriaEquivalente{
 		IdArchivo:         NewOpcional[int64](),
-		idCarrera:         NewOpcional[int64](),
+		IdCarrera:         NewOpcional[int64](),
 		IdMateria:         NewOpcional[int64](),
 		Nombre:            nombre,
 		Codigo:            codigo,
@@ -28,70 +28,52 @@ func NewConstructorMateriaEquivalente(nombre string, codigo string) *Constructor
 	}
 }
 
-func (cme *ConstructorMateriaEquivalente) CumpleDependencia() (*MateriaEquivalente, bool) {
-	if idArchivo, existe := cme.IdArchivo.Obtener(); !existe {
-		return nil, false
+func (me *MateriaEquivalente) CrearDependenciaCarrera(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		me.IdCarrera.Asignar(id)
+		return me, CumpleAll(me.IdArchivo, me.IdCarrera, me.IdMateria)
+	})
+}
+func (me *MateriaEquivalente) CrearDependenciaMateria(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		me.IdMateria.Asignar(id)
+		return me, CumpleAll(me.IdArchivo, me.IdCarrera, me.IdMateria)
+	})
+}
 
-	} else if idMateria, existe := cme.IdMateria.Obtener(); !existe {
-		return nil, false
+func (me *MateriaEquivalente) CrearDependenciaArchivo(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		me.IdArchivo.Asignar(id)
+		return me, CumpleAll(me.IdArchivo, me.IdCarrera, me.IdMateria)
+	})
+}
 
-	} else if idCarrera, existe := cme.idCarrera.Obtener(); !existe {
-		return nil, false
+func (me *MateriaEquivalente) CargarDependencia(dependencia Dependencia) {
+	me.ListaDependencias.Push(dependencia)
+}
+
+func (me *MateriaEquivalente) Insertar() ([]any, error) {
+	if idArchivo, existe := me.IdArchivo.Obtener(); !existe {
+		return []any{}, fmt.Errorf("materia equivalente no tiene todavia el idArchivo")
+
+	} else if idMateria, existe := me.IdMateria.Obtener(); !existe {
+		return []any{}, fmt.Errorf("materia equivalente no tiene todavia el idMateria")
+
+	} else if idCarrera, existe := me.IdCarrera.Obtener(); !existe {
+		return []any{}, fmt.Errorf("materia equivalente no tiene todavia el idCarrera")
 
 	} else {
-		return &MateriaEquivalente{
-			IdArchivo:         idArchivo,
-			IdCarrera:         idCarrera,
-			IdMateria:         idMateria,
-			Nombre:            cme.Nombre,
-			Codigo:            cme.Codigo,
-			ListaDependencias: cme.ListaDependencias,
-		}, true
+		return []any{me.Nombre, me.Codigo, idCarrera, idMateria, idArchivo}, nil
 	}
-}
-
-func (cme *ConstructorMateriaEquivalente) CrearDependenciaCarrera(dependible Dependible) {
-	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		cme.idCarrera.Asignar(id)
-		return cme.CumpleDependencia()
-	})
-}
-func (cme *ConstructorMateriaEquivalente) CrearDependenciaMateria(dependible Dependible) {
-	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		cme.IdMateria.Asignar(id)
-		return cme.CumpleDependencia()
-	})
-}
-
-func (cme *ConstructorMateriaEquivalente) CrearDependenciaArchivo(dependible Dependible) {
-	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		cme.IdArchivo.Asignar(id)
-		return cme.CumpleDependencia()
-	})
-}
-
-func (cme *ConstructorMateriaEquivalente) CargarDependencia(dependencia Dependencia) {
-	cme.ListaDependencias.Push(dependencia)
-}
-
-type MateriaEquivalente struct {
-	IdArchivo         int64
-	IdMateria         int64
-	IdCarrera         int64
-	Nombre            string
-	Codigo            string
-	ListaDependencias *l.Lista[Dependencia]
-}
-
-func (me *MateriaEquivalente) Insertar() []any {
-	return []any{me.Nombre, me.Codigo, me.IdCarrera, me.IdMateria, me.IdArchivo}
 }
 
 func (me *MateriaEquivalente) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 	canal <- fmt.Sprintf("Insertar Materia Equivalentes: %s", me.Nombre)
-	return Insertar(
-		func() (sql.Result, error) { return bdd.Exec(INSERTAR_MATERIA_EQUIVALENTES, me.Insertar()...) },
-	)
+	if datos, err := me.Insertar(); err != nil {
+		return 0, err
+	} else {
+		return InsertarDirecto(bdd, INSERTAR_MATERIA_EQUIVALENTES, datos...)
+	}
 }
 
 func (me *MateriaEquivalente) ResolverDependencias(id int64) []Cargable {

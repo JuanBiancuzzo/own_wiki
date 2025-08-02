@@ -2,6 +2,7 @@ package estructura
 
 import (
 	"database/sql"
+	"fmt"
 	l "own_wiki/system_protocol/listas"
 )
 
@@ -14,7 +15,7 @@ const (
 	MATERIA_EQUIVALENTE = "Equivalente"
 )
 
-type ConstructorMateriasCorrelativas struct {
+type MateriasCorrelativas struct {
 	IdMateria         *Opcional[int64]
 	TipoMateria       TipoMateria
 	IdCorrelativa     *Opcional[int64]
@@ -22,8 +23,8 @@ type ConstructorMateriasCorrelativas struct {
 	ListaDependencias *l.Lista[Dependencia]
 }
 
-func NewConstructorMateriasCorrelativas(tipoMateria TipoMateria, tipoCorrelativa TipoMateria) *ConstructorMateriasCorrelativas {
-	return &ConstructorMateriasCorrelativas{
+func NewMateriasCorrelativas(tipoMateria TipoMateria, tipoCorrelativa TipoMateria) *MateriasCorrelativas {
+	return &MateriasCorrelativas{
 		IdMateria:         NewOpcional[int64](),
 		TipoMateria:       tipoMateria,
 		IdCorrelativa:     NewOpcional[int64](),
@@ -32,59 +33,43 @@ func NewConstructorMateriasCorrelativas(tipoMateria TipoMateria, tipoCorrelativa
 	}
 }
 
-func (cmc *ConstructorMateriasCorrelativas) CumpleDependencia() (*MateriasCorrelativas, bool) {
-	if idMateria, existe := cmc.IdMateria.Obtener(); !existe {
-		return nil, false
+func (mc *MateriasCorrelativas) CrearDependenciaCorrelativa(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		mc.IdCorrelativa.Asignar(id)
+		return mc, CumpleAll(mc.IdMateria, mc.IdCorrelativa)
+	})
+}
 
-	} else if idCorrelativa, existe := cmc.IdCorrelativa.Obtener(); !existe {
-		return nil, false
+func (mc *MateriasCorrelativas) CrearDependenciaMateria(dependible Dependible) {
+	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
+		mc.IdMateria.Asignar(id)
+		return mc, CumpleAll(mc.IdMateria, mc.IdCorrelativa)
+	})
+}
+
+func (mc *MateriasCorrelativas) CargarDependencia(dependencia Dependencia) {
+	mc.ListaDependencias.Push(dependencia)
+}
+
+func (mc *MateriasCorrelativas) Insertar() ([]any, error) {
+	if idMateria, existe := mc.IdMateria.Obtener(); !existe {
+		return []any{}, fmt.Errorf("materia correlativa no tiene todavia el idArchivo")
+
+	} else if idCorrelativa, existe := mc.IdCorrelativa.Obtener(); !existe {
+		return []any{}, fmt.Errorf("materia correlativa no tiene todavia el idCorrelativa")
 
 	} else {
-		return &MateriasCorrelativas{
-			IdMateria:         idMateria,
-			TipoArchivo:       cmc.TipoMateria,
-			IdCorrelativa:     idCorrelativa,
-			TipoCorrelativa:   cmc.TipoCorrelativa,
-			ListaDependencias: cmc.ListaDependencias,
-		}, true
+		return []any{mc.TipoMateria, idMateria, mc.TipoCorrelativa, idCorrelativa}, nil
 	}
-}
-
-func (cmc *ConstructorMateriasCorrelativas) CrearDependenciaCorrelativa(dependible Dependible) {
-	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		cmc.IdCorrelativa.Asignar(id)
-		return cmc.CumpleDependencia()
-	})
-}
-
-func (cmc *ConstructorMateriasCorrelativas) CrearDependenciaMateria(dependible Dependible) {
-	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		cmc.IdMateria.Asignar(id)
-		return cmc.CumpleDependencia()
-	})
-}
-
-func (cmc *ConstructorMateriasCorrelativas) CargarDependencia(dependencia Dependencia) {
-	cmc.ListaDependencias.Push(dependencia)
-}
-
-type MateriasCorrelativas struct {
-	IdMateria         int64
-	TipoArchivo       TipoMateria
-	IdCorrelativa     int64
-	TipoCorrelativa   TipoMateria
-	ListaDependencias *l.Lista[Dependencia]
-}
-
-func (mc *MateriasCorrelativas) Insertar() []any {
-	return []any{mc.TipoArchivo, mc.IdMateria, mc.TipoCorrelativa, mc.IdCorrelativa}
 }
 
 func (mc *MateriasCorrelativas) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 	canal <- "Insertar Materia Correlativas"
-	return Insertar(
-		func() (sql.Result, error) { return bdd.Exec(INSERTAR_MATERIA_CORRELATIVA, mc.Insertar()...) },
-	)
+	if datos, err := mc.Insertar(); err != nil {
+		return 0, err
+	} else {
+		return InsertarDirecto(bdd, INSERTAR_MATERIA_CORRELATIVA, datos...)
+	}
 }
 
 func (mc *MateriasCorrelativas) ResolverDependencias(id int64) []Cargable {

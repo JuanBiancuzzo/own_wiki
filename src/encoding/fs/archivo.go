@@ -85,7 +85,7 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 		switch tag {
 		case TAG_CARRERA:
 			nombreCarrera := archivo.Nombre()
-			if constructor, err := e.NewConstructorCarrera(nombreCarrera, meta.Etapa, meta.TieneCodigo); err == nil {
+			if constructor, err := e.NewCarrera(nombreCarrera, meta.Etapa, meta.TieneCodigo); err == nil {
 				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 
 				archivo.CargarDependible(e.DEP_CARRERA, constructor)
@@ -94,7 +94,7 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			}
 
 		case TAG_MATERIA:
-			if constructor, err := e.NewConstructorMateria(meta.NombreMateria, meta.Codigo, meta.Plan, meta.Cuatri, meta.Etapa); err == nil {
+			if constructor, err := e.NewMateria(meta.NombreMateria, meta.Codigo, meta.Plan, meta.Cuatri, meta.Etapa); err == nil {
 				pathCarrera := ObtenerWikiLink(meta.PathCarrera)[0]
 				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 				archivo.CargarDependencia(pathCarrera, e.DEP_CARRERA, constructor.CrearDependenciaCarrera)
@@ -105,7 +105,7 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			}
 
 			for _, correlativa := range meta.Correlativas {
-				constructor := e.NewConstructorMateriasCorrelativas(e.MATERIA_REAL, correlativa.Tipo)
+				constructor := e.NewMateriasCorrelativas(e.MATERIA_REAL, correlativa.Tipo)
 
 				archivo.CargarDependencia(path, e.DEP_MATERIA, constructor.CrearDependenciaMateria)
 				switch correlativa.Tipo {
@@ -117,7 +117,7 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			}
 
 		case TAG_MATERIA_EQUIVALENTE:
-			constructor := e.NewConstructorMateriaEquivalente(meta.NombreMateria, meta.Codigo)
+			constructor := e.NewMateriaEquivalente(meta.NombreMateria, meta.Codigo)
 			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 			archivo.CargarDependencia(ObtenerWikiLink(meta.Equivalencia)[0], e.DEP_MATERIA, constructor.CrearDependenciaMateria)
 			archivo.CargarDependencia(ObtenerWikiLink(meta.PathCarrera)[0], e.DEP_CARRERA, constructor.CrearDependenciaCarrera)
@@ -125,7 +125,7 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			archivo.CargarDependible(e.DEP_MATERIA_EQUIVALENTE, constructor)
 
 			for _, correlativa := range meta.Correlativas {
-				constructor := e.NewConstructorMateriasCorrelativas(e.MATERIA_EQUIVALENTE, correlativa.Tipo)
+				constructor := e.NewMateriasCorrelativas(e.MATERIA_EQUIVALENTE, correlativa.Tipo)
 
 				archivo.CargarDependencia(path, e.DEP_MATERIA_EQUIVALENTE, constructor.CrearDependenciaMateria)
 				switch correlativa.Tipo {
@@ -137,14 +137,14 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			}
 
 		case TAG_RESUMEN_MATERIA:
-			constructor := e.NewConstructorTemaMateria(meta.NombreResumen, meta.Capitulo, meta.Parte)
+			constructor := e.NewTemaMateria(meta.NombreResumen, meta.Capitulo, meta.Parte)
 			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 			archivo.CargarDependencia(meta.MateriaResumen, e.DEP_MATERIA, constructor.CrearDependenciaMateria)
 
 			archivo.CargarDependible(e.DEP_TEMA_MATERIA, constructor)
 
 		case TAG_CURSO:
-			if constructor, err := meta.CrearConstructorCurso(); err == nil {
+			if constructor, err := meta.CrearCurso(); err == nil {
 				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 
 				archivo.CargarDependible(e.DEP_CURSO, constructor)
@@ -153,7 +153,7 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			}
 
 		case TAG_CURSO_PRESENCIA:
-			if constructor, err := meta.CrearConstructorCursoPresencial(); err == nil {
+			if constructor, err := meta.CrearCursoPresencial(); err == nil {
 				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 
 				archivo.CargarDependible(e.DEP_CURSO_PRESENCIAL, constructor)
@@ -162,7 +162,7 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			}
 
 		case TAG_RESUMEN_CURSO:
-			constructor := e.NewConstructorTemaCurso(meta.NombreResumen, meta.Capitulo, meta.Parte, meta.TipoCurso)
+			constructor := e.NewTemaCurso(meta.NombreResumen, meta.Capitulo, meta.Parte, meta.TipoCurso)
 			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 
 			pathCurso := ObtenerWikiLink(meta.Curso)[0]
@@ -176,11 +176,11 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			archivo.CargarDependible(e.DEP_TEMA_CURSO, constructor)
 
 		case TAG_LIBRO:
-			constructor := meta.CrearConstructorLibro()
+			constructor := meta.CrearLibro()
 			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 
 		case TAG_PAPER:
-			if constructor, err := meta.CrearConstructorPaper(); err == nil {
+			if constructor, err := meta.CrearPaper(); err == nil {
 				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 
 			} else {
@@ -188,7 +188,7 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			}
 
 		case TAG_DISTRIBUCION:
-			if constructor, err := e.NewConstructorDistribucion(meta.NombreDistribuucion, meta.TipoDistribucion); err == nil {
+			if constructor, err := e.NewDistribucion(meta.NombreDistribuucion, meta.TipoDistribucion); err == nil {
 				archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 
 			} else {

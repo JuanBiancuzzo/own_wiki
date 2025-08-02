@@ -21,3 +21,12 @@ func (o *Opcional[T]) Asignar(valor T) {
 func (o *Opcional[T]) Obtener() (T, bool) {
 	return o.Valor, o.Esta
 }
+
+func CumpleAll[T any](valores ...*Opcional[T]) bool {
+	for _, valor := range valores {
+		if !valor.Esta {
+			return false
+		}
+	}
+	return true
+}

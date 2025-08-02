@@ -20,7 +20,8 @@ const (
 	PAPER_AUTOR  = "Autor"
 )
 
-type ConstructorPaper struct {
+type Paper struct {
+	IdArchivo      *Opcional[int64]
 	Titulo         string
 	Subtitulo      string
 	NombreRevista  string
@@ -34,11 +35,12 @@ type ConstructorPaper struct {
 	Editores       []*Persona
 }
 
-func NewConstructorPaper(titulo string, subtitulo string, nombreRevista string, volumenRevista string, numeroRevista string, paginaInicial string, paginaFinal string, repAnio string, url string, autores []*Persona, editores []*Persona) (*ConstructorPaper, error) {
+func NewPaper(titulo string, subtitulo string, nombreRevista string, volumenRevista string, numeroRevista string, paginaInicial string, paginaFinal string, repAnio string, url string, autores []*Persona, editores []*Persona) (*Paper, error) {
 	if anio, err := strconv.Atoi(repAnio); err != nil {
 		return nil, fmt.Errorf("error al crear paper al obtener el anio, con error: %v", err)
 	} else {
-		return &ConstructorPaper{
+		return &Paper{
+			IdArchivo:      NewOpcional[int64](),
 			Titulo:         titulo,
 			Subtitulo:      subtitulo,
 			NombreRevista:  nombreRevista,
@@ -54,59 +56,37 @@ func NewConstructorPaper(titulo string, subtitulo string, nombreRevista string, 
 	}
 }
 
-func (cp *ConstructorPaper) CrearDependenciaArchivo(dependible Dependible) {
+func (p *Paper) CrearDependenciaArchivo(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		return &Paper{
-			Titulo:         cp.Titulo,
-			Subtitulo:      cp.Subtitulo,
-			NombreRevista:  cp.NombreRevista,
-			VolumenRevista: cp.VolumenRevista,
-			NumeroRevista:  cp.NumeroRevista,
-			PaginaInicio:   cp.PaginaInicio,
-			PaginaFinal:    cp.PaginaFinal,
-			Anio:           cp.Anio,
-			Url:            cp.Url,
-			Autores:        cp.Autores,
-			Editores:       cp.Editores,
-			IdArchivo:      id,
-		}, true
+		p.IdArchivo.Asignar(id)
+		return p, true
 	})
 }
 
-type Paper struct {
-	Titulo         string
-	Subtitulo      string
-	NombreRevista  string
-	VolumenRevista int
-	NumeroRevista  int
-	PaginaInicio   int
-	PaginaFinal    int
-	Anio           int
-	Url            string
-	Autores        []*Persona
-	Editores       []*Persona
-	IdArchivo      int64
-}
+func (p *Paper) Insertar(idRevista int64) ([]any, error) {
+	if idArchivo, existe := p.IdArchivo.Obtener(); !existe {
+		return []any{}, fmt.Errorf("paper no tiene todavia el idArchivo")
 
-func (p *Paper) Insertar(idRevista int64) []any {
-	return []any{p.Titulo, p.Subtitulo, idRevista, p.VolumenRevista, p.NumeroRevista, p.PaginaInicio, p.PaginaFinal, p.Anio, p.Url, p.IdArchivo}
+	} else {
+		return []any{p.Titulo, p.Subtitulo, idRevista, p.VolumenRevista, p.NumeroRevista, p.PaginaInicio, p.PaginaFinal, p.Anio, p.Url, idArchivo}, nil
+	}
 }
 
 func (p *Paper) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 	canal <- "Insertar Paper"
 
 	var idPaper int64
-
 	if idRevista, err := ObtenerOInsertar(
 		func() *sql.Row { return bdd.QueryRow(QUERY_REVISTA_PAPER, p.NombreRevista) },
 		func() (sql.Result, error) { return bdd.Exec(INSERTAR_REVISTA_PAPER, p.NombreRevista) },
 	); err != nil {
 		return 0, fmt.Errorf("error al hacer una querry de la revista %s con error: %v", p.NombreRevista, err)
 
-	} else if idPaper, err = Insertar(func() (sql.Result, error) {
-		return bdd.Exec(INSERTAR_PAPER, p.Insertar(idRevista)...)
-	}); err != nil {
-		return 0, fmt.Errorf("error al insertar un paper, con error: %v", err)
+	} else if datos, err := p.Insertar(idRevista); err != nil {
+		return 0, err
+
+	} else if idPaper, err = InsertarDirecto(bdd, INSERTAR_PAPER, datos...); err != nil {
+		return 0, err
 	}
 
 	for _, escritor := range p.Autores {

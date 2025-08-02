@@ -15,55 +15,50 @@ const (
 
 const INSERTAR_DISTRIBUCION = "INSERT INTO distribuciones (nombre, tipo, idArchivo) VALUES (?, ?, ?)"
 
-type ConstructorDistribucion struct {
-	Tipo   TipoDistribucion
-	Nombre string
+type Distribucion struct {
+	Nombre    string
+	Tipo      TipoDistribucion
+	IdArchivo *Opcional[int64]
 }
 
-func NewConstructorDistribucion(nombre string, repTipo string) (*ConstructorDistribucion, error) {
+func NewDistribucion(nombre string, repTipo string) (*Distribucion, error) {
 	if tipo, err := ObtenerTipoDistribucion(repTipo); err != nil {
 		return nil, fmt.Errorf("error al crear distribucion con error: %v", err)
 
 	} else {
-		return &ConstructorDistribucion{
-			Tipo:   tipo,
-			Nombre: nombre,
+		return &Distribucion{
+			Tipo:      tipo,
+			Nombre:    nombre,
+			IdArchivo: NewOpcional[int64](),
 		}, nil
 	}
 }
 
-func (cd *ConstructorDistribucion) CrearDependenciaArchivo(dependible Dependible) {
+func (c *Distribucion) CrearDependenciaArchivo(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		return &Distribucion{
-			Nombre:    cd.Nombre,
-			Tipo:      cd.Tipo,
-			IdArchivo: id,
-		}, true
+		c.IdArchivo.Asignar(id)
+		return c, true
 	})
 }
 
-type Distribucion struct {
-	Nombre    string
-	Tipo      TipoDistribucion
-	IdArchivo int64
-}
-
-func (d *Distribucion) Insertar() []any {
-	return []any{
-		d.Nombre,
-		d.Tipo,
-		d.IdArchivo,
+func (c *Distribucion) Insertar() ([]any, error) {
+	if idArchivo, existe := c.IdArchivo.Obtener(); !existe {
+		return []any{}, fmt.Errorf("distribucion no tiene todavia el idArchivo")
+	} else {
+		return []any{c.Nombre, c.Tipo, idArchivo}, nil
 	}
 }
 
-func (d *Distribucion) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	// canal <- "Insertar Distribucion"
-	return Insertar(
-		func() (sql.Result, error) { return bdd.Exec(INSERTAR_DISTRIBUCION, d.Insertar()...) },
-	)
+func (c *Distribucion) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+	canal <- "Insertar Distribucion"
+	if datos, err := c.Insertar(); err != nil {
+		return 0, err
+	} else {
+		return InsertarDirecto(bdd, INSERTAR_DISTRIBUCION, datos...)
+	}
 }
 
-func (d *Distribucion) ResolverDependencias(id int64) []Cargable {
+func (c *Distribucion) ResolverDependencias(id int64) []Cargable {
 	return []Cargable{}
 }
 

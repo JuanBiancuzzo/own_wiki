@@ -9,15 +9,16 @@ import (
 
 const INSERTAR_CURSO_PRESENCIAL = "INSERT INTO cursosPresencial (nombre, etapa, anioCurso, idArchivo) VALUES (?, ?, ?, ?)"
 
-type ConstructorCursoPresencial struct {
+type CursoPresencial struct {
 	Nombre            string
 	Etapa             Etapa
 	AnioCurso         int
+	IdArchivo         *Opcional[int64]
 	Profesores        []*Persona
 	ListaDependencias *l.Lista[Dependencia]
 }
 
-func NewConstructorCursoPresencial(nombre string, repEtapa string, repAnioCurso string, profesores []*Persona) (*ConstructorCursoPresencial, error) {
+func NewCursoPresencial(nombre string, repEtapa string, repAnioCurso string, profesores []*Persona) (*CursoPresencial, error) {
 	if etapa, err := ObtenerEtapa(repEtapa); err != nil {
 		return nil, fmt.Errorf("error al crear curso presencial con error: %v", err)
 
@@ -25,64 +26,54 @@ func NewConstructorCursoPresencial(nombre string, repEtapa string, repAnioCurso 
 		return nil, fmt.Errorf("error al crear curso presencial al obtener el anio, con error: %v", err)
 
 	} else {
-		return &ConstructorCursoPresencial{
+		return &CursoPresencial{
 			Nombre:            nombre,
 			Etapa:             etapa,
 			AnioCurso:         anioCurso,
+			IdArchivo:         NewOpcional[int64](),
 			Profesores:        profesores,
 			ListaDependencias: l.NewLista[Dependencia](),
 		}, nil
 	}
 }
 
-func (ccp *ConstructorCursoPresencial) CrearDependenciaArchivo(dependible Dependible) {
+func (cp *CursoPresencial) CrearDependenciaArchivo(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
-		return &CursoPresencial{
-			Nombre:            ccp.Nombre,
-			Etapa:             ccp.Etapa,
-			AnioCurso:         ccp.AnioCurso,
-			Profesores:        ccp.Profesores,
-			IdArchivo:         id,
-			ListaDependencias: ccp.ListaDependencias,
-		}, true
+		cp.IdArchivo.Asignar(id)
+		return cp, true
 	})
 }
 
-func (ccp *ConstructorCursoPresencial) CargarDependencia(dependencia Dependencia) {
-	ccp.ListaDependencias.Push(dependencia)
+func (cp *CursoPresencial) CargarDependencia(dependencia Dependencia) {
+	cp.ListaDependencias.Push(dependencia)
 }
 
-type CursoPresencial struct {
-	Nombre            string
-	Etapa             Etapa
-	AnioCurso         int
-	IdArchivo         int64
-	Profesores        []*Persona
-	ListaDependencias *l.Lista[Dependencia]
+func (cp *CursoPresencial) Insertar() ([]any, error) {
+	if idArchivo, existe := cp.IdArchivo.Obtener(); !existe {
+		return []any{}, fmt.Errorf("curso presencial no tiene todavia el idArchivo")
+	} else {
+		return []any{cp.Nombre, cp.Etapa, cp.AnioCurso, idArchivo}, nil
+	}
 }
 
-func (c *CursoPresencial) Insertar() []any {
-	return []any{c.Nombre, c.Etapa, c.AnioCurso, c.IdArchivo}
-}
-
-func (c *CursoPresencial) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+func (cp *CursoPresencial) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 	canal <- "Insertar Curso Presencial"
 
-	idCursoPresencial, err := Insertar(func() (sql.Result, error) {
-		return bdd.Exec(INSERTAR_CURSO_PRESENCIAL, c.Insertar()...)
-	})
-	if err != nil {
+	var idCursoPresencial int64
+	if datos, err := cp.Insertar(); err != nil {
+		return 0, err
+	} else if idCursoPresencial, err = InsertarDirecto(bdd, INSERTAR_CURSO_PRESENCIAL, datos...); err != nil {
 		return 0, fmt.Errorf("error al insertar un curso, con error: %v", err)
 	}
 
-	for _, profesor := range c.Profesores {
+	for _, profesor := range cp.Profesores {
 		if idAutor, err := ObtenerOInsertar(
 			func() *sql.Row { return bdd.QueryRow(QUERY_PERSONAS, profesor.Insertar()...) },
 			func() (sql.Result, error) { return bdd.Exec(INSERTAR_PERSONA, profesor.Insertar()...) },
 		); err != nil {
 			canal <- fmt.Sprintf("error al hacer una querry del profesor: %s %s con error: %v", profesor.Nombre, profesor.Apellido, err)
 
-		} else if _, err := bdd.Exec(INSERTAR_PROFESOR_CURSO, idCursoPresencial, CURSO_PRESENCIAL, idAutor); err != nil {
+		} else if _, err := InsertarDirecto(bdd, INSERTAR_PROFESOR_CURSO, idCursoPresencial, CURSO_PRESENCIAL, idAutor); err != nil {
 			canal <- fmt.Sprintf("error al insertar par idCurso-idProfesor, con error: %v", err)
 		}
 	}
@@ -90,6 +81,6 @@ func (c *CursoPresencial) CargarDatos(bdd *sql.DB, canal chan string) (int64, er
 	return idCursoPresencial, nil
 }
 
-func (c *CursoPresencial) ResolverDependencias(id int64) []Cargable {
-	return ResolverDependencias(id, c.ListaDependencias.Items())
+func (cp *CursoPresencial) ResolverDependencias(id int64) []Cargable {
+	return ResolverDependencias(id, cp.ListaDependencias.Items())
 }
