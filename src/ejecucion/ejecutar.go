@@ -1,8 +1,11 @@
 package ejecucion
 
 import (
+	"bufio"
 	"fmt"
-	fs "own_wiki/ejecucion/fs"
+	"os"
+	"own_wiki/ejecucion/fs"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -11,23 +14,25 @@ import (
 // tp "github.com/BurntSushi/toml"
 // "github.com/go-sql-driver/mysql"
 
-func MostrarLs(directorio *fs.Directorio, canalMensajes chan string) bool {
+func MostrarLs(directorio *fs.Directorio, canalMensajes chan string) {
 	if output, err := directorio.Ls(); err != nil {
 		canalMensajes <- fmt.Sprintf("Se intentó ejecutar ls y se obtuvo un error: %v", err)
-		return false
-
 	} else {
 		canalMensajes <- output
-		return true
 	}
 }
 
-func EjectuarCd(directorio *fs.Directorio, parametroCd string, canalMensajes chan string) bool {
+func EjectuarCd(directorio *fs.Directorio, parametroCd string, canalMensajes chan string) {
 	if err := directorio.Cd(parametroCd); err != nil {
 		canalMensajes <- fmt.Sprintf("Se intentó ejecutar cd con '%s' y se obtuvo un error: %v", parametroCd, err)
-		return false
 	}
-	return true
+}
+
+func Abs(valor int) int {
+	if valor < 0 {
+		return -valor
+	}
+	return valor
 }
 
 func Ejecutar(dirInput string, canalMensajes chan string) {
@@ -38,19 +43,31 @@ func Ejecutar(dirInput string, canalMensajes chan string) {
 	}
 	defer directorio.Close()
 
-	if !MostrarLs(directorio, canalMensajes) {
-		return
-	}
+	scanner := bufio.NewScanner(os.Stdin)
+	canalMensajes <- "Terminal prendida..."
 
-	canalMensajes <- ""
-	canalMensajes <- ""
-	canalMensajes <- ""
+	for {
+		if !scanner.Scan() {
+			break
+		}
 
-	if !EjectuarCd(directorio, fs.PD_FACULTAD, canalMensajes) {
-		return
-	}
+		input := strings.TrimSpace(scanner.Text())
+		if input == "" {
+			continue
+		}
 
-	if !MostrarLs(directorio, canalMensajes) {
-		return
+		if Abs(strings.Index(input, "ls")) == 0 {
+			MostrarLs(directorio, canalMensajes)
+
+		} else if Abs(strings.Index(input, "cd ")) == 0 {
+			EjectuarCd(directorio, strings.TrimSpace(input[3:]), canalMensajes)
+
+		} else if input == "cd" {
+			EjectuarCd(directorio, "../../../../..", canalMensajes)
+
+		} else {
+			canalMensajes <- "El comando '%s' no puede no es ls o cd"
+		}
+
 	}
 }

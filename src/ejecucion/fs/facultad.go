@@ -7,12 +7,16 @@ import (
 	l "own_wiki/system_protocol/listas"
 )
 
-const QUERY_CARRERAS_LS = "SELECT nombre FROM carreras"
+const (
+	QUERY_CARRERAS_LS = "SELECT nombre FROM carreras"
+	QUERY_MATERIAS_LS = "SELECT materias.nombre FROM materias INNER JOIN (SELECt id FROM carreras WHERE id = %d) AS carrera ON materias.idCarrera = carrera.id"
+	QUERY_TEMAS_LS    = "SELECT temasMateria.nombre FROM temasMateria INNER JOIN (SELECt id FROM materias WHERE id = %d) AS materia ON temasMateria.idMateria = materia.id"
+)
 
 const (
-	QUERY_EXISTENCIA_CARRERA = "SELECT id, nombre FROM carreras WHERE nombre = ?"
-	QUERY_EXISTENCIA_MATERIA = "SELECT res.id, res.nombre FROM (SELECT id, nombre FROM materias INNER JOIN carreras ON materias.idCarrera = carreras.id) AS res WHERE res.nombre = ?"
-	QUERY_EXISTENCIA_TEMA    = "SELECT res.id, res.nombre FROM (SELECT id, nombre FROM temasMateria INNER JOIN materias ON temasMateria.idMateria = materias.id) AS res WHERE res.nombre = ?"
+	QUERY_EXISTENCIA_CARRERA = "SELECT id, nombre FROM carreras WHERE nombre = '%s'"
+	QUERY_EXISTENCIA_MATERIA = "SELECT materias.id, materias.nombre FROM materias INNER JOIN (SELECt id FROM carreras WHERE id = %d) AS carrera ON materias.idCarrera = carrera.id WHERE materias.nombre = '%s'"
+	QUERY_EXISTENCIA_TEMA    = "SELECT temasMateria.id, temasMateria.nombre FROM temasMateria INNER JOIN (SELECt id FROM materias WHERE id = %d) AS materia ON temasMateria.idMateria = materia.id WHERE temasMateria.nombre = '%s'"
 )
 
 type TipoFacultad byte
@@ -21,6 +25,7 @@ const (
 	TF_CARRERA = iota
 	TF_MATERIA
 	TF_TEMA
+	TF_NOTA
 )
 
 type IdFacultad struct {
@@ -43,25 +48,34 @@ func NewFacultad(bdd *sql.DB) *Facultad {
 }
 
 func (f *Facultad) Ls() ([]string, error) {
+	var query string
 	switch f.Tipo {
 	case TF_CARRERA:
-		if rows, err := f.Bdd.Query(QUERY_CARRERAS_LS); err != nil {
-			return []string{}, fmt.Errorf("se obtuvo un error en facultad, al hacer query de carrera, dando el error: %v", err)
-
-		} else {
-			columnas := l.NewLista[string]()
-			defer rows.Close()
-			for rows.Next() {
-				var nombreMateria string
-				_ = rows.Scan(&nombreMateria)
-				columnas.Push(nombreMateria)
-			}
-
-			return columnas.Items(), nil
+		query = QUERY_CARRERAS_LS
+	case TF_MATERIA:
+		if idCarrera, err := f.Path.Pick(); err == nil {
+			query = fmt.Sprintf(QUERY_MATERIAS_LS, idCarrera.Id)
+		}
+	case TF_TEMA:
+		if idMateria, err := f.Path.Pick(); err == nil {
+			query = fmt.Sprintf(QUERY_TEMAS_LS, idMateria.Id)
 		}
 	}
 
-	return []string{}, nil
+	if rows, err := f.Bdd.Query(query); err != nil {
+		return []string{}, fmt.Errorf("se obtuvo un error en facultad, al hacer query de carrera, dando el error: %v", err)
+
+	} else {
+		columnas := l.NewLista[string]()
+		defer rows.Close()
+		for rows.Next() {
+			var nombreMateria string
+			_ = rows.Scan(&nombreMateria)
+			columnas.Push(nombreMateria)
+		}
+
+		return columnas.Items(), nil
+	}
 }
 
 func (f *Facultad) Cd(subpath string, cache *Cache) (Subpath, error) {
@@ -80,22 +94,44 @@ func (f *Facultad) Cd(subpath string, cache *Cache) (Subpath, error) {
 		return f, nil
 	}
 
-	var query string
+	var query string = ""
 	switch f.Tipo {
 	case TF_CARRERA:
-		query = QUERY_EXISTENCIA_CARRERA
+		query = fmt.Sprintf(QUERY_EXISTENCIA_CARRERA, subpath)
 	case TF_MATERIA:
-		query = QUERY_EXISTENCIA_MATERIA
+		if idCarrera, err := f.Path.Pick(); err == nil {
+			query = fmt.Sprintf(QUERY_EXISTENCIA_MATERIA, idCarrera.Id, subpath)
+		}
 	case TF_TEMA:
-		query = QUERY_EXISTENCIA_TEMA
+		if idMateria, err := f.Path.Pick(); err == nil {
+			query = fmt.Sprintf(QUERY_EXISTENCIA_TEMA, idMateria.Id, subpath)
+		}
+	case TF_NOTA:
+		return f, fmt.Errorf("ya se esta viendo todos los archivos, no hay subcarpetas")
 	}
 
-	fila := f.Bdd.QueryRow(query, subpath)
-	var idElemento int64
-	if err := fila.Scan(&idElemento); err != nil {
-		return f, fmt.Errorf("no existe posible solucion para el cd a '%s'", subpath)
+	fmt.Printf("QUERY: %s\n", query)
+	if query == "" {
+		return f, fmt.Errorf("hubo un error en la query, y esta vacia")
 	}
 
-	f.Path.Apilar(IdFacultad{Id: idElemento, Nombre: subpath})
+	fila := f.Bdd.QueryRow(query)
+	var id int64
+	var nombre string
+
+	if err := fila.Scan(&id, &nombre); err != nil {
+		return f, fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
+	}
+
+	switch f.Tipo {
+	case TF_CARRERA:
+		f.Tipo = TF_MATERIA
+	case TF_MATERIA:
+		f.Tipo = TF_TEMA
+	case TF_TEMA:
+		f.Tipo = TF_NOTA
+	}
+
+	f.Path.Apilar(IdFacultad{Id: id, Nombre: nombre})
 	return f, nil
 }

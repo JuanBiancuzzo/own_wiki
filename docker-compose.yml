@@ -38,11 +38,12 @@ services:
 
   app_process:
     build: .
-    container_name: manerar_archivos
+    container_name: manejar_archivos
     depends_on:
       app_encoder:
         condition: service_completed_successfully
-
+    stdin_open: true 
+    tty: true
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
