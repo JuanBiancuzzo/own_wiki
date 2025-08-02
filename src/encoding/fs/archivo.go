@@ -120,6 +120,7 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 			constructor := e.NewConstructorMateriaEquivalente(meta.NombreMateria, meta.Codigo)
 			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
 			archivo.CargarDependencia(ObtenerWikiLink(meta.Equivalencia)[0], e.DEP_MATERIA, constructor.CrearDependenciaMateria)
+			archivo.CargarDependencia(ObtenerWikiLink(meta.PathCarrera)[0], e.DEP_CARRERA, constructor.CrearDependenciaCarrera)
 
 			archivo.CargarDependible(e.DEP_MATERIA_EQUIVALENTE, constructor)
 

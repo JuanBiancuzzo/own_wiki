@@ -125,9 +125,11 @@ CREATE TABLE IF NOT EXISTS materiasEquivalentes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   codigo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  idCarrera INT NOT NULL,
   idMateria INT NOT NULL,
   idArchivo INT NOT NULL,
 
+  FOREIGN KEY (idCarrera) REFERENCES carreras(id),
   FOREIGN KEY (idMateria) REFERENCES materias(id),
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
 );
