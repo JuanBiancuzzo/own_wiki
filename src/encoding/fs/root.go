@@ -3,7 +3,7 @@ package fs
 import (
 	"fmt"
 	"os"
-	"own_wiki/system_protocol/db"
+	db "own_wiki/system_protocol/bdd"
 	ls "own_wiki/system_protocol/listas"
 	"slices"
 	"sync"

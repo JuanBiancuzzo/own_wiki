@@ -1,4 +1,4 @@
-package db
+package bdd
 
 type InfoArchivos struct {
 	MaxPath        uint32

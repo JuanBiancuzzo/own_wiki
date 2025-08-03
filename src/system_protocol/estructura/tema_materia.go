@@ -59,7 +59,7 @@ func (tm *TemaMateria) Insertar() ([]any, error) {
 }
 
 func (tm *TemaMateria) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- fmt.Sprintf("Insertar Resumen Materia: %s", tm.Nombre)
+	// canal <- fmt.Sprintf("Insertar Tema Materia: %s", tm.Nombre)
 	if datos, err := tm.Insertar(); err != nil {
 		return 0, err
 	} else {

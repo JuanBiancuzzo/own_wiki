@@ -3,7 +3,7 @@ package fs
 import (
 	"fmt"
 	"os"
-	"own_wiki/system_protocol/db"
+	bdd "own_wiki/system_protocol/bdd"
 	e "own_wiki/system_protocol/estructura"
 	l "own_wiki/system_protocol/listas"
 	"strings"
@@ -59,7 +59,7 @@ type Archivo struct {
 	Dependibles    map[e.TipoDependible]*l.Lista[e.Dependible]
 }
 
-func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan string) (*Archivo, error) {
+func NewArchivo(root *Root, path string, info *bdd.InfoArchivos, canal chan string) (*Archivo, error) {
 	archivo := Archivo{
 		Root:           root,
 		Path:           path,

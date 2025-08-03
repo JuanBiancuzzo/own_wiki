@@ -4,18 +4,19 @@ services:
     container_name: mysql_db
     restart: always
     environment:
-      MYSQL_ROOT_USER: ${MYSQL_ROOT_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_DATABASE: ${MYSQL_DB_NAME}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
-      - data-db:/var/lib/mysql
+      - my-db-mysql:/var/lib/mysql
     networks:
       - appnet
   
   db_nosql:
-    image: monto:8.0
+    image: mongo:8.0
     container_name: mongo_db
     restart: always
     environment:
@@ -24,8 +25,9 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - data-db:/data/db
-      - config-db:/data/configdb
+      - my-db-mongo:/data/db
+    networks:
+      - appnet
 
   app_encoder:
     build: .
@@ -34,19 +36,25 @@ services:
       - db_relacional
       - db_nosql
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
+      # Necesario para mysql
+      MYSQL_DB_NAME: ${MYSQL_DB_NAME}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_HOST: ${MYSQL_HOST}
+      # Necesario para mongodb
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      MONGO_HOST: ${MONGO_HOST}
     ports:
       - "8080:8080"
     volumes:
       - ../../Ashurbanipal:/var/lib/datos
-      - ./volumenes/output:/var/lib/output
     networks:
       - appnet
-    command: ["./own_wiki", "-e", "/var/lib/datos", "/var/lib/output"] 
+    command: ["./own_wiki", "-e", "/var/lib/datos"] 
 
   app_process:
     build: .
@@ -57,11 +65,18 @@ services:
     stdin_open: true 
     tty: true
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
+      # Necesario para mysql
+      MYSQL_DB_NAME: ${MYSQL_DB_NAME}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_HOST: ${MYSQL_HOST}
+      # Necesario para mongodb
+      MONGO_USER: ${MONGO_USER}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_PORT: ${MONGO_PORT}
+      MONGO_DB_NAME: ${MONGO_DB_NAME}
+      MONGO_HOST: ${MONGO_HOST}
     ports:
       - "8080:8080"
     volumes:
@@ -69,8 +84,10 @@ services:
     networks:
       - appnet
     command: ["./own_wiki", "-p", "/var/lib/datos"] 
+
 volumes:
-  my-db: 
+  my-db-mysql: 
+  my-db-mongo: 
 
 networks:
   appnet:

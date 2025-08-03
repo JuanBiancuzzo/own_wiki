@@ -1,44 +1,48 @@
-package db
+package bdd
 
 import (
+	"context"
 	"database/sql"
 	_ "embed"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	l "own_wiki/system_protocol/listas"
-
-	"github.com/joho/godotenv"
 )
 
 //go:embed esquema.sql
 var crearTablas string
 
-func EstablecerBaseDeDatos() (*sql.DB, error) {
-	_ = godotenv.Load()
+func EstablecerConexionRelacional(canalMensajes chan string) (*sql.DB, error) {
+	dbUser := os.Getenv("MYSQL_USER")
+	dbPass := os.Getenv("MYSQL_PASSWORD")
+	dbHost := os.Getenv("MYSQL_HOST")
+	dbPort := os.Getenv("MYSQL_PORT")
+	dbName := os.Getenv("MYSQL_DB_NAME")
 
-	dbUser := os.Getenv("DB_USER")
-	dbPass := os.Getenv("DB_PASSWORD")
-	dbHost := os.Getenv("DB_HOST")
-	dbPort := os.Getenv("DB_PORT")
-	dbName := os.Getenv("DB_NAME")
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
+	canalMensajes <- fmt.Sprintf("Conectando a MySQL con: %s", dsn)
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", dbUser, dbPass, dbHost, dbPort, dbName)
-
-	db, err := sql.Open("mysql", dsn)
+	bdd, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to DB: %v", err)
 	}
 
 	for {
-		if err = db.Ping(); err == nil {
-			fmt.Println("Successfully connected to the database!")
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		if err = bdd.PingContext(ctx); err == nil {
+			canalMensajes <- "Se conecto correctamente a MySQL"
 			break
+		} else {
+			// canalMensajes <- fmt.Sprintf("Error al hacer ping a MySQL, error: %v", err)
 		}
 	}
 
-	return db, nil
+	return bdd, nil
 }
 
 func datosParaTabla(info *InfoArchivos) []any {
@@ -96,23 +100,23 @@ func datosParaTabla(info *InfoArchivos) []any {
 Que tablas necesitamos
   - Archivos - DONE
   - Tags - DONE
-  - Libros (con sus capitulos)
+  - Libros (con sus capitulos) - DONE
+  - Distribuciones - DONE
+  - Papers - DONE
+  - Carreras - DONE
+  - Materias - DONE
+  - Resumenes materias - DONE
+  - Cursos - DONE
+  - Resumenes cursos - DONE
   - Referencias
   - Data structures
-  - Distribuciones
   - Documentos
+  - Teoremas, procposiciones y observaciones
+  - Temas de investigacion
   - Impresion 3d (todavia ni lo tengo definido entonces tal vez despues)
   - Librerias (todavia no completamente definido entonces tal vez despues)
-  - Papers
   - Programas (todavia no completamente definido entonces tal vez despues)
   - Recetas (todavia no completamente definido entonces tal vez despues)
-  - Teoremas, procposiciones y observaciones
-  - Carreras
-  - Materias
-  - Resumenes materias
-  - Cursos
-  - Resumenes cursos
-  - Temas de investigacion
 */
 func CrearTablas(db *sql.DB, info *InfoArchivos) error {
 	queryCrearTablas := fmt.Sprintf(strings.ReplaceAll(crearTablas, "(?)", "(%d)"), datosParaTabla(info)...)
@@ -167,4 +171,12 @@ func CrearTablas(db *sql.DB, info *InfoArchivos) error {
 	fmt.Println("Tablas creadas")
 
 	return nil
+}
+
+func CerrarBddRelacional(bdd *sql.DB) {
+	if bdd == nil {
+		return
+	}
+
+	bdd.Close()
 }

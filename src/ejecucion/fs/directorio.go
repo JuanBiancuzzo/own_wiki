@@ -3,7 +3,7 @@ package fs
 import (
 	"database/sql"
 	"fmt"
-	"own_wiki/system_protocol/db"
+	bdd "own_wiki/system_protocol/bdd"
 	"strings"
 )
 
@@ -18,8 +18,8 @@ type Subpath interface {
 	Cd(subpath string, cache *Cache) (Subpath, error)
 }
 
-func NewDirectorio() (*Directorio, error) {
-	if bdd, err := db.EstablecerBaseDeDatos(); err != nil {
+func NewDirectorio(canalMensajes chan string) (*Directorio, error) {
+	if bdd, err := bdd.EstablecerConexionRelacional(canalMensajes); err != nil {
 		return nil, fmt.Errorf("no se pudo establecer la conexion con la base de datos, con error: %v", err)
 
 	} else {

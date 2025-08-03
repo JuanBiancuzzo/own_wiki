@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 )
 
 // mdp "github.com/gomarkdown/markdown/parser"
@@ -36,7 +37,9 @@ func Abs(valor int) int {
 }
 
 func Ejecutar(dirInput string, canalMensajes chan string) {
-	directorio, err := fs.NewDirectorio()
+	_ = godotenv.Load()
+
+	directorio, err := fs.NewDirectorio(canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return

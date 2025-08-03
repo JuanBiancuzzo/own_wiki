@@ -50,7 +50,7 @@ func (c *Distribucion) Insertar() ([]any, error) {
 }
 
 func (c *Distribucion) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- "Insertar Distribucion"
+	// canal <- "Insertar Distribucion"
 	if datos, err := c.Insertar(); err != nil {
 		return 0, err
 	} else {
