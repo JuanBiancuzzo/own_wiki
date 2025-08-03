@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-const CANTIDAD_WORKERS = 10
+const CANTIDAD_WORKERS = 20
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
@@ -18,16 +18,12 @@ type Root struct {
 	Archivos map[string]*Archivo
 }
 
-func NewRoot(path string) *Root {
-	return &Root{
-		Archivos: make(map[string]*Archivo),
-		Path:     path,
-	}
-}
-
 func EstablecerDirectorio(dirOrigen string, infoArchivos *db.InfoArchivos, canalMensajes chan string) *Root {
 	var waitArchivos sync.WaitGroup
-	root := NewRoot(dirOrigen)
+	root := &Root{
+		Path:     dirOrigen,
+		Archivos: make(map[string]*Archivo),
+	}
 
 	canalInput := make(chan string, CANTIDAD_WORKERS)
 	waitArchivos.Add(1)
