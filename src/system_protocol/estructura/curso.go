@@ -66,7 +66,7 @@ func (c *Curso) Insertar(idPagina int64) ([]any, error) {
 }
 
 func (c *Curso) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- "Insertar Curso"
+	// canal <- "Insertar Curso"
 
 	var idCurso int64
 

@@ -64,7 +64,7 @@ func (mc *MateriasCorrelativas) Insertar() ([]any, error) {
 }
 
 func (mc *MateriasCorrelativas) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- "Insertar Materia Correlativas"
+	// canal <- "Insertar Materia Correlativas"
 	if datos, err := mc.Insertar(); err != nil {
 		return 0, err
 	} else {

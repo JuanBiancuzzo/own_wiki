@@ -57,7 +57,7 @@ func (cp *CursoPresencial) Insertar() ([]any, error) {
 }
 
 func (cp *CursoPresencial) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- "Insertar Curso Presencial"
+	// canal <- "Insertar Curso Presencial"
 
 	var idCursoPresencial int64
 	if datos, err := cp.Insertar(); err != nil {

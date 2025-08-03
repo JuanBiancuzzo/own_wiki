@@ -58,7 +58,7 @@ func (nv *NotaVinculo) Insertar() ([]any, error) {
 }
 
 func (nv *NotaVinculo) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- "Insertar Nota vinculante"
+	// canal <- "Insertar Nota vinculante"
 	if datos, err := nv.Insertar(); err != nil {
 		return 0, err
 	} else {

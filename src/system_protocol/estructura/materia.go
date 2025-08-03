@@ -90,7 +90,7 @@ func (m *Materia) Insertar(idPlan int64, idCuatrimestre int64) ([]any, error) {
 }
 
 func (m *Materia) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- fmt.Sprintf("Insertar Materia: %s", m.Nombre)
+	// canal <- fmt.Sprintf("Insertar Materia: %s", m.Nombre)
 
 	if idPlan, err := ObtenerOInsertar(
 		func() *sql.Row { return bdd.QueryRow(QUERY_PLANES, m.Plan) },

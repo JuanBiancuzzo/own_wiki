@@ -68,7 +68,7 @@ func (tc *TemaCurso) Insertar() ([]any, error) {
 }
 
 func (tc *TemaCurso) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- fmt.Sprintf("Insertar Resumen Curso: %s", tc.Nombre)
+	// canal <- fmt.Sprintf("Insertar Resumen Curso: %s", tc.Nombre)
 	if datos, err := tc.Insertar(); err != nil {
 		return 0, err
 	} else {

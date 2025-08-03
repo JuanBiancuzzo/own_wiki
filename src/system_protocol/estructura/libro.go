@@ -83,7 +83,7 @@ func (l *Libro) Insertar(idEditorial int64) ([]any, error) {
 }
 
 func (l *Libro) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- "Insertar Libro"
+	// canal <- "Insertar Libro"
 
 	var idLibro int64
 	if idEditorial, err := ObtenerOInsertar(

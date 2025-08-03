@@ -73,7 +73,7 @@ func (p *Paper) Insertar(idRevista int64) ([]any, error) {
 }
 
 func (p *Paper) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- "Insertar Paper"
+	// canal <- "Insertar Paper"
 
 	var idPaper int64
 	if idRevista, err := ObtenerOInsertar(

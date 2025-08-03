@@ -48,7 +48,7 @@ func (n *Nota) Insertar() ([]any, error) {
 }
 
 func (n *Nota) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	canal <- fmt.Sprintf("Insertar Nota: %s", n.Nombre)
+	// canal <- fmt.Sprintf("Insertar Nota: %s", n.Nombre)
 	if datos, err := n.Insertar(); err != nil {
 		return 0, err
 	} else {
