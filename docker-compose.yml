@@ -1,26 +1,38 @@
 services:
-  db:
+  db_relacional:
     image: mysql:8
     container_name: mysql_db
     restart: always
     environment:
+      MYSQL_ROOT_USER: ${MYSQL_ROOT_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
-      - my-db:/var/lib/mysql
-      - ./volumenes/output/bdd:/var/lib/output
+      - data-db:/var/lib/mysql
     networks:
       - appnet
+  
+  db_nosql:
+    image: monto:8.0
+    container_name: mongo_db
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USER: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - data-db:/data/db
+      - config-db:/data/configdb
 
   app_encoder:
     build: .
     container_name: encodear_archivos
     depends_on:
-      - db
+      - db_relacional
+      - db_nosql
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}

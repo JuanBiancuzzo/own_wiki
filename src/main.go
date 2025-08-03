@@ -36,10 +36,8 @@ func main() {
 		switch len(os.Args) {
 		case 2:
 			canalMensajes <- "No tiene la cantidad suficiente de argumentos, necesitas pasar el directorio de input"
-		case 3:
-			canalMensajes <- "No tiene la cantidad suficiente de argumentos, necesitas pasar el directorio de output"
 		default:
-			en.Encodear(os.Args[2], os.Args[3], canalMensajes)
+			en.Encodear(os.Args[2], canalMensajes)
 		}
 
 	case "-p":

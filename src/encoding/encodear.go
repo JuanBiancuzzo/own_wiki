@@ -61,7 +61,7 @@ func EvaluarCargable(bdd *sql.DB, canalMensajes chan string, cargable e.Cargable
 	}
 }
 
-func Encodear(dirInput string, dirOutput string, canalMensajes chan string) {
+func Encodear(dirInput string, canalMensajes chan string) {
 	canalInfo := make(chan db.InfoArchivos)
 	canalDirectorio := make(chan fs.Root)
 	go ProcesarArchivos(canalInfo, canalDirectorio, dirInput, canalMensajes)
