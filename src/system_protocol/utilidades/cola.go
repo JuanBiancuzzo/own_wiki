@@ -27,3 +27,13 @@ func (c *Cola[T]) Desencolar() (T, error) {
 func (c *Cola[T]) Vacia() bool {
 	return c.Lista.Largo == 0
 }
+
+func (c *Cola[T]) DesencolarIterativamente(yield func(T) bool) {
+	for !c.Vacia() {
+		if elemento, err := c.Desencolar(); err != nil {
+			return
+		} else if !yield(elemento) {
+			return
+		}
+	}
+}

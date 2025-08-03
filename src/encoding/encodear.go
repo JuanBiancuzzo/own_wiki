@@ -95,19 +95,14 @@ func CargarDatos(bddRelacional *sql.DB, canalIndependiente chan e.Cargable, wg *
 
 	canalMensajes <- "Cargados todos los archivos sin dependencias, ahora procesando los que tengan dependencias"
 
-	for !cargablesListos.Vacia() {
-		if cargable, err := cargablesListos.Desencolar(); err != nil {
-			canalMensajes <- fmt.Sprintf("Error al desencolar el procesamiento, con error: %v", err)
-			break
-
-		} else {
-			EvaluarCargable(bddRelacional, canalMensajes, cargable, cargablesListos)
-		}
+	for cargable := range cargablesListos.DesencolarIterativamente {
+		EvaluarCargable(bddRelacional, canalMensajes, cargable, cargablesListos)
 	}
 
 	if cargablesListos.Lista.Largo > 0 {
 		canalMensajes <- fmt.Sprint("Hubo un error, no se procesaron: ", cargablesListos.Lista.Largo, " cargables")
 	}
+
 	wg.Done()
 }
 

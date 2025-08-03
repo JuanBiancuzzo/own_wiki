@@ -23,7 +23,6 @@ func EstablecerConexionRelacional(canalMensajes chan string) (*sql.DB, error) {
 	dbName := os.Getenv("MYSQL_DB_NAME")
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
-	canalMensajes <- fmt.Sprintf("Conectando a MySQL con: %s", dsn)
 
 	bdd, err := sql.Open("mysql", dsn)
 	if err != nil {

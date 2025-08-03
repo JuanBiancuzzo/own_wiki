@@ -16,7 +16,6 @@ func EstablecerConexionNoSQL(canalMensajes chan string) (*mongo.Database, error)
 	dbName := os.Getenv("MONGO_NAME")
 
 	uri := fmt.Sprintf("mongodb://%s:%s/", dbHost, dbPort)
-	canalMensajes <- fmt.Sprintf("Conectando a MongoDB con: %s", uri)
 
 	cliente, err := mongo.Connect(options.Client().ApplyURI(uri))
 	if err != nil {
