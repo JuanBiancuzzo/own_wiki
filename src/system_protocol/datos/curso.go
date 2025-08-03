@@ -20,7 +20,7 @@ type Curso struct {
 	AnioCurso         int
 	NombrePagina      string
 	Url               string
-	IdArchivo         *Opcional[int64]
+	IdArchivo         *u.Opcional[int64]
 	Profesores        []*Persona
 	ListaDependencias *u.Lista[Dependencia]
 }
@@ -39,7 +39,7 @@ func NewCurso(nombre string, repEtapa string, repAnioCurso string, nombrePagina 
 			AnioCurso:         anioCurso,
 			NombrePagina:      nombrePagina,
 			Url:               url,
-			IdArchivo:         NewOpcional[int64](),
+			IdArchivo:         u.NewOpcional[int64](),
 			Profesores:        profesores,
 			ListaDependencias: u.NewLista[Dependencia](),
 		}, nil

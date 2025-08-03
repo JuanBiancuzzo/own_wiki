@@ -3,6 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 type TipoDistribucion string
@@ -18,7 +19,7 @@ const INSERTAR_DISTRIBUCION = "INSERT INTO distribuciones (nombre, tipo, idArchi
 type Distribucion struct {
 	Nombre    string
 	Tipo      TipoDistribucion
-	IdArchivo *Opcional[int64]
+	IdArchivo *u.Opcional[int64]
 }
 
 func NewDistribucion(nombre string, repTipo string) (*Distribucion, error) {
@@ -29,7 +30,7 @@ func NewDistribucion(nombre string, repTipo string) (*Distribucion, error) {
 		return &Distribucion{
 			Tipo:      tipo,
 			Nombre:    nombre,
-			IdArchivo: NewOpcional[int64](),
+			IdArchivo: u.NewOpcional[int64](),
 		}, nil
 	}
 }

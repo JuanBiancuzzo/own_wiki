@@ -9,8 +9,8 @@ import (
 const INSERTAR_TEMA_MATERIA = "INSERT INTO temasMateria (nombre, capitulo, parte, idMateria, idArchivo) VALUES (?, ?, ?, ?, ?)"
 
 type TemaMateria struct {
-	IdArchivo         *Opcional[int64]
-	IdMateria         *Opcional[int64]
+	IdArchivo         *u.Opcional[int64]
+	IdMateria         *u.Opcional[int64]
 	Nombre            string
 	Capitulo          int
 	Parte             int
@@ -19,8 +19,8 @@ type TemaMateria struct {
 
 func NewTemaMateria(nombre string, capitulo string, parte string) *TemaMateria {
 	return &TemaMateria{
-		IdArchivo:         NewOpcional[int64](),
-		IdMateria:         NewOpcional[int64](),
+		IdArchivo:         u.NewOpcional[int64](),
+		IdMateria:         u.NewOpcional[int64](),
 		Nombre:            nombre,
 		Capitulo:          NumeroODefault(capitulo, 1),
 		Parte:             NumeroODefault(parte, 0),
@@ -31,14 +31,14 @@ func NewTemaMateria(nombre string, capitulo string, parte string) *TemaMateria {
 func (tm *TemaMateria) CrearDependenciaMateria(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		tm.IdMateria.Asignar(id)
-		return tm, CumpleAll(tm.IdArchivo, tm.IdMateria)
+		return tm, u.CumpleAll(tm.IdArchivo, tm.IdMateria)
 	})
 }
 
 func (tm *TemaMateria) CrearDependenciaArchivo(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		tm.IdArchivo.Asignar(id)
-		return tm, CumpleAll(tm.IdArchivo, tm.IdMateria)
+		return tm, u.CumpleAll(tm.IdArchivo, tm.IdMateria)
 	})
 }
 

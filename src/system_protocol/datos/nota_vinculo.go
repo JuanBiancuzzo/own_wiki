@@ -3,6 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 type TipoNota string
@@ -18,15 +19,15 @@ const (
 const INSERTAR_NOTA_VINCULO = "INSERT INTO notasVinculo (idNota, idVinculo, tipoVinculo) VALUES (?, ?, ?)"
 
 type NotaVinculo struct {
-	IdNota    *Opcional[int64]
-	IdVinculo *Opcional[int64]
+	IdNota    *u.Opcional[int64]
+	IdVinculo *u.Opcional[int64]
 	Tipo      TipoNota
 }
 
 func NewNotaVinculo(tipo TipoNota) *NotaVinculo {
 	return &NotaVinculo{
-		IdNota:    NewOpcional[int64](),
-		IdVinculo: NewOpcional[int64](),
+		IdNota:    u.NewOpcional[int64](),
+		IdVinculo: u.NewOpcional[int64](),
 		Tipo:      tipo,
 	}
 }
@@ -34,14 +35,14 @@ func NewNotaVinculo(tipo TipoNota) *NotaVinculo {
 func (nv *NotaVinculo) CrearDependenciaVinculo(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		nv.IdVinculo.Asignar(id)
-		return nv, CumpleAll(nv.IdNota, nv.IdVinculo)
+		return nv, u.CumpleAll(nv.IdNota, nv.IdVinculo)
 	})
 }
 
 func (nv *NotaVinculo) CrearDependenciaNota(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		nv.IdNota.Asignar(id)
-		return nv, CumpleAll(nv.IdNota, nv.IdVinculo)
+		return nv, u.CumpleAll(nv.IdNota, nv.IdVinculo)
 	})
 }
 

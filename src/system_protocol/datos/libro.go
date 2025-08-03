@@ -3,6 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 const QUERY_EDITORIAL = "SELECT id FROM editoriales WHERE editorial = ?"
@@ -14,7 +15,7 @@ const INSERTAR_AUTOR_LIBRO = "INSERT INTO autoresLibro (idLibro, idPersona) VALU
 const INSERTAR_EDITOR_CAPITULO = "INSERT INTO editoresCapitulo (idCapitulo, idPersona) VALUES (?, ?)"
 
 type Libro struct {
-	IdArchivo *Opcional[int64]
+	IdArchivo *u.Opcional[int64]
 	Titulo    string
 	Subtitulo string
 	Editorial string
@@ -28,7 +29,7 @@ type Libro struct {
 
 func NewLibro(titulo string, subtitulo string, editorial string, anio string, edicion string, volumen string, url string, autores []*Persona, capitulos []*Capitulo) *Libro {
 	return &Libro{
-		IdArchivo: NewOpcional[int64](),
+		IdArchivo: u.NewOpcional[int64](),
 		Titulo:    titulo,
 		Subtitulo: subtitulo,
 		Editorial: editorial,
@@ -66,7 +67,7 @@ func NewCapitulo(capitulo string, nombre string, editores []*Persona, paginaInic
 	}
 }
 
-func (c *Capitulo) Insertar(idLibro int64, OpIdArchivo *Opcional[int64]) ([]any, error) {
+func (c *Capitulo) Insertar(idLibro int64, OpIdArchivo *u.Opcional[int64]) ([]any, error) {
 	if idArchivo, existe := OpIdArchivo.Obtener(); !existe {
 		return []any{}, fmt.Errorf("capitulo no tiene todavia el idArchivo")
 	} else {

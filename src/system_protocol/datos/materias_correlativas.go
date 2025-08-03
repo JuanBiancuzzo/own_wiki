@@ -16,18 +16,18 @@ const (
 )
 
 type MateriasCorrelativas struct {
-	IdMateria         *Opcional[int64]
+	IdMateria         *u.Opcional[int64]
 	TipoMateria       TipoMateria
-	IdCorrelativa     *Opcional[int64]
+	IdCorrelativa     *u.Opcional[int64]
 	TipoCorrelativa   TipoMateria
 	ListaDependencias *u.Lista[Dependencia]
 }
 
 func NewMateriasCorrelativas(tipoMateria TipoMateria, tipoCorrelativa TipoMateria) *MateriasCorrelativas {
 	return &MateriasCorrelativas{
-		IdMateria:         NewOpcional[int64](),
+		IdMateria:         u.NewOpcional[int64](),
 		TipoMateria:       tipoMateria,
-		IdCorrelativa:     NewOpcional[int64](),
+		IdCorrelativa:     u.NewOpcional[int64](),
 		TipoCorrelativa:   tipoCorrelativa,
 		ListaDependencias: u.NewLista[Dependencia](),
 	}
@@ -36,14 +36,14 @@ func NewMateriasCorrelativas(tipoMateria TipoMateria, tipoCorrelativa TipoMateri
 func (mc *MateriasCorrelativas) CrearDependenciaCorrelativa(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		mc.IdCorrelativa.Asignar(id)
-		return mc, CumpleAll(mc.IdMateria, mc.IdCorrelativa)
+		return mc, u.CumpleAll(mc.IdMateria, mc.IdCorrelativa)
 	})
 }
 
 func (mc *MateriasCorrelativas) CrearDependenciaMateria(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		mc.IdMateria.Asignar(id)
-		return mc, CumpleAll(mc.IdMateria, mc.IdCorrelativa)
+		return mc, u.CumpleAll(mc.IdMateria, mc.IdCorrelativa)
 	})
 }
 

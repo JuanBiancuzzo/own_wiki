@@ -3,6 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
+	u "own_wiki/system_protocol/utilidades"
 	"strconv"
 )
 
@@ -21,7 +22,7 @@ const (
 )
 
 type Paper struct {
-	IdArchivo      *Opcional[int64]
+	IdArchivo      *u.Opcional[int64]
 	Titulo         string
 	Subtitulo      string
 	NombreRevista  string
@@ -40,7 +41,7 @@ func NewPaper(titulo string, subtitulo string, nombreRevista string, volumenRevi
 		return nil, fmt.Errorf("error al crear paper al obtener el anio, con error: %v", err)
 	} else {
 		return &Paper{
-			IdArchivo:      NewOpcional[int64](),
+			IdArchivo:      u.NewOpcional[int64](),
 			Titulo:         titulo,
 			Subtitulo:      subtitulo,
 			NombreRevista:  nombreRevista,

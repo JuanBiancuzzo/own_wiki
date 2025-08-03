@@ -10,7 +10,7 @@ const FORMATO_DIA = "YYYY-MM-DD"
 const INSERTAR_NOTA = "INSERT INTO notas (nombre, etapa, dia, idArchivo) VALUES (?, ?, ?, ?)"
 
 type Nota struct {
-	IdArchivo         *Opcional[int64]
+	IdArchivo         *u.Opcional[int64]
 	Nombre            string
 	Etapa             Etapa
 	Dia               string
@@ -19,7 +19,7 @@ type Nota struct {
 
 func NewNota(nombre string, repEtapa string, dia string) *Nota {
 	return &Nota{
-		IdArchivo:         NewOpcional[int64](),
+		IdArchivo:         u.NewOpcional[int64](),
 		Nombre:            nombre,
 		Etapa:             EtapaODefault(repEtapa, ETAPA_SIN_EMPEZAR),
 		Dia:               dia,

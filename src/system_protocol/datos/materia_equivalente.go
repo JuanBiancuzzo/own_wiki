@@ -9,9 +9,9 @@ import (
 const INSERTAR_MATERIA_EQUIVALENTES = "INSERT INTO materiasEquivalentes (nombre, codigo, idCarrera, idMateria, idArchivo) VALUES (?, ?, ?, ?, ?)"
 
 type MateriaEquivalente struct {
-	IdArchivo         *Opcional[int64]
-	IdCarrera         *Opcional[int64]
-	IdMateria         *Opcional[int64]
+	IdArchivo         *u.Opcional[int64]
+	IdCarrera         *u.Opcional[int64]
+	IdMateria         *u.Opcional[int64]
 	Nombre            string
 	Codigo            string
 	ListaDependencias *u.Lista[Dependencia]
@@ -19,9 +19,9 @@ type MateriaEquivalente struct {
 
 func NewMateriaEquivalente(nombre string, codigo string) *MateriaEquivalente {
 	return &MateriaEquivalente{
-		IdArchivo:         NewOpcional[int64](),
-		IdCarrera:         NewOpcional[int64](),
-		IdMateria:         NewOpcional[int64](),
+		IdArchivo:         u.NewOpcional[int64](),
+		IdCarrera:         u.NewOpcional[int64](),
+		IdMateria:         u.NewOpcional[int64](),
 		Nombre:            nombre,
 		Codigo:            codigo,
 		ListaDependencias: u.NewLista[Dependencia](),
@@ -31,20 +31,20 @@ func NewMateriaEquivalente(nombre string, codigo string) *MateriaEquivalente {
 func (me *MateriaEquivalente) CrearDependenciaCarrera(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		me.IdCarrera.Asignar(id)
-		return me, CumpleAll(me.IdArchivo, me.IdCarrera, me.IdMateria)
+		return me, u.CumpleAll(me.IdArchivo, me.IdCarrera, me.IdMateria)
 	})
 }
 func (me *MateriaEquivalente) CrearDependenciaMateria(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		me.IdMateria.Asignar(id)
-		return me, CumpleAll(me.IdArchivo, me.IdCarrera, me.IdMateria)
+		return me, u.CumpleAll(me.IdArchivo, me.IdCarrera, me.IdMateria)
 	})
 }
 
 func (me *MateriaEquivalente) CrearDependenciaArchivo(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		me.IdArchivo.Asignar(id)
-		return me, CumpleAll(me.IdArchivo, me.IdCarrera, me.IdMateria)
+		return me, u.CumpleAll(me.IdArchivo, me.IdCarrera, me.IdMateria)
 	})
 }
 

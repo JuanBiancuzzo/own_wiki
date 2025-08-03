@@ -16,9 +16,9 @@ const (
 )
 
 type TemaCurso struct {
-	IdArchivo         *Opcional[int64]
+	IdArchivo         *u.Opcional[int64]
 	TipoCurso         TipoCurso
-	IdCurso           *Opcional[int64]
+	IdCurso           *u.Opcional[int64]
 	Nombre            string
 	Capitulo          int
 	Parte             int
@@ -27,9 +27,9 @@ type TemaCurso struct {
 
 func NewTemaCurso(nombre string, capitulo string, parte string, tipoCurso TipoCurso) *TemaCurso {
 	return &TemaCurso{
-		IdArchivo:         NewOpcional[int64](),
+		IdArchivo:         u.NewOpcional[int64](),
 		TipoCurso:         tipoCurso,
-		IdCurso:           NewOpcional[int64](),
+		IdCurso:           u.NewOpcional[int64](),
 		Nombre:            nombre,
 		Capitulo:          NumeroODefault(capitulo, 1),
 		Parte:             NumeroODefault(parte, 0),
@@ -40,14 +40,14 @@ func NewTemaCurso(nombre string, capitulo string, parte string, tipoCurso TipoCu
 func (tc *TemaCurso) CrearDependenciaCurso(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		tc.IdCurso.Asignar(id)
-		return tc, CumpleAll(tc.IdArchivo, tc.IdCurso)
+		return tc, u.CumpleAll(tc.IdArchivo, tc.IdCurso)
 	})
 }
 
 func (tc *TemaCurso) CrearDependenciaArchivo(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		tc.IdArchivo.Asignar(id)
-		return tc, CumpleAll(tc.IdArchivo, tc.IdCurso)
+		return tc, u.CumpleAll(tc.IdArchivo, tc.IdCurso)
 	})
 }
 

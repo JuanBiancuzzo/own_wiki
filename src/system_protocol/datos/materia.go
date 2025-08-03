@@ -27,8 +27,8 @@ const (
 )
 
 type Materia struct {
-	IdArchivo         *Opcional[int64]
-	IdCarrera         *Opcional[int64]
+	IdArchivo         *u.Opcional[int64]
+	IdCarrera         *u.Opcional[int64]
 	Nombre            string
 	Codigo            string
 	Plan              string
@@ -47,8 +47,8 @@ func NewMateria(nombre string, codigo string, plan string, repCuatri string, rep
 
 	} else {
 		return &Materia{
-			IdArchivo:         NewOpcional[int64](),
-			IdCarrera:         NewOpcional[int64](),
+			IdArchivo:         u.NewOpcional[int64](),
+			IdCarrera:         u.NewOpcional[int64](),
 			Nombre:            nombre,
 			Codigo:            codigo,
 			Anio:              anio,
@@ -62,14 +62,14 @@ func NewMateria(nombre string, codigo string, plan string, repCuatri string, rep
 func (m *Materia) CrearDependenciaCarrera(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		m.IdCarrera.Asignar(id)
-		return m, CumpleAll(m.IdArchivo, m.IdCarrera)
+		return m, u.CumpleAll(m.IdArchivo, m.IdCarrera)
 	})
 }
 
 func (m *Materia) CrearDependenciaArchivo(dependible Dependible) {
 	dependible.CargarDependencia(func(id int64) (Cargable, bool) {
 		m.IdArchivo.Asignar(id)
-		return m, CumpleAll(m.IdArchivo, m.IdCarrera)
+		return m, u.CumpleAll(m.IdArchivo, m.IdCarrera)
 	})
 }
 

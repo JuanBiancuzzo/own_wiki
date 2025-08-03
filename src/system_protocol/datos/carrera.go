@@ -13,7 +13,7 @@ type Carrera struct {
 	Nombre            string
 	Etapa             Etapa
 	TieneCodigo       bool
-	IdArchivo         *Opcional[int64]
+	IdArchivo         *u.Opcional[int64]
 	ListaDependencias *u.Lista[Dependencia]
 }
 
@@ -25,7 +25,7 @@ func NewCarrera(nombre string, repEtapa string, tieneCodigo string) (*Carrera, e
 			Nombre:            nombre,
 			Etapa:             etapa,
 			TieneCodigo:       BooleanoODefault(tieneCodigo, false),
-			IdArchivo:         NewOpcional[int64](),
+			IdArchivo:         u.NewOpcional[int64](),
 			ListaDependencias: u.NewLista[Dependencia](),
 		}, nil
 	}

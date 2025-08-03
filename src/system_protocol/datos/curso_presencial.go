@@ -13,7 +13,7 @@ type CursoPresencial struct {
 	Nombre            string
 	Etapa             Etapa
 	AnioCurso         int
-	IdArchivo         *Opcional[int64]
+	IdArchivo         *u.Opcional[int64]
 	Profesores        []*Persona
 	ListaDependencias *u.Lista[Dependencia]
 }
@@ -30,7 +30,7 @@ func NewCursoPresencial(nombre string, repEtapa string, repAnioCurso string, pro
 			Nombre:            nombre,
 			Etapa:             etapa,
 			AnioCurso:         anioCurso,
-			IdArchivo:         NewOpcional[int64](),
+			IdArchivo:         u.NewOpcional[int64](),
 			Profesores:        profesores,
 			ListaDependencias: u.NewLista[Dependencia](),
 		}, nil
