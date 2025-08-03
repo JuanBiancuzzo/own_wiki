@@ -3,7 +3,7 @@ package fs
 import (
 	"database/sql"
 	"fmt"
-	e "own_wiki/system_protocol/estructura"
+	e "own_wiki/system_protocol/datos"
 	l "own_wiki/system_protocol/listas"
 	"slices"
 )

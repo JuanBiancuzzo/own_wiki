@@ -1,14 +1,20 @@
-package estructura
+package datos
 
 import (
 	"database/sql"
 	"fmt"
+
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type Cargable interface {
 	CargarDatos(bdd *sql.DB, canal chan string) (int64, error)
 
 	ResolverDependencias(id int64) []Cargable
+}
+
+type A interface {
+	CargarDocumento(bdd *mongo.Database, canal chan string) (int64, error)
 }
 
 func CargableDefault() Cargable {

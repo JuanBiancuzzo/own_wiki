@@ -1,4 +1,4 @@
-package estructura
+package datos
 
 const QUERY_PERSONAS = "SELECT id FROM personas WHERE nombre = ? AND apellido = ?"
 const INSERTAR_PERSONA = "INSERT INTO personas (nombre, apellido) VALUES (?, ?)"

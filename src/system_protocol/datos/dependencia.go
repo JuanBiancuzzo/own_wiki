@@ -1,4 +1,4 @@
-package estructura
+package datos
 
 // Es una estructura que es capaz de tener dependencias
 type Dependible interface {

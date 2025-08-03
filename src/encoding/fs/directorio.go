@@ -1,7 +1,7 @@
 package fs
 
 import (
-	e "own_wiki/system_protocol/estructura"
+	e "own_wiki/system_protocol/datos"
 	ls "own_wiki/system_protocol/listas"
 
 	_ "github.com/go-sql-driver/mysql"

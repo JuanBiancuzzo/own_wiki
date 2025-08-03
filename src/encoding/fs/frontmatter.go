@@ -2,7 +2,7 @@ package fs
 
 import (
 	db "own_wiki/system_protocol/bdd"
-	e "own_wiki/system_protocol/estructura"
+	e "own_wiki/system_protocol/datos"
 )
 
 type Frontmatter struct {

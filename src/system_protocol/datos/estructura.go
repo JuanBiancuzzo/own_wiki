@@ -1,4 +1,4 @@
-package estructura
+package datos
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package estructura
+package datos
 
 type Opcional[T any] struct {
 	Valor T
