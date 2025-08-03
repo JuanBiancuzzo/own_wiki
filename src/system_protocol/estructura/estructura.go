@@ -33,6 +33,23 @@ func BooleanoODefault(representacion string, valorDefault bool) bool {
 	}
 }
 
+func EtapaODefault(representacion string, valorDefault Etapa) Etapa {
+	var etapa Etapa
+	switch representacion {
+	case "sin-empezar":
+		etapa = ETAPA_SIN_EMPEZAR
+	case "empezado":
+		etapa = ETAPA_EMPEZADO
+	case "ampliar":
+		etapa = ETAPA_AMPLIAR
+	case "terminado":
+		etapa = ETAPA_TERMINADO
+	default:
+		etapa = valorDefault
+	}
+	return etapa
+}
+
 func ObtenerEtapa(representacionEtapa string) (Etapa, error) {
 	var etapa Etapa
 	switch representacionEtapa {

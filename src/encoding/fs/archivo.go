@@ -12,16 +12,32 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const TAG_CARRERA = "facultad/carrera"
-const TAG_MATERIA = "facultad/materia"
-const TAG_MATERIA_EQUIVALENTE = "facultad/materia-equivalente"
-const TAG_RESUMEN_MATERIA = "facultad/resumen"
-const TAG_CURSO = "cursos/curso"
-const TAG_CURSO_PRESENCIA = "cursos/curso-presencial"
-const TAG_RESUMEN_CURSO = "cursos/resumen"
-const TAG_DISTRIBUCION = "colección/distribuciones/distribución"
-const TAG_LIBRO = "colección/biblioteca/libro"
-const TAG_PAPER = "colección/biblioteca/paper"
+const (
+	TAG_CARRERA             = "facultad/carrera"
+	TAG_MATERIA             = "facultad/materia"
+	TAG_MATERIA_EQUIVALENTE = "facultad/materia-equivalente"
+	TAG_RESUMEN_MATERIA     = "facultad/resumen"
+)
+
+const (
+	TAG_CURSO           = "cursos/curso"
+	TAG_CURSO_PRESENCIA = "cursos/curso-presencial"
+	TAG_RESUMEN_CURSO   = "cursos/resumen"
+)
+
+const (
+	TAG_DISTRIBUCION = "colección/distribuciones/distribución"
+	TAG_LIBRO        = "colección/biblioteca/libro"
+	TAG_PAPER        = "colección/biblioteca/paper"
+)
+
+const (
+	TAG_NOTA_FACULTAD      = "nota/facultad"
+	TAG_NOTA_CURSO         = "nota/curso"
+	TAG_NOTA_INVESTIGACION = "nota/investigacion"
+	TAG_NOTA_COLECCION     = "nota/colección"
+	TAG_NOTA_PROYECTO      = "nota/proyecto"
+)
 
 type PathTipo struct {
 	Path string
@@ -175,6 +191,33 @@ func NewArchivo(root *Root, path string, info *db.InfoArchivos, canal chan strin
 
 			archivo.CargarDependible(e.DEP_TEMA_CURSO, constructor)
 
+		case TAG_NOTA_FACULTAD:
+			fallthrough
+		case TAG_NOTA_INVESTIGACION:
+			fallthrough
+		case TAG_NOTA_CURSO:
+			fallthrough
+		case TAG_NOTA_PROYECTO:
+			fallthrough
+		case TAG_NOTA_COLECCION:
+			constructor := meta.CrearNota(e.Nombre(path))
+			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+			archivo.CargarDependible(e.DEP_NOTA, constructor)
+
+			vinculosNota := [][]string{meta.VinculoFacultad, meta.VinculoCurso}
+			tipoNota := []e.TipoNota{e.TN_FACULTAD, e.TN_CURSO}
+			tipoDependencia := []e.TipoDependible{e.DEP_TEMA_MATERIA, e.DEP_TEMA_CURSO}
+
+			for i, vinculos := range vinculosNota {
+				for _, vinculo := range vinculos {
+					pathVinculo := ObtenerWikiLink(vinculo)[0]
+
+					notaVinculo := e.NewNotaVinculo(tipoNota[i])
+					archivo.CargarDependencia(path, e.DEP_NOTA, notaVinculo.CrearDependenciaNota)
+					archivo.CargarDependencia(pathVinculo, tipoDependencia[i], notaVinculo.CrearDependenciaVinculo)
+				}
+			}
+
 		case TAG_LIBRO:
 			constructor := meta.CrearLibro()
 			archivo.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
@@ -229,7 +272,7 @@ func (a *Archivo) EstablecerDependencias(canal chan e.Cargable, canalMensajes ch
 			canalMensajes <- fmt.Sprintf("No se encontró el archivo '%s' para el archivo: '%s'", pathTipo.Path, a.Nombre())
 
 		} else if listaDependible, ok := archivo.Dependibles[pathTipo.Tipo]; !ok {
-			canalMensajes <- fmt.Sprintf("No se encontró el tipo '%d' para el archivo: '%s'", pathTipo.Tipo, a.Nombre())
+			canalMensajes <- fmt.Sprintf("No se encontró el tipo '%s' para el archivo: '%s'", e.TipoDependible2String(pathTipo.Tipo), a.Nombre())
 
 		} else {
 			for dependible := range listaDependible.Iterar {

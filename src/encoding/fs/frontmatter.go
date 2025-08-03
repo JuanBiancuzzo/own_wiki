@@ -6,67 +6,72 @@ import (
 )
 
 type Frontmatter struct {
-	Tags                []string      `yaml:"tags,omitempty"`
-	Dia                 string        `yaml:"dia,omitempty"`
-	Etapa               string        `yaml:"etapa,omitempty"`
-	Aliases             []string      `yaml:"aliases,omitempty"`
-	Referencias         []string      `yaml:"referencias,omitempty"`
-	NumReferncia        int           `yaml:"numReferncia,omitempty"`
-	TipoCita            string        `yaml:"tipoCita,omitempty"`
-	Previo              string        `yaml:"previo,omitempty"`
-	Num                 int           `yaml:"num,omitempty"`
-	Url                 string        `yaml:"url,omitempty"`
-	Nombre              string        `yaml:"nombre,omitempty"`
-	Articulo            []Articulo    `yaml:"articulo,omitempty"`
-	Capitulo            string        `yaml:"capitulo,omitempty"`
-	Fecha               string        `yaml:"fecha,omitempty"`
-	NombreResumen       string        `yaml:"nombreResumen,omitempty"`
-	MateriaResumen      string        `yaml:"materiaResumen,omitempty"`
-	Anio                string        `yaml:"anio,omitempty"`
-	Tipo                string        `yaml:"tipo,omitempty"`
-	NombreAutores       []Persona     `yaml:"nombreAutores,omitempty"`
-	Estado              string        `yaml:"estado,omitempty"`
-	NombreCanal         string        `yaml:"nombreCanal,omitempty"`
-	NombreVideo         string        `yaml:"nombreVideo,omitempty"`
-	NombreArticulo      string        `yaml:"nombreArticulo,omitempty"`
-	Editorial           string        `yaml:"editorial,omitempty"`
-	Capitulos           []Capitulo    `yaml:"capitulos,omitempty"`
-	TituloObra          string        `yaml:"tituloObra,omitempty"`
-	SubtituloObra       string        `yaml:"subtituloObra,omitempty"`
-	Edicion             string        `yaml:"edicion,omitempty"`
-	Cover               string        `yaml:"cover,omitempty"`
-	Volumen             string        `yaml:"volumen,omitempty"`
-	NombreTema          string        `yaml:"nombreTema,omitempty"`
-	Parte               string        `yaml:"parte,omitempty"`
-	Curso               string        `yaml:"curso,omitempty"`
-	NombreCurso         string        `yaml:"nombreCurso,omitempty"`
-	FechaCurso          string        `yaml:"fechaCurso,omitempty"`
-	TipoCurso           e.TipoCurso   `yaml:"tipoCurso,omitempty"`
-	Profesores          []int         `yaml:"profesores,omitempty"`
-	Autores             []Persona     `yaml:"autores,omitempty"`
-	Editores            []Persona     `yaml:"editores,omitempty"`
-	NumeroInforme       string        `yaml:"numeroInforme,omitempty"`
-	TituloInforme       string        `yaml:"tituloInforme,omitempty"`
-	SubtituloInforme    string        `yaml:"subtituloInforme,omitempty"`
-	NombreRevista       string        `yaml:"nombreRevista,omitempty"`
-	VolumenInforme      string        `yaml:"volumenRevista,omitempty"`
-	Paginas             Pagina        `yaml:"paginas,omitempty"`
-	Planes              []string      `yaml:"planes,omitempty"`
-	TieneCodigo         string        `yaml:"tieneCodigo,omitempty"`
-	NombreMateria       string        `yaml:"nombreMateria,omitempty"`
-	NombreReducido      string        `yaml:"nombreReducido,omitempty"`
-	PathCarrera         string        `yaml:"pathCarrera,omitempty"`
-	Plan                string        `yaml:"plan,omitempty"`
-	Codigo              string        `yaml:"codigo,omitempty"`
-	Correlativas        []Correlativa `yaml:"correlativas,omitempty"`
-	NombrePagina        string        `yaml:"nombrePagina,omitempty"`
-	FechaPublicacion    string        `yaml:"fechaPublicacion,omitempty"`
-	TituloArticulo      string        `yaml:"tituloArticulo,omitempty"`
-	Cuatri              string        `yaml:"cuatri,omitempty"`
-	NombreDistribuucion string        `yaml:"nombreDistribucion,omitempty"`
-	TipoDistribucion    string        `yaml:"tipoDistribucion,omitempty"`
-	Equivalencia        string        `yaml:"equivalencia,omitempty"`
-	NombreSubtema       string        `yaml:"nombreSubtema,omitempty"`
+	Tags                 []string      `yaml:"tags,omitempty"`
+	Dia                  string        `yaml:"dia,omitempty"`
+	VinculoFacultad      []string      `yaml:"vinculoFacultad,omitempty"`
+	VinculoInvestigacion []string      `yaml:"vinculoInvestigacion,omitempty"`
+	VinculoCurso         []string      `yaml:"vinculoCurso,omitempty"`
+	VinculoProyecto      []string      `yaml:"vinculoProyecto,omitempty"`
+	VinculoColeccion     []string      `yaml:"vinculoColeccion,omitempty"`
+	Etapa                string        `yaml:"etapa,omitempty"`
+	Aliases              []string      `yaml:"aliases,omitempty"`
+	Referencias          []string      `yaml:"referencias,omitempty"`
+	NumReferncia         int           `yaml:"numReferncia,omitempty"`
+	TipoCita             string        `yaml:"tipoCita,omitempty"`
+	Previo               string        `yaml:"previo,omitempty"`
+	Num                  int           `yaml:"num,omitempty"`
+	Url                  string        `yaml:"url,omitempty"`
+	Nombre               string        `yaml:"nombre,omitempty"`
+	Articulo             []Articulo    `yaml:"articulo,omitempty"`
+	Capitulo             string        `yaml:"capitulo,omitempty"`
+	Fecha                string        `yaml:"fecha,omitempty"`
+	NombreResumen        string        `yaml:"nombreResumen,omitempty"`
+	MateriaResumen       string        `yaml:"materiaResumen,omitempty"`
+	Anio                 string        `yaml:"anio,omitempty"`
+	Tipo                 string        `yaml:"tipo,omitempty"`
+	NombreAutores        []Persona     `yaml:"nombreAutores,omitempty"`
+	Estado               string        `yaml:"estado,omitempty"`
+	NombreCanal          string        `yaml:"nombreCanal,omitempty"`
+	NombreVideo          string        `yaml:"nombreVideo,omitempty"`
+	NombreArticulo       string        `yaml:"nombreArticulo,omitempty"`
+	Editorial            string        `yaml:"editorial,omitempty"`
+	Capitulos            []Capitulo    `yaml:"capitulos,omitempty"`
+	TituloObra           string        `yaml:"tituloObra,omitempty"`
+	SubtituloObra        string        `yaml:"subtituloObra,omitempty"`
+	Edicion              string        `yaml:"edicion,omitempty"`
+	Cover                string        `yaml:"cover,omitempty"`
+	Volumen              string        `yaml:"volumen,omitempty"`
+	NombreTema           string        `yaml:"nombreTema,omitempty"`
+	Parte                string        `yaml:"parte,omitempty"`
+	Curso                string        `yaml:"curso,omitempty"`
+	NombreCurso          string        `yaml:"nombreCurso,omitempty"`
+	FechaCurso           string        `yaml:"fechaCurso,omitempty"`
+	TipoCurso            e.TipoCurso   `yaml:"tipoCurso,omitempty"`
+	Profesores           []int         `yaml:"profesores,omitempty"`
+	Autores              []Persona     `yaml:"autores,omitempty"`
+	Editores             []Persona     `yaml:"editores,omitempty"`
+	NumeroInforme        string        `yaml:"numeroInforme,omitempty"`
+	TituloInforme        string        `yaml:"tituloInforme,omitempty"`
+	SubtituloInforme     string        `yaml:"subtituloInforme,omitempty"`
+	NombreRevista        string        `yaml:"nombreRevista,omitempty"`
+	VolumenInforme       string        `yaml:"volumenRevista,omitempty"`
+	Paginas              Pagina        `yaml:"paginas,omitempty"`
+	Planes               []string      `yaml:"planes,omitempty"`
+	TieneCodigo          string        `yaml:"tieneCodigo,omitempty"`
+	NombreMateria        string        `yaml:"nombreMateria,omitempty"`
+	NombreReducido       string        `yaml:"nombreReducido,omitempty"`
+	PathCarrera          string        `yaml:"pathCarrera,omitempty"`
+	Plan                 string        `yaml:"plan,omitempty"`
+	Codigo               string        `yaml:"codigo,omitempty"`
+	Correlativas         []Correlativa `yaml:"correlativas,omitempty"`
+	NombrePagina         string        `yaml:"nombrePagina,omitempty"`
+	FechaPublicacion     string        `yaml:"fechaPublicacion,omitempty"`
+	TituloArticulo       string        `yaml:"tituloArticulo,omitempty"`
+	Cuatri               string        `yaml:"cuatri,omitempty"`
+	NombreDistribuucion  string        `yaml:"nombreDistribucion,omitempty"`
+	TipoDistribucion     string        `yaml:"tipoDistribucion,omitempty"`
+	Equivalencia         string        `yaml:"equivalencia,omitempty"`
+	NombreSubtema        string        `yaml:"nombreSubtema,omitempty"`
 }
 type Capitulo struct {
 	NumeroCapitulo string    `yaml:"numeroCapitulo"`
@@ -165,6 +170,10 @@ func (f *Frontmatter) CrearPaper() (*e.Paper, error) {
 	)
 }
 
+func (f *Frontmatter) CrearNota(nombreArchivo string) *e.Nota {
+	return e.NewNota(nombreArchivo, f.Etapa, f.Dia)
+}
+
 func (f *Frontmatter) CrearCurso() (*e.Curso, error) {
 	profesores := make([]*e.Persona, len(f.NombreAutores))
 	for i, profesor := range f.NombreAutores {
@@ -187,12 +196,7 @@ func (f *Frontmatter) CrearCursoPresencial() (*e.CursoPresencial, error) {
 		profesores[i] = e.NewPersona(profesor.Nombre, profesor.Apellido)
 	}
 
-	return e.NewCursoPresencial(
-		f.NombreCurso,
-		f.Etapa,
-		f.FechaCurso,
-		profesores,
-	)
+	return e.NewCursoPresencial(f.NombreCurso, f.Etapa, f.FechaCurso, profesores)
 }
 
 func CargarInfo(info *db.InfoArchivos, meta *Frontmatter) {

@@ -77,6 +77,7 @@ func datosParaTabla(info *InfoArchivos) []any {
 		255,            // nombre de la seccion legal
 		255,            // abreviacion del documento legal
 		255,            // nombre del articulo
+		255,            // Nombre de una nota
 		255,            // nombre del canal de youtube
 		255,            // nombre del video de youtube
 		info.MaxUrl,    // url del video de youtube

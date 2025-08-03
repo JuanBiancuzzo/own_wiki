@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS libros (
   id INT AUTO_INCREMENT PRIMARY KEY,
   titulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   subtitulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  anio INT,
+  anio YEAR,
   idEditorial INT NOT NULL,
   edicion INT,
   volumen INT,
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS planesCarrera (
 
 CREATE TABLE IF NOT EXISTS cuatrimestreCarrera (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  anio INT NOT NULL,
+  anio YEAR NOT NULL,
   cuatrimestre ENUM ("Primero", "Segundo") NOT NULL
 );
 
@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS cursos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
-  anioCurso INT,
+  anioCurso YEAR,
   idPagina INT NOT NULL,
   url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS cursosPresencial (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
-  anioCurso INT,
+  anioCurso YEAR,
   idArchivo INT NOT NULL,
 
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS papers (
   numeroRevista INT,
   paginaInicio INT,
   paginaFinal INT,
-  anio INT,
+  anio YEAR,
   url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
   idArchivo INT NOT NULL,
 
@@ -323,6 +323,24 @@ CREATE TABLE IF NOT EXISTS gruposDocumento (
 
   FOREIGN KEY (idDocumento) REFERENCES documentosLegales(id),
   FOREIGN KEY (idGrupo) REFERENCES gruposLegales(id)
+);
+
+CREATE TABLE IF NOT EXISTS notas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
+  dia DATE,
+  idArchivo INT NOT NULL,
+
+  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
+);
+
+CREATE TABLE IF NOT EXISTS notasVinculo (
+  idNota INT NOT NULL,
+  idVinculo INT NOT NULL,
+  tipoVinculo ENUM ("Facultad", "Coleccion", "Curso", "Investigacion", "Proyecto"),
+
+  FOREIGN KEY (idNota) REFERENCES notas(id)
 );
 
 CREATE TABLE IF NOT EXISTS canalesYoutube (

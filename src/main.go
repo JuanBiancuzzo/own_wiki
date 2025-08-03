@@ -31,7 +31,6 @@ func main() {
 		wg.Done()
 	}(canalMensajes, &waitMensajes)
 
-	canalMensajes <- fmt.Sprint("Se tiene los argumentos sin limitar: ", os.Args)
 	switch strings.TrimSpace(os.Args[1]) {
 	case "-e":
 		switch len(os.Args) {
@@ -40,7 +39,6 @@ func main() {
 		case 3:
 			canalMensajes <- "No tiene la cantidad suficiente de argumentos, necesitas pasar el directorio de output"
 		default:
-			canalMensajes <- fmt.Sprintf("Se manda como input: %s, y manda como output: %s", os.Args[2], os.Args[3])
 			en.Encodear(os.Args[2], os.Args[3], canalMensajes)
 		}
 
@@ -49,7 +47,6 @@ func main() {
 		case 2:
 			canalMensajes <- "No tiene la cantidad suficiente de argumentos, necesitas pasar el directorio de input"
 		default:
-			canalMensajes <- fmt.Sprintf("Se manda como input: %s", os.Args[2])
 			ej.Ejecutar(os.Args[2], canalMensajes)
 		}
 
