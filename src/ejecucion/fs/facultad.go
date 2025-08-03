@@ -13,6 +13,9 @@ const (
 		SELECT idCarrera, nombre FROM materias UNION ALL SELECT idCarrera, nombre FROM materiasEquivalentes
 	) AS materiasGlobal WHERE materiasGlobal.idCarrera = %d`
 	QUERY_TEMAS_MATERIA_LS = "SELECT nombre FROM temasMateria WHERE idMateria = %d"
+	QUERY_NOTA_MATERIA_LS  = `SELECT DISTINCT notas.nombre FROM notas INNER JOIN (
+		SELECT idNota, idVinculo FROM notasVinculo WHERE tipoVinculo = "Facultad"
+	) AS vinculo ON notas.id = vinculo.idNota WHERE vinculo.idVinculo = %d`
 )
 
 const (
@@ -33,22 +36,17 @@ const (
 	TF_DENTRO_TEMA
 )
 
-type IdFacultad struct {
-	Id     int64
-	Nombre string
-}
-
 type Facultad struct {
 	Bdd  *sql.DB
 	Tipo TipoFacultad
-	Path *l.Pila[IdFacultad]
+	Path *l.Pila[int64]
 }
 
 func NewFacultad(bdd *sql.DB) *Facultad {
 	return &Facultad{
 		Bdd:  bdd,
 		Tipo: TF_FACULTAD,
-		Path: l.NewPila[IdFacultad](),
+		Path: l.NewPila[int64](),
 	}
 }
 
@@ -59,14 +57,17 @@ func (f *Facultad) Ls() ([]string, error) {
 		query = QUERY_CARRERAS_LS
 	case TF_DENTRO_CARRERA:
 		if idCarrera, err := f.Path.Pick(); err == nil {
-			query = fmt.Sprintf(QUERY_MATERIAS_LS, idCarrera.Id)
+			query = fmt.Sprintf(QUERY_MATERIAS_LS, idCarrera)
 		}
 	case TF_DENTRO_MATERIA:
 		if idMateria, err := f.Path.Pick(); err == nil {
-			query = fmt.Sprintf(QUERY_TEMAS_MATERIA_LS, idMateria.Id)
+			query = fmt.Sprintf(QUERY_TEMAS_MATERIA_LS, idMateria)
 		}
 	case TF_DENTRO_TEMA:
-		return []string{}, fmt.Errorf("no hay opciones actualmente para tema de la materia")
+		if idTema, err := f.Path.Pick(); err == nil {
+			query = fmt.Sprintf(QUERY_NOTA_MATERIA_LS, idTema)
+		}
+
 	}
 
 	if rows, err := f.Bdd.Query(query); err != nil {
@@ -96,11 +97,11 @@ func (f *Facultad) Cd(subpath string, cache *Cache) (Subpath, error) {
 		query = fmt.Sprintf(QUERY_OBTENER_CARRERA, subpath)
 	case TF_DENTRO_CARRERA:
 		if idCarrera, err := f.Path.Pick(); err == nil {
-			query = fmt.Sprintf(QUERY_OBTENER_MATERIA, idCarrera.Id, subpath, idCarrera.Id, subpath)
+			query = fmt.Sprintf(QUERY_OBTENER_MATERIA, idCarrera, subpath, idCarrera, subpath)
 		}
 	case TF_DENTRO_MATERIA:
 		if idMateria, err := f.Path.Pick(); err == nil {
-			query = fmt.Sprintf(QUERY_OBTNER_TEMA_MATERIA, idMateria.Id, subpath)
+			query = fmt.Sprintf(QUERY_OBTNER_TEMA_MATERIA, idMateria, subpath)
 		}
 	case TF_DENTRO_TEMA:
 		return f, fmt.Errorf("ya se esta viendo todos los archivos, no hay subcarpetas")
@@ -127,7 +128,7 @@ func (f *Facultad) Cd(subpath string, cache *Cache) (Subpath, error) {
 		f.Tipo = TF_DENTRO_TEMA
 	}
 
-	f.Path.Apilar(IdFacultad{Id: id, Nombre: nombre})
+	f.Path.Apilar(id)
 	return f, nil
 }
 
@@ -142,6 +143,8 @@ func (f *Facultad) RutinaAtras(cache *Cache) (Subpath, error) {
 		f.Tipo = TF_FACULTAD
 	case TF_DENTRO_MATERIA:
 		f.Tipo = TF_DENTRO_CARRERA
+	case TF_DENTRO_TEMA:
+		f.Tipo = TF_DENTRO_MATERIA
 	}
 
 	return f, nil

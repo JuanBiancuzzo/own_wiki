@@ -9,6 +9,9 @@ import (
 const (
 	QUERY_CURSOS_LS      = "SELECT nombre FROM cursos UNION ALL SELECT nombre FROM cursosPresencial"
 	QUERY_TEMAS_CURSO_LS = "SELECT nombre FROM temasCurso WHERE idCurso = %d"
+	QUERY_NOTA_CURSO_LS  = `SELECT DISTINCT notas.nombre FROM notas INNER JOIN (
+		SELECT idNota, idVinculo FROM notasVinculo WHERE tipoVinculo = "Curso"
+	) AS vinculo ON notas.id = vinculo.idNota WHERE vinculo.idVinculo = %d`
 )
 
 const (
@@ -51,7 +54,9 @@ func (c *Cursos) Ls() ([]string, error) {
 			query = fmt.Sprintf(QUERY_TEMAS_CURSO_LS, idCurso)
 		}
 	case TCC_DENTRO_TEMA:
-		return []string{}, fmt.Errorf("no hay opciones actualmente para tema del curso")
+		if idTema, err := c.Path.Pick(); err == nil {
+			query = fmt.Sprintf(QUERY_NOTA_CURSO_LS, idTema)
+		}
 	}
 
 	if rows, err := c.Bdd.Query(query); err != nil {
