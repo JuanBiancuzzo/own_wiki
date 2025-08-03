@@ -3,7 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
-	l "own_wiki/system_protocol/listas"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 const INSERTAR_TEMA_MATERIA = "INSERT INTO temasMateria (nombre, capitulo, parte, idMateria, idArchivo) VALUES (?, ?, ?, ?, ?)"
@@ -14,7 +14,7 @@ type TemaMateria struct {
 	Nombre            string
 	Capitulo          int
 	Parte             int
-	ListaDependencias *l.Lista[Dependencia]
+	ListaDependencias *u.Lista[Dependencia]
 }
 
 func NewTemaMateria(nombre string, capitulo string, parte string) *TemaMateria {
@@ -24,7 +24,7 @@ func NewTemaMateria(nombre string, capitulo string, parte string) *TemaMateria {
 		Nombre:            nombre,
 		Capitulo:          NumeroODefault(capitulo, 1),
 		Parte:             NumeroODefault(parte, 0),
-		ListaDependencias: l.NewLista[Dependencia](),
+		ListaDependencias: u.NewLista[Dependencia](),
 	}
 }
 

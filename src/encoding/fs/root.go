@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	db "own_wiki/system_protocol/baseDeDatos"
-	ls "own_wiki/system_protocol/listas"
+	ls "own_wiki/system_protocol/utilidades"
 	"slices"
 	"sync"
 )

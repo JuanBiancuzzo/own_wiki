@@ -5,7 +5,7 @@ import (
 	"os"
 	bdd "own_wiki/system_protocol/baseDeDatos"
 	e "own_wiki/system_protocol/datos"
-	l "own_wiki/system_protocol/listas"
+	l "own_wiki/system_protocol/utilidades"
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"

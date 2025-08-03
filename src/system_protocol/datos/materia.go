@@ -3,7 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
-	l "own_wiki/system_protocol/listas"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 const INSERTAR_MATERIA = "INSERT INTO materias (nombre, codigo, etapa, idCarrera, idPlan, idCuatrimestre, idArchivo) VALUES (?, ?, ?, ?, ?, ?, ?)"
@@ -35,7 +35,7 @@ type Materia struct {
 	Anio              int
 	Cuatri            ParteCuatrimestre
 	Etapa             Etapa
-	ListaDependencias *l.Lista[Dependencia]
+	ListaDependencias *u.Lista[Dependencia]
 }
 
 func NewMateria(nombre string, codigo string, plan string, repCuatri string, repEtapa string) (*Materia, error) {
@@ -54,7 +54,7 @@ func NewMateria(nombre string, codigo string, plan string, repCuatri string, rep
 			Anio:              anio,
 			Cuatri:            cuatri,
 			Etapa:             etapa,
-			ListaDependencias: l.NewLista[Dependencia](),
+			ListaDependencias: u.NewLista[Dependencia](),
 		}, nil
 	}
 }

@@ -1,4 +1,4 @@
-package listas
+package utilidades
 
 type Cola[T any] struct {
 	Lista *Lista[T]

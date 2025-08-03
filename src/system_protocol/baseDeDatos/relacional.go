@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	l "own_wiki/system_protocol/listas"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 //go:embed esquema.sql
@@ -123,8 +123,8 @@ func CrearTablas(db *sql.DB, info *InfoArchivos) error {
 
 	cantidadTablas := uint32(len(strings.Split(queryCrearTablas, ");")))
 
-	pilaEliminar := l.NewPilaConCapacidad[string](cantidadTablas)
-	colaQuery := l.NewColaConCapacidad[string](cantidadTablas)
+	pilaEliminar := u.NewPilaConCapacidad[string](cantidadTablas)
+	colaQuery := u.NewColaConCapacidad[string](cantidadTablas)
 
 	for query := range strings.SplitSeq(queryCrearTablas, ";") {
 		query = strings.TrimSpace(query)

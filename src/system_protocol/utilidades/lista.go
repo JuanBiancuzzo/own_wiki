@@ -1,4 +1,4 @@
-package listas
+package utilidades
 
 import (
 	"fmt"

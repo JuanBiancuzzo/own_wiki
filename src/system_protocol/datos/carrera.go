@@ -3,7 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
-	l "own_wiki/system_protocol/listas"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 const QUERY_CARRERA = "SELECT id FROM carreras WHERE nombre = ?"
@@ -14,7 +14,7 @@ type Carrera struct {
 	Etapa             Etapa
 	TieneCodigo       bool
 	IdArchivo         *Opcional[int64]
-	ListaDependencias *l.Lista[Dependencia]
+	ListaDependencias *u.Lista[Dependencia]
 }
 
 func NewCarrera(nombre string, repEtapa string, tieneCodigo string) (*Carrera, error) {
@@ -26,7 +26,7 @@ func NewCarrera(nombre string, repEtapa string, tieneCodigo string) (*Carrera, e
 			Etapa:             etapa,
 			TieneCodigo:       BooleanoODefault(tieneCodigo, false),
 			IdArchivo:         NewOpcional[int64](),
-			ListaDependencias: l.NewLista[Dependencia](),
+			ListaDependencias: u.NewLista[Dependencia](),
 		}, nil
 	}
 }

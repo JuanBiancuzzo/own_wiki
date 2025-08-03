@@ -3,7 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
-	l "own_wiki/system_protocol/listas"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 const FORMATO_DIA = "YYYY-MM-DD"
@@ -14,7 +14,7 @@ type Nota struct {
 	Nombre            string
 	Etapa             Etapa
 	Dia               string
-	ListaDependencias *l.Lista[Dependencia]
+	ListaDependencias *u.Lista[Dependencia]
 }
 
 func NewNota(nombre string, repEtapa string, dia string) *Nota {
@@ -23,7 +23,7 @@ func NewNota(nombre string, repEtapa string, dia string) *Nota {
 		Nombre:            nombre,
 		Etapa:             EtapaODefault(repEtapa, ETAPA_SIN_EMPEZAR),
 		Dia:               dia,
-		ListaDependencias: l.NewLista[Dependencia](),
+		ListaDependencias: u.NewLista[Dependencia](),
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	l "own_wiki/system_protocol/listas"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 const INSERTAR_ARCHIVO = "INSERT INTO archivos (path) VALUES (?)"
@@ -16,14 +16,14 @@ const INSERTAR_TAG = "INSERT INTO tags (tag, idArchivo) VALUES (?, ?)"
 type Archivo struct {
 	Path              string
 	Tags              []string
-	ListaDependencias *l.Lista[Dependencia]
+	ListaDependencias *u.Lista[Dependencia]
 }
 
 func NewArchivo(path string, tags []string) *Archivo {
 	return &Archivo{
 		Path:              path,
 		Tags:              tags,
-		ListaDependencias: l.NewLista[Dependencia](),
+		ListaDependencias: u.NewLista[Dependencia](),
 	}
 }
 

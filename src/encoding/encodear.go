@@ -8,7 +8,7 @@ import (
 	fs "own_wiki/encoding/fs"
 	b "own_wiki/system_protocol/baseDeDatos"
 	e "own_wiki/system_protocol/datos"
-	l "own_wiki/system_protocol/listas"
+	l "own_wiki/system_protocol/utilidades"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"

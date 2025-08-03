@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	l "own_wiki/system_protocol/listas"
+	l "own_wiki/system_protocol/utilidades"
 )
 
 const (

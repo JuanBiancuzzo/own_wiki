@@ -3,7 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
-	l "own_wiki/system_protocol/listas"
+	u "own_wiki/system_protocol/utilidades"
 	"strconv"
 )
 
@@ -22,7 +22,7 @@ type Curso struct {
 	Url               string
 	IdArchivo         *Opcional[int64]
 	Profesores        []*Persona
-	ListaDependencias *l.Lista[Dependencia]
+	ListaDependencias *u.Lista[Dependencia]
 }
 
 func NewCurso(nombre string, repEtapa string, repAnioCurso string, nombrePagina string, url string, profesores []*Persona) (*Curso, error) {
@@ -41,7 +41,7 @@ func NewCurso(nombre string, repEtapa string, repAnioCurso string, nombrePagina 
 			Url:               url,
 			IdArchivo:         NewOpcional[int64](),
 			Profesores:        profesores,
-			ListaDependencias: l.NewLista[Dependencia](),
+			ListaDependencias: u.NewLista[Dependencia](),
 		}, nil
 	}
 }

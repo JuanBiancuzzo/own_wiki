@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	e "own_wiki/system_protocol/datos"
-	l "own_wiki/system_protocol/listas"
+	l "own_wiki/system_protocol/utilidades"
 	"slices"
 )
 

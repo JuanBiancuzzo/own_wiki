@@ -3,7 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
-	l "own_wiki/system_protocol/listas"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 const INSERTAR_TEMA_CURSO = "INSERT INTO temasCurso (nombre, capitulo, parte, tipoCurso, idCurso, idArchivo) VALUES (?, ?, ?, ?, ?, ?)"
@@ -22,7 +22,7 @@ type TemaCurso struct {
 	Nombre            string
 	Capitulo          int
 	Parte             int
-	ListaDependencias *l.Lista[Dependencia]
+	ListaDependencias *u.Lista[Dependencia]
 }
 
 func NewTemaCurso(nombre string, capitulo string, parte string, tipoCurso TipoCurso) *TemaCurso {
@@ -33,7 +33,7 @@ func NewTemaCurso(nombre string, capitulo string, parte string, tipoCurso TipoCu
 		Nombre:            nombre,
 		Capitulo:          NumeroODefault(capitulo, 1),
 		Parte:             NumeroODefault(parte, 0),
-		ListaDependencias: l.NewLista[Dependencia](),
+		ListaDependencias: u.NewLista[Dependencia](),
 	}
 }
 

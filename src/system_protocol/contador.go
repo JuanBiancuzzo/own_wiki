@@ -4,7 +4,7 @@ import (
 	"cmp"
 	"fmt"
 
-	l "own_wiki/system_protocol/listas"
+	l "own_wiki/system_protocol/utilidades"
 )
 
 type Inc[T cmp.Ordered] func(T) T

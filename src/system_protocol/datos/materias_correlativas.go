@@ -3,7 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
-	l "own_wiki/system_protocol/listas"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 const INSERTAR_MATERIA_CORRELATIVA = "INSERT INTO materiasCorrelativas (tipoMateria, idMateria, tipoCorrelativa, idCorrelativa) VALUES (?, ?, ?, ?)"
@@ -20,7 +20,7 @@ type MateriasCorrelativas struct {
 	TipoMateria       TipoMateria
 	IdCorrelativa     *Opcional[int64]
 	TipoCorrelativa   TipoMateria
-	ListaDependencias *l.Lista[Dependencia]
+	ListaDependencias *u.Lista[Dependencia]
 }
 
 func NewMateriasCorrelativas(tipoMateria TipoMateria, tipoCorrelativa TipoMateria) *MateriasCorrelativas {
@@ -29,7 +29,7 @@ func NewMateriasCorrelativas(tipoMateria TipoMateria, tipoCorrelativa TipoMateri
 		TipoMateria:       tipoMateria,
 		IdCorrelativa:     NewOpcional[int64](),
 		TipoCorrelativa:   tipoCorrelativa,
-		ListaDependencias: l.NewLista[Dependencia](),
+		ListaDependencias: u.NewLista[Dependencia](),
 	}
 }
 

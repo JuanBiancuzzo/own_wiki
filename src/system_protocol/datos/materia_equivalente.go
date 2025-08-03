@@ -3,7 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
-	l "own_wiki/system_protocol/listas"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 const INSERTAR_MATERIA_EQUIVALENTES = "INSERT INTO materiasEquivalentes (nombre, codigo, idCarrera, idMateria, idArchivo) VALUES (?, ?, ?, ?, ?)"
@@ -14,7 +14,7 @@ type MateriaEquivalente struct {
 	IdMateria         *Opcional[int64]
 	Nombre            string
 	Codigo            string
-	ListaDependencias *l.Lista[Dependencia]
+	ListaDependencias *u.Lista[Dependencia]
 }
 
 func NewMateriaEquivalente(nombre string, codigo string) *MateriaEquivalente {
@@ -24,7 +24,7 @@ func NewMateriaEquivalente(nombre string, codigo string) *MateriaEquivalente {
 		IdMateria:         NewOpcional[int64](),
 		Nombre:            nombre,
 		Codigo:            codigo,
-		ListaDependencias: l.NewLista[Dependencia](),
+		ListaDependencias: u.NewLista[Dependencia](),
 	}
 }
 
