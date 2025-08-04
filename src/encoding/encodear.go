@@ -4,11 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	"sync"
+	"unsafe"
 
 	fs "own_wiki/encoding/fs"
 	b "own_wiki/system_protocol/baseDeDatos"
 	e "own_wiki/system_protocol/datos"
 	l "own_wiki/system_protocol/utilidades"
+
+	ts "github.com/tree-sitter/go-tree-sitter"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -112,6 +115,24 @@ func CargarDocumentos(bddNoSQL *mongo.Database, canalIndependiente chan e.A, wg 
 }
 
 func Encodear(dirInput string, canalMensajes chan string) {
+
+	code := []byte("const foo = 1 + 2")
+
+	parser := ts.NewParser()
+	defer parser.Close()
+
+	if pointer, err := tsb.LanguageJavascript(); err != nil {
+		canalMensajes <- fmt.Sprintf("Error al cargar libreria, con el error: %v", err)
+	} else {
+		parser.SetLanguage(ts.NewLanguage(unsafe.Pointer(pointer)))
+
+		tree := parser.Parse(code, nil)
+		defer tree.Close()
+
+		root := tree.RootNode()
+		fmt.Println(root.ToSexp())
+	}
+
 	canalInfo := make(chan b.InfoArchivos)
 	canalDirectorio := make(chan fs.Root)
 	go ProcesarArchivos(canalInfo, canalDirectorio, dirInput, canalMensajes)

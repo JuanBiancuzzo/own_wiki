@@ -1,4 +1,7 @@
-FROM golang:1.24.5
+FROM golang:1.24.5-bullseye
+
+RUN apt-get update && apt-get install -y \
+    build-essential
 
 # Set working directory
 WORKDIR /app

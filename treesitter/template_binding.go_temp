@@ -1,0 +1,13 @@
+func Language__Lenguaje__() (uintptr, error) {
+	path := "./lib_treesitter___lenguaje__.so"
+	lib, err := purego.Dlopen(path, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+	if err != nil {
+		var pointer uintptr
+        return pointer, fmt.Errorf("error al cargar el grammar de __lenguaje__ como .so")
+    }
+
+	var lenguaje func() uintptr
+	purego.RegisterLibFunc(&lenguaje, lib, "tree_sitter___lenguaje__")
+
+	return lenguaje(), nil
+}
