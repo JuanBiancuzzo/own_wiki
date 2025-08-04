@@ -1,4 +1,4 @@
-package baseDeDatos
+package bass_de_datos
 
 import (
 	"context"
@@ -29,17 +29,13 @@ func EstablecerConexionRelacional(canalMensajes chan string) (*sql.DB, error) {
 		return nil, fmt.Errorf("error connecting to DB: %v", err)
 	}
 
-	for {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
-		if err = bdd.PingContext(ctx); err == nil {
-			canalMensajes <- "Se conecto correctamente a MySQL"
-			break
-		} else {
-			// canalMensajes <- fmt.Sprintf("Error al hacer ping a MySQL, error: %v", err)
-		}
+	if err = bdd.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("no se pudo pinear el servidor de MySQL, con error: %v", err)
 	}
+	canalMensajes <- "Se conecto correctamente a MySQL"
 
 	return bdd, nil
 }

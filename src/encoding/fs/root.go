@@ -3,7 +3,7 @@ package fs
 import (
 	"fmt"
 	"os"
-	db "own_wiki/system_protocol/baseDeDatos"
+	db "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 	"slices"
 	"sync"

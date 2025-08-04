@@ -3,7 +3,7 @@ package fs
 import (
 	"fmt"
 	"os"
-	bdd "own_wiki/system_protocol/baseDeDatos"
+	bdd "own_wiki/system_protocol/bass_de_datos"
 	e "own_wiki/system_protocol/datos"
 	l "own_wiki/system_protocol/utilidades"
 	"strings"

@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	fs "own_wiki/encoding/fs"
-	b "own_wiki/system_protocol/baseDeDatos"
+	b "own_wiki/system_protocol/bass_de_datos"
 	e "own_wiki/system_protocol/datos"
 	l "own_wiki/system_protocol/utilidades"
 

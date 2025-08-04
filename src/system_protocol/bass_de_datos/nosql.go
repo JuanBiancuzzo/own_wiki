@@ -1,4 +1,4 @@
-package baseDeDatos
+package bass_de_datos
 
 import (
 	"context"
@@ -22,17 +22,14 @@ func EstablecerConexionNoSQL(canalMensajes chan string) (*mongo.Database, error)
 		return nil, fmt.Errorf("error connecting to mongoDB, con error: %v", err)
 	}
 
-	for {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
-		if err = cliente.Ping(ctx, nil); err == nil {
-			canalMensajes <- "Se conecto correctamente a la MongoDB"
-			break
-		} else {
-			// canalMensajes <- fmt.Sprintf("Error al hacer ping a MongoDB, error: %v", err)
-		}
+	if err = cliente.Ping(ctx, nil); err != nil {
+		return nil, fmt.Errorf("no se pudo pinear el servidor de MongoDB, con error: %v", err)
 	}
+
+	canalMensajes <- "Se conecto correctamente a la MongoDB"
 
 	return cliente.Database(dbName), nil
 }

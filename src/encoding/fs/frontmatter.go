@@ -1,7 +1,7 @@
 package fs
 
 import (
-	db "own_wiki/system_protocol/baseDeDatos"
+	db "own_wiki/system_protocol/bass_de_datos"
 	e "own_wiki/system_protocol/datos"
 )
 

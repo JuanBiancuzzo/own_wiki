@@ -1,4 +1,4 @@
-package baseDeDatos
+package bass_de_datos
 
 type InfoArchivos struct {
 	MaxPath        uint32

@@ -3,7 +3,7 @@ package fs
 import (
 	"database/sql"
 	"fmt"
-	bdd "own_wiki/system_protocol/baseDeDatos"
+	bdd "own_wiki/system_protocol/bass_de_datos"
 	"strings"
 )
 
