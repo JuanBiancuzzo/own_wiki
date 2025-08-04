@@ -68,9 +68,11 @@ func Ejecutar(dirInput string, canalMensajes chan string) {
 		} else if input == "cd" {
 			EjectuarCd(directorio, "../../../../..", canalMensajes)
 
+		} else if input == "exit" {
+			break
+
 		} else {
 			canalMensajes <- "El comando '%s' no puede no es ls o cd"
 		}
-
 	}
 }

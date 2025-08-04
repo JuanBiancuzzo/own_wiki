@@ -22,3 +22,30 @@ func (w *Worker[R]) Ejecutar() {
 	}
 	w.WaitGroupt.Done()
 }
+
+func DividirTrabajo[R any](canalInput chan R, cantidadWorkers int, funcionEjecutar func(R), wg *sync.WaitGroup) {
+	canalesInput := make([]chan R, cantidadWorkers)
+	var waitWorkers sync.WaitGroup
+
+	waitWorkers.Add(cantidadWorkers)
+	for i := range cantidadWorkers {
+		canalesInput[i] = make(chan R, 5)
+		worker := NewWorker(canalesInput[i], funcionEjecutar, &waitWorkers)
+		go worker.Ejecutar()
+	}
+
+	contador := 0
+	for input := range canalInput {
+		canalesInput[contador] <- input
+		contador = (contador + 1) % cantidadWorkers
+	}
+
+	for i := range cantidadWorkers {
+		close(canalesInput[i])
+	}
+
+	waitWorkers.Wait()
+	if wg != nil {
+		wg.Done()
+	}
+}

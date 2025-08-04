@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-const CANTIDAD_WORKERS = 20
+const CANTIDAD_WORKERS = 15
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
@@ -27,7 +27,18 @@ func EstablecerDirectorio(dirOrigen string, infoArchivos *db.InfoArchivos, canal
 
 	canalInput := make(chan string, CANTIDAD_WORKERS)
 	waitArchivos.Add(1)
-	go DividirTrabajo(canalInput, root, infoArchivos, &waitArchivos, canalMensajes)
+
+	var mutexRoot sync.Mutex
+	procesarArchivo := func(path string) {
+		if archivo, err := NewArchivo(root, path, infoArchivos, canalMensajes); err != nil {
+			canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo, con error: %v", err)
+		} else {
+			mutexRoot.Lock()
+			root.Archivos[path] = archivo
+			mutexRoot.Unlock()
+		}
+	}
+	go u.DividirTrabajo(canalInput, CANTIDAD_WORKERS, procesarArchivo, &waitArchivos)
 
 	colaDirectorios := u.NewCola[string]()
 	colaDirectorios.Encolar("")
@@ -59,43 +70,6 @@ func EstablecerDirectorio(dirOrigen string, infoArchivos *db.InfoArchivos, canal
 	close(canalInput)
 	waitArchivos.Wait()
 	return root
-}
-
-func DividirTrabajo(canalInput chan string, root *Root, info *db.InfoArchivos, wg *sync.WaitGroup, canalMensajes chan string) {
-	var mutexRoot sync.Mutex
-
-	procesarArchivo := func(path string) {
-		if archivo, err := NewArchivo(root, path, info, canalMensajes); err != nil {
-			canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo, con error: %v", err)
-		} else {
-			mutexRoot.Lock()
-			root.Archivos[path] = archivo
-			mutexRoot.Unlock()
-		}
-	}
-
-	canalesInput := make([]chan string, CANTIDAD_WORKERS)
-	var waitWorkers sync.WaitGroup
-
-	waitWorkers.Add(CANTIDAD_WORKERS)
-	for i := range CANTIDAD_WORKERS {
-		canalesInput[i] = make(chan string, 5)
-		worker := u.NewWorker(canalesInput[i], procesarArchivo, &waitWorkers)
-		go worker.Ejecutar()
-	}
-
-	contador := 0
-	for input := range canalInput {
-		canalesInput[contador] <- input
-		contador = (contador + 1) % CANTIDAD_WORKERS
-	}
-
-	for i := range CANTIDAD_WORKERS {
-		close(canalesInput[i])
-	}
-
-	waitWorkers.Wait()
-	wg.Done()
 }
 
 func (r *Root) EncontrarArchivo(path string) (*Archivo, error) {
