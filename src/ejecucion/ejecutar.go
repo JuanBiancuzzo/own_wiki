@@ -36,6 +36,7 @@ func Abs(valor int) int {
 	return valor
 }
 
+// Ver de renderizar esto usando htmx y golang
 func Ejecutar(dirInput string, canalMensajes chan string) {
 	_ = godotenv.Load()
 
