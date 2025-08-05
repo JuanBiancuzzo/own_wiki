@@ -3,7 +3,6 @@ package encoding
 import (
 	"database/sql"
 	"fmt"
-	"sync"
 
 	fs "own_wiki/encoding/fs"
 	b "own_wiki/system_protocol/bass_de_datos"
@@ -74,7 +73,7 @@ func ConstruirBaseNoSQL(canalBDD chan *mongo.Database, canalMensajes chan string
 	close(canalBDD)
 }
 
-func EvaluarCargable(bdd *sql.DB, canalMensajes chan string, cargable e.Cargable, cola *l.Cola[e.Cargable]) {
+func EvaluarCargable(bdd *b.Bdd, canalMensajes chan string, cargable e.Cargable, cola *l.Cola[e.Cargable]) {
 	if id, err := cargable.CargarDatos(bdd, canalMensajes); err == nil {
 		for _, cargable := range cargable.ResolverDependencias(id) {
 			cola.Encolar(cargable)
@@ -85,30 +84,23 @@ func EvaluarCargable(bdd *sql.DB, canalMensajes chan string, cargable e.Cargable
 	}
 }
 
-func CargarDatos(bddRelacional *sql.DB, canalIndependiente chan e.Cargable, wg *sync.WaitGroup, canalMensajes chan string) {
+func CargarDatos(bdd *b.Bdd, canalIndependiente chan e.Cargable, canalMensajes chan string) {
 	canalMensajes <- "Cargando los archivos sin dependencias"
 
 	cargablesListos := l.NewCola[e.Cargable]()
 	for cargable := range canalIndependiente {
-		EvaluarCargable(bddRelacional, canalMensajes, cargable, cargablesListos)
+		EvaluarCargable(bdd, canalMensajes, cargable, cargablesListos)
 	}
 
 	canalMensajes <- "Cargados todos los archivos sin dependencias, ahora procesando los que tengan dependencias"
 
 	for cargable := range cargablesListos.DesencolarIterativamente {
-		EvaluarCargable(bddRelacional, canalMensajes, cargable, cargablesListos)
+		EvaluarCargable(bdd, canalMensajes, cargable, cargablesListos)
 	}
 
 	if cargablesListos.Lista.Largo > 0 {
 		canalMensajes <- fmt.Sprint("Hubo un error, no se procesaron: ", cargablesListos.Lista.Largo, " cargables")
 	}
-
-	wg.Done()
-}
-
-func CargarDocumentos(bddNoSQL *mongo.Database, canalIndependiente chan e.A, wg *sync.WaitGroup, canalMensajes chan string) {
-	canalMensajes <- "Cargando los documentos"
-	wg.Done()
 }
 
 func Encodear(dirInput string, canalMensajes chan string) {
@@ -125,19 +117,16 @@ func Encodear(dirInput string, canalMensajes chan string) {
 	go ConstruirBaseNoSQL(canalBddNoSQL, canalMensajes)
 
 	canalDatos := make(chan e.Cargable, 100)
-	canalDocumentos := make(chan e.A, 100)
 
-	go func(canalDatos chan e.Cargable, canalDocumentos chan e.A, canalMensajes chan string) {
+	go func(canalDatos chan e.Cargable, canalMensajes chan string) {
 		root := <-canalDirectorio
 		for _, archivo := range root.Archivos {
-			archivo.EstablecerDependencias(canalDatos, canalDocumentos, canalMensajes)
+			archivo.EstablecerDependencias(canalDatos, canalMensajes)
 		}
 
 		canalMensajes <- "Dejar de mandar archivos para procesar"
 		close(canalDatos)
-		close(canalDocumentos)
-
-	}(canalDatos, canalDocumentos, canalMensajes)
+	}(canalDatos, canalMensajes)
 
 	bddRelacional := <-canalBddRelacional
 	defer b.CerrarBddRelacional(bddRelacional)
@@ -151,14 +140,8 @@ func Encodear(dirInput string, canalMensajes chan string) {
 	}
 	canalMensajes <- "Insertando datos en la base de datos"
 
-	var waitCarga sync.WaitGroup
+	bdd := b.NewBdd(bddRelacional, bddNoSQL)
+	CargarDatos(bdd, canalDatos, canalMensajes)
 
-	waitCarga.Add(1)
-	go CargarDatos(bddRelacional, canalDatos, &waitCarga, canalMensajes)
-
-	waitCarga.Add(1)
-	go CargarDocumentos(bddNoSQL, canalDocumentos, &waitCarga, canalMensajes)
-
-	waitCarga.Wait()
 	canalMensajes <- "Se termino de cargar a la base de datos"
 }

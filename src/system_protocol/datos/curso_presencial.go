@@ -3,6 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
+	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 	"strconv"
 )
@@ -56,7 +57,7 @@ func (cp *CursoPresencial) Insertar() ([]any, error) {
 	}
 }
 
-func (cp *CursoPresencial) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+func (cp *CursoPresencial) CargarDatos(bdd *b.Bdd, canal chan string) (int64, error) {
 	// canal <- "Insertar Curso Presencial"
 
 	var idCursoPresencial int64
@@ -68,8 +69,8 @@ func (cp *CursoPresencial) CargarDatos(bdd *sql.DB, canal chan string) (int64, e
 
 	for _, profesor := range cp.Profesores {
 		if idAutor, err := ObtenerOInsertar(
-			func() *sql.Row { return bdd.QueryRow(QUERY_PERSONAS, profesor.Insertar()...) },
-			func() (sql.Result, error) { return bdd.Exec(INSERTAR_PERSONA, profesor.Insertar()...) },
+			func() *sql.Row { return bdd.MySQL.QueryRow(QUERY_PERSONAS, profesor.Insertar()...) },
+			func() (sql.Result, error) { return bdd.MySQL.Exec(INSERTAR_PERSONA, profesor.Insertar()...) },
 		); err != nil {
 			canal <- fmt.Sprintf("error al hacer una querry del profesor: %s %s con error: %v", profesor.Nombre, profesor.Apellido, err)
 

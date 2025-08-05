@@ -1,10 +1,10 @@
 package datos
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
+	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 )
 
@@ -27,13 +27,13 @@ func NewArchivo(path string, tags []string) *Archivo {
 	}
 }
 
-func (a *Archivo) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
-	if idArchivo, err := Insertar(func() (sql.Result, error) { return bdd.Exec(INSERTAR_ARCHIVO, a.Path) }); err != nil {
+func (a *Archivo) CargarDatos(bdd *b.Bdd, canal chan string) (int64, error) {
+	if idArchivo, err := InsertarDirecto(bdd, INSERTAR_ARCHIVO, a.Path); err != nil {
 		return 0, fmt.Errorf("error al obtener insertar el archivo: %s, con error: %v", Nombre(a.Path), err)
 
 	} else {
 		for _, tag := range a.Tags {
-			if _, err := bdd.Exec(INSERTAR_TAG, tag, idArchivo); err != nil {
+			if _, err := InsertarDirecto(bdd, INSERTAR_TAG, tag, idArchivo); err != nil {
 				canal <- fmt.Sprintf("Error al insertar tag: %s en el archivo: %s\n", tag, Nombre(a.Path))
 			}
 		}

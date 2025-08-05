@@ -1,8 +1,8 @@
 package datos
 
 import (
-	"database/sql"
 	"fmt"
+	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 )
 
@@ -50,7 +50,7 @@ func (c *Carrera) Insertar() ([]any, error) {
 	}
 }
 
-func (c *Carrera) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+func (c *Carrera) CargarDatos(bdd *b.Bdd, canal chan string) (int64, error) {
 	// canal <- fmt.Sprintf("Insertar Carrera: %s", c.Nombre)
 	if datos, err := c.Insertar(); err != nil {
 		return 0, err

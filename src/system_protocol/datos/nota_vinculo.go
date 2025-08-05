@@ -1,8 +1,8 @@
 package datos
 
 import (
-	"database/sql"
 	"fmt"
+	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 )
 
@@ -58,7 +58,7 @@ func (nv *NotaVinculo) Insertar() ([]any, error) {
 	}
 }
 
-func (nv *NotaVinculo) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+func (nv *NotaVinculo) CargarDatos(bdd *b.Bdd, canal chan string) (int64, error) {
 	// canal <- "Insertar Nota vinculante"
 	if datos, err := nv.Insertar(); err != nil {
 		return 0, err

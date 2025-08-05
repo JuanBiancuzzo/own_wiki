@@ -154,7 +154,7 @@ func (a *Archivo) CargarDependencia(path string, tipo e.TipoDependible, relacion
 }
 
 // Cambiar a establecer conexiones
-func (a *Archivo) EstablecerDependencias(canalDatos chan e.Cargable, canalDocumentos chan e.A, canalMensajes chan string) {
+func (a *Archivo) EstablecerDependencias(canalDatos chan e.Cargable, canalMensajes chan string) {
 	for pathTipo, listaRelacion := range a.FnDependencias {
 		if archivo, err := a.Root.EncontrarArchivo(pathTipo.Path); err != nil {
 			canalMensajes <- fmt.Sprintf("No se encontró el archivo '%s' para el archivo: '%s'", pathTipo.Path, a.Path)

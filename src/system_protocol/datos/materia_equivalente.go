@@ -1,8 +1,8 @@
 package datos
 
 import (
-	"database/sql"
 	"fmt"
+	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 )
 
@@ -67,7 +67,7 @@ func (me *MateriaEquivalente) Insertar() ([]any, error) {
 	}
 }
 
-func (me *MateriaEquivalente) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+func (me *MateriaEquivalente) CargarDatos(bdd *b.Bdd, canal chan string) (int64, error) {
 	// canal <- fmt.Sprintf("Insertar Materia Equivalentes: %s", me.Nombre)
 	if datos, err := me.Insertar(); err != nil {
 		return 0, err

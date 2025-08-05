@@ -1,8 +1,8 @@
 package datos
 
 import (
-	"database/sql"
 	"fmt"
+	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 )
 
@@ -63,7 +63,7 @@ func (mc *MateriasCorrelativas) Insertar() ([]any, error) {
 	}
 }
 
-func (mc *MateriasCorrelativas) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+func (mc *MateriasCorrelativas) CargarDatos(bdd *b.Bdd, canal chan string) (int64, error) {
 	// canal <- "Insertar Materia Correlativas"
 	if datos, err := mc.Insertar(); err != nil {
 		return 0, err

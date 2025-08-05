@@ -3,18 +3,13 @@ package datos
 import (
 	"database/sql"
 	"fmt"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	b "own_wiki/system_protocol/bass_de_datos"
 )
 
 type Cargable interface {
-	CargarDatos(bdd *sql.DB, canal chan string) (int64, error)
+	CargarDatos(bdd *b.Bdd, canal chan string) (int64, error)
 
 	ResolverDependencias(id int64) []Cargable
-}
-
-type A interface {
-	CargarDocumento(bdd *mongo.Database, canal chan string) (int64, error)
 }
 
 func CargableDefault() Cargable {
@@ -53,6 +48,15 @@ func Obtener(query func() *sql.Row) (int64, bool) {
 	return id, true
 }
 
+func ObtenerDirecto(bdd *b.Bdd, query string, datos ...any) (int64, bool) {
+	var id int64
+	row := bdd.MySQL.QueryRow(QUERY_PERSONAS, datos...)
+	if err := row.Scan(&id); err != nil {
+		return 0, false
+	}
+	return id, true
+}
+
 func Insertar(insert func() (sql.Result, error)) (int64, error) {
 	if filaAfectada, err := insert(); err != nil {
 		return 0, fmt.Errorf("error al insertar con query, con error: %v", err)
@@ -65,6 +69,14 @@ func Insertar(insert func() (sql.Result, error)) (int64, error) {
 	}
 }
 
-func InsertarDirecto(bdd *sql.DB, query string, datos ...any) (int64, error) {
-	return Insertar(func() (sql.Result, error) { return bdd.Exec(query, datos...) })
+func InsertarDirecto(bdd *b.Bdd, query string, datos ...any) (int64, error) {
+	if filaAfectada, err := bdd.MySQL.Exec(query, datos...); err != nil {
+		return 0, fmt.Errorf("error al insertar con query, con error: %v", err)
+
+	} else if id, err := filaAfectada.LastInsertId(); err != nil {
+		return 0, fmt.Errorf("error al obtener id from query, con error: %v", err)
+
+	} else {
+		return id, nil
+	}
 }

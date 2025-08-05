@@ -3,6 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
+	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 )
 
@@ -89,18 +90,18 @@ func (m *Materia) Insertar(idPlan int64, idCuatrimestre int64) ([]any, error) {
 	}
 }
 
-func (m *Materia) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+func (m *Materia) CargarDatos(bdd *b.Bdd, canal chan string) (int64, error) {
 	// canal <- fmt.Sprintf("Insertar Materia: %s", m.Nombre)
 
 	if idPlan, err := ObtenerOInsertar(
-		func() *sql.Row { return bdd.QueryRow(QUERY_PLANES, m.Plan) },
-		func() (sql.Result, error) { return bdd.Exec(INSERTAR_PLAN, m.Plan) },
+		func() *sql.Row { return bdd.MySQL.QueryRow(QUERY_PLANES, m.Plan) },
+		func() (sql.Result, error) { return bdd.MySQL.Exec(INSERTAR_PLAN, m.Plan) },
 	); err != nil {
 		return 0, fmt.Errorf("error al hacer una querry del plan %s con error: %v", m.Plan, err)
 
 	} else if idCuatrimestre, err := ObtenerOInsertar(
-		func() *sql.Row { return bdd.QueryRow(QUERY_CUATRIMESTRES, m.Anio, m.Cuatri) },
-		func() (sql.Result, error) { return bdd.Exec(INSERTAR_CUATRIMESTRE, m.Anio, m.Cuatri) },
+		func() *sql.Row { return bdd.MySQL.QueryRow(QUERY_CUATRIMESTRES, m.Anio, m.Cuatri) },
+		func() (sql.Result, error) { return bdd.MySQL.Exec(INSERTAR_CUATRIMESTRE, m.Anio, m.Cuatri) },
 	); err != nil {
 		return 0, fmt.Errorf("error al hacer una querry del cuatri %s parte de %d con error: %v", m.Cuatri, m.Anio, err)
 

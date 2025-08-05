@@ -3,6 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
+	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 	"strconv"
 )
@@ -65,14 +66,14 @@ func (c *Curso) Insertar(idPagina int64) ([]any, error) {
 	}
 }
 
-func (c *Curso) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+func (c *Curso) CargarDatos(bdd *b.Bdd, canal chan string) (int64, error) {
 	// canal <- "Insertar Curso"
 
 	var idCurso int64
 
 	if idPagina, err := ObtenerOInsertar(
-		func() *sql.Row { return bdd.QueryRow(QUERY_PAGINA_CURSO, c.NombrePagina) },
-		func() (sql.Result, error) { return bdd.Exec(INSERTAR_PAGINA_CURSO, c.NombrePagina) },
+		func() *sql.Row { return bdd.MySQL.QueryRow(QUERY_PAGINA_CURSO, c.NombrePagina) },
+		func() (sql.Result, error) { return bdd.MySQL.Exec(INSERTAR_PAGINA_CURSO, c.NombrePagina) },
 	); err != nil {
 		return 0, fmt.Errorf("error al hacer una querry del nombre de la pagina: '%s' con error: %v", c.NombrePagina, err)
 
@@ -85,12 +86,12 @@ func (c *Curso) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 
 	for _, profesor := range c.Profesores {
 		if idAutor, err := ObtenerOInsertar(
-			func() *sql.Row { return bdd.QueryRow(QUERY_PERSONAS, profesor.Insertar()...) },
-			func() (sql.Result, error) { return bdd.Exec(INSERTAR_PERSONA, profesor.Insertar()...) },
+			func() *sql.Row { return bdd.MySQL.QueryRow(QUERY_PERSONAS, profesor.Insertar()...) },
+			func() (sql.Result, error) { return bdd.MySQL.Exec(INSERTAR_PERSONA, profesor.Insertar()...) },
 		); err != nil {
 			canal <- fmt.Sprintf("error al hacer una querry del profesor: %s %s con error: %v", profesor.Nombre, profesor.Apellido, err)
 
-		} else if _, err := bdd.Exec(INSERTAR_PROFESOR_CURSO, idCurso, CURSO_ONLINE, idAutor); err != nil {
+		} else if _, err := bdd.MySQL.Exec(INSERTAR_PROFESOR_CURSO, idCurso, CURSO_ONLINE, idAutor); err != nil {
 			canal <- fmt.Sprintf("error al insertar par idCurso-idProfesor, con error: %v", err)
 		}
 	}

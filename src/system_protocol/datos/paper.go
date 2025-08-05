@@ -3,6 +3,7 @@ package datos
 import (
 	"database/sql"
 	"fmt"
+	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 	"strconv"
 )
@@ -73,13 +74,13 @@ func (p *Paper) Insertar(idRevista int64) ([]any, error) {
 	}
 }
 
-func (p *Paper) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
+func (p *Paper) CargarDatos(bdd *b.Bdd, canal chan string) (int64, error) {
 	// canal <- "Insertar Paper"
 
 	var idPaper int64
 	if idRevista, err := ObtenerOInsertar(
-		func() *sql.Row { return bdd.QueryRow(QUERY_REVISTA_PAPER, p.NombreRevista) },
-		func() (sql.Result, error) { return bdd.Exec(INSERTAR_REVISTA_PAPER, p.NombreRevista) },
+		func() *sql.Row { return bdd.MySQL.QueryRow(QUERY_REVISTA_PAPER, p.NombreRevista) },
+		func() (sql.Result, error) { return bdd.MySQL.Exec(INSERTAR_REVISTA_PAPER, p.NombreRevista) },
 	); err != nil {
 		return 0, fmt.Errorf("error al hacer una querry de la revista %s con error: %v", p.NombreRevista, err)
 
@@ -92,24 +93,24 @@ func (p *Paper) CargarDatos(bdd *sql.DB, canal chan string) (int64, error) {
 
 	for _, escritor := range p.Autores {
 		if idAutor, err := ObtenerOInsertar(
-			func() *sql.Row { return bdd.QueryRow(QUERY_PERSONAS, escritor.Insertar()...) },
-			func() (sql.Result, error) { return bdd.Exec(INSERTAR_PERSONA, escritor.Insertar()...) },
+			func() *sql.Row { return bdd.MySQL.QueryRow(QUERY_PERSONAS, escritor.Insertar()...) },
+			func() (sql.Result, error) { return bdd.MySQL.Exec(INSERTAR_PERSONA, escritor.Insertar()...) },
 		); err != nil {
 			canal <- fmt.Sprintf("error al hacer una querry del autor: %s %s con error: %v", escritor.Nombre, escritor.Apellido, err)
 
-		} else if _, err := bdd.Exec(INSERTAR_ESCRITOR_PAPER, PAPER_AUTOR, idPaper, idAutor); err != nil {
+		} else if _, err := bdd.MySQL.Exec(INSERTAR_ESCRITOR_PAPER, PAPER_AUTOR, idPaper, idAutor); err != nil {
 			canal <- fmt.Sprintf("error al insertar par idRevista-idEscritor, con error: %v", err)
 		}
 	}
 
 	for _, escritor := range p.Editores {
 		if idAutor, err := ObtenerOInsertar(
-			func() *sql.Row { return bdd.QueryRow(QUERY_PERSONAS, escritor.Insertar()...) },
-			func() (sql.Result, error) { return bdd.Exec(INSERTAR_PERSONA, escritor.Insertar()...) },
+			func() *sql.Row { return bdd.MySQL.QueryRow(QUERY_PERSONAS, escritor.Insertar()...) },
+			func() (sql.Result, error) { return bdd.MySQL.Exec(INSERTAR_PERSONA, escritor.Insertar()...) },
 		); err != nil {
 			canal <- fmt.Sprintf("error al hacer una querry del autor: %s %s con error: %v", escritor.Nombre, escritor.Apellido, err)
 
-		} else if _, err := bdd.Exec(INSERTAR_ESCRITOR_PAPER, PAPER_EDITOR, idPaper, idAutor); err != nil {
+		} else if _, err := bdd.MySQL.Exec(INSERTAR_ESCRITOR_PAPER, PAPER_EDITOR, idPaper, idAutor); err != nil {
 			canal <- fmt.Sprintf("error al insertar par idRevista-idEscritor, con error: %v", err)
 		}
 	}
