@@ -3,8 +3,11 @@ package fs
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
-	l "own_wiki/system_protocol/utilidades"
+	u "own_wiki/system_protocol/utilidades"
+
+	"github.com/labstack/echo/v4"
 )
 
 const (
@@ -12,7 +15,7 @@ const (
 	QUERY_MATERIAS_LS = `SELECT materiasGlobal.nombre FROM (
 		SELECT idCarrera, nombre FROM materias UNION ALL SELECT idCarrera, nombre FROM materiasEquivalentes
 	) AS materiasGlobal WHERE materiasGlobal.idCarrera = %d`
-	QUERY_TEMAS_MATERIA_LS = "SELECT nombre FROM temasMateria WHERE idMateria = %d"
+	QUERY_TEMAS_MATERIA_LS = "SELECT nombre FROM temasMateria WHERE idMateria = %d ORDER BY capitulo, parte"
 	QUERY_NOTA_MATERIA_LS  = `SELECT DISTINCT notas.nombre FROM notas INNER JOIN (
 		SELECT idNota, idVinculo FROM notasVinculo WHERE tipoVinculo = "Facultad"
 	) AS vinculo ON notas.id = vinculo.idNota WHERE vinculo.idVinculo = %d`
@@ -39,22 +42,52 @@ const (
 type Facultad struct {
 	Bdd  *sql.DB
 	Tipo TipoFacultad
-	Path *l.Pila[int64]
+	Path *u.Pila[int64]
 }
 
 func NewFacultad(bdd *sql.DB) *Facultad {
 	return &Facultad{
 		Bdd:  bdd,
 		Tipo: TF_FACULTAD,
-		Path: l.NewPila[int64](),
+		Path: u.NewPila[int64](),
 	}
 }
 
-func (f *Facultad) Ls() ([]string, error) {
+func GenerarRutaFacultad(e *echo.Echo, bdd *sql.DB) {
+	facultad := NewFacultad(bdd)
+
+	e.GET("/Facultad", func(c echo.Context) error {
+		data := facultad.DecidirSiguientePath(c)
+		return c.Render(200, "facultad", data)
+	})
+}
+
+func (f *Facultad) DecidirSiguientePath(ec echo.Context) Data {
+	path := strings.TrimSpace(ec.QueryParam("path"))
+	errCd := f.Cd(path)
+	data, errLs := f.Ls()
+
+	if errCd != nil {
+		data.Opciones = append(data.Opciones, NewOpcion(fmt.Sprintf("Cd tuvo el error: %v", errCd), "/Facultad"))
+	}
+
+	if errLs != nil {
+		data.Opciones = append(data.Opciones, NewOpcion(fmt.Sprintf("Ls tuvo el error: %v", errLs), "/Facultad"))
+	}
+
+	return data
+}
+
+func (f *Facultad) Ls() (Data, error) {
+	var data Data
+	opciones := u.NewLista[Opcion]()
+	returnPath := "/Facultad?path=.."
+
 	var query string
 	switch f.Tipo {
 	case TF_FACULTAD:
 		query = QUERY_CARRERAS_LS
+		returnPath = "/Root"
 	case TF_DENTRO_CARRERA:
 		if idCarrera, err := f.Path.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_MATERIAS_LS, idCarrera)
@@ -71,24 +104,30 @@ func (f *Facultad) Ls() ([]string, error) {
 	}
 
 	if rows, err := f.Bdd.Query(query); err != nil {
-		return []string{}, fmt.Errorf("se obtuvo un error en facultad, al hacer query, dando el error: %v", err)
+		return data, fmt.Errorf("se obtuvo un error en facultad, al hacer query, dando el error: %v", err)
 
 	} else {
-		columnas := l.NewLista[string]()
 		defer rows.Close()
 		for rows.Next() {
 			var nombre string
 			_ = rows.Scan(&nombre)
-			columnas.Push(nombre)
+
+			opciones.Push(
+				NewOpcion(nombre, fmt.Sprintf("/Facultad?path=%s", nombre)),
+			)
 		}
 
-		return columnas.Items(), nil
+		return NewData(NewContenidoMinimo("Facultad", returnPath), opciones.Items()), nil
 	}
 }
 
-func (f *Facultad) Cd(subpath string, cache *Cache) (Subpath, error) {
+func (f *Facultad) Cd(subpath string) error {
+	if subpath == "" {
+		return nil
+	}
+
 	if subpath == ".." {
-		return f.RutinaAtras(cache)
+		return f.RutinaAtras()
 	}
 
 	query := ""
@@ -104,11 +143,11 @@ func (f *Facultad) Cd(subpath string, cache *Cache) (Subpath, error) {
 			query = fmt.Sprintf(QUERY_OBTNER_TEMA_MATERIA, idMateria, subpath)
 		}
 	case TF_DENTRO_TEMA:
-		return f, fmt.Errorf("ya se esta viendo todos los archivos, no hay subcarpetas")
+		return fmt.Errorf("ya se esta viendo todos los archivos, no hay subcarpetas")
 	}
 
 	if query == "" {
-		return f, fmt.Errorf("hubo un error en la query, y esta vacia")
+		return fmt.Errorf("hubo un error en la query, y esta vacia")
 	}
 
 	fila := f.Bdd.QueryRow(query)
@@ -116,7 +155,7 @@ func (f *Facultad) Cd(subpath string, cache *Cache) (Subpath, error) {
 	var nombre string
 
 	if err := fila.Scan(&id, &nombre); err != nil {
-		return f, fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
+		return fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
 	}
 
 	switch f.Tipo {
@@ -129,15 +168,15 @@ func (f *Facultad) Cd(subpath string, cache *Cache) (Subpath, error) {
 	}
 
 	f.Path.Apilar(id)
-	return f, nil
+	return nil
 }
 
-func (f *Facultad) RutinaAtras(cache *Cache) (Subpath, error) {
+func (f *Facultad) RutinaAtras() error {
 	_, _ = f.Path.Desapilar()
 
 	switch f.Tipo {
 	case TF_FACULTAD:
-		return cache.ObtenerSubpath(PD_ROOT)
+		return fmt.Errorf("no deberia ser posible que pongan .. aca")
 
 	case TF_DENTRO_CARRERA:
 		f.Tipo = TF_FACULTAD
@@ -147,5 +186,5 @@ func (f *Facultad) RutinaAtras(cache *Cache) (Subpath, error) {
 		f.Tipo = TF_DENTRO_MATERIA
 	}
 
-	return f, nil
+	return nil
 }

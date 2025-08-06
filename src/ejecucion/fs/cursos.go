@@ -3,12 +3,15 @@ package fs
 import (
 	"database/sql"
 	"fmt"
-	l "own_wiki/system_protocol/utilidades"
+	u "own_wiki/system_protocol/utilidades"
+	"strings"
+
+	"github.com/labstack/echo/v4"
 )
 
 const (
 	QUERY_CURSOS_LS      = "SELECT nombre FROM cursos UNION ALL SELECT nombre FROM cursosPresencial"
-	QUERY_TEMAS_CURSO_LS = "SELECT nombre FROM temasCurso WHERE idCurso = %d"
+	QUERY_TEMAS_CURSO_LS = "SELECT nombre FROM temasCurso WHERE idCurso = %d ORDER BY capitulo, parte"
 	QUERY_NOTA_CURSO_LS  = `SELECT DISTINCT notas.nombre FROM notas INNER JOIN (
 		SELECT idNota, idVinculo FROM notasVinculo WHERE tipoVinculo = "Curso"
 	) AS vinculo ON notas.id = vinculo.idNota WHERE vinculo.idVinculo = %d`
@@ -33,22 +36,52 @@ const (
 type Cursos struct {
 	Bdd  *sql.DB
 	Tipo TipoCurso
-	Path *l.Pila[int64]
+	Path *u.Pila[int64]
 }
 
 func NewCursos(bdd *sql.DB) *Cursos {
 	return &Cursos{
 		Bdd:  bdd,
 		Tipo: TCC_GENERAL,
-		Path: l.NewPila[int64](),
+		Path: u.NewPila[int64](),
 	}
 }
 
-func (c *Cursos) Ls() ([]string, error) {
+func GenerarRutaCursos(e *echo.Echo, bdd *sql.DB) {
+	cursos := NewCursos(bdd)
+
+	e.GET("/Cursos", func(c echo.Context) error {
+		data := cursos.DecidirSiguientePath(c)
+		return c.Render(200, "cursos", data)
+	})
+}
+
+func (c *Cursos) DecidirSiguientePath(ec echo.Context) Data {
+	path := strings.TrimSpace(ec.QueryParam("path"))
+	errCd := c.Cd(path)
+	data, errLs := c.Ls()
+
+	if errCd != nil {
+		data.Opciones = append(data.Opciones, NewOpcion(fmt.Sprintf("Cd tuvo el error: %v", errCd), "/Cursos"))
+	}
+
+	if errLs != nil {
+		data.Opciones = append(data.Opciones, NewOpcion(fmt.Sprintf("Ls tuvo el error: %v", errLs), "/Cursos"))
+	}
+
+	return data
+}
+
+func (c *Cursos) Ls() (Data, error) {
+	var data Data
+	opciones := u.NewLista[Opcion]()
+	returnPath := "/Cursos?path=.."
+
 	var query string
 	switch c.Tipo {
 	case TCC_GENERAL:
 		query = QUERY_CURSOS_LS
+		returnPath = "/Root"
 	case TCC_DENTRO_CURSO:
 		if idCurso, err := c.Path.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_TEMAS_CURSO_LS, idCurso)
@@ -60,24 +93,30 @@ func (c *Cursos) Ls() ([]string, error) {
 	}
 
 	if rows, err := c.Bdd.Query(query); err != nil {
-		return []string{}, fmt.Errorf("se obtuvo un error en cursos, al hacer query, dando el error: %v", err)
+		return data, fmt.Errorf("se obtuvo un error en cursos, al hacer query, dando el error: %v", err)
 
 	} else {
-		columnas := l.NewLista[string]()
 		defer rows.Close()
 		for rows.Next() {
 			var nombre string
 			_ = rows.Scan(&nombre)
-			columnas.Push(nombre)
+
+			opciones.Push(
+				NewOpcion(nombre, fmt.Sprintf("/Cursos?path=%s", nombre)),
+			)
 		}
 
-		return columnas.Items(), nil
+		return NewData(NewContenidoMinimo("Cursos", returnPath), opciones.Items()), nil
 	}
 }
 
-func (c *Cursos) Cd(subpath string, cache *Cache) (Subpath, error) {
+func (c *Cursos) Cd(subpath string) error {
+	if subpath == "" {
+		return nil
+	}
+
 	if subpath == ".." {
-		return c.RutinaAtras(cache)
+		return c.RutinaAtras()
 	}
 
 	query := ""
@@ -89,17 +128,17 @@ func (c *Cursos) Cd(subpath string, cache *Cache) (Subpath, error) {
 			query = fmt.Sprintf(QUERY_OBTENER_TEMA_CURSO, idCurso, subpath)
 		}
 	case TCC_DENTRO_TEMA:
-		return c, fmt.Errorf("ya se esta viendo todos los archivos, no hay subcarpetas")
+		return fmt.Errorf("ya se esta viendo todos los archivos, no hay subcarpetas")
 	}
 
 	if query == "" {
-		return c, fmt.Errorf("hubo un error en la query, y esta vacia")
+		return fmt.Errorf("hubo un error en la query, y esta vacia")
 	}
 
 	fila := c.Bdd.QueryRow(query)
 	var id int64
 	if err := fila.Scan(&id); err != nil {
-		return c, fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
+		return fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
 	}
 
 	switch c.Tipo {
@@ -110,15 +149,15 @@ func (c *Cursos) Cd(subpath string, cache *Cache) (Subpath, error) {
 	}
 
 	c.Path.Apilar(id)
-	return c, nil
+	return nil
 }
 
-func (c *Cursos) RutinaAtras(cache *Cache) (Subpath, error) {
+func (c *Cursos) RutinaAtras() error {
 	_, _ = c.Path.Desapilar()
 
 	switch c.Tipo {
 	case TCC_GENERAL:
-		return cache.ObtenerSubpath(PD_ROOT)
+		return fmt.Errorf("no deberia ser posible que pongan .. aca")
 
 	case TCC_DENTRO_CURSO:
 		c.Tipo = TCC_GENERAL
@@ -126,5 +165,5 @@ func (c *Cursos) RutinaAtras(cache *Cache) (Subpath, error) {
 		c.Tipo = TCC_DENTRO_CURSO
 	}
 
-	return c, nil
+	return nil
 }

@@ -16,27 +16,6 @@ import (
 // tp "github.com/BurntSushi/toml"
 // "github.com/go-sql-driver/mysql"
 
-func MostrarLs(directorio *fs.Directorio, canalMensajes chan string) {
-	if output, err := directorio.Ls(); err != nil {
-		canalMensajes <- fmt.Sprintf("Se intentó ejecutar ls y se obtuvo un error: %v", err)
-	} else {
-		canalMensajes <- output
-	}
-}
-
-func EjectuarCd(directorio *fs.Directorio, parametroCd string, canalMensajes chan string) {
-	if err := directorio.Cd(parametroCd); err != nil {
-		canalMensajes <- fmt.Sprintf("Se intentó ejecutar cd con '%s' y se obtuvo un error: %v", parametroCd, err)
-	}
-}
-
-func Abs(valor int) int {
-	if valor < 0 {
-		return -valor
-	}
-	return valor
-}
-
 func Ejecutar(canalMensajes chan string) {
 	_ = godotenv.Load()
 
@@ -56,9 +35,9 @@ func Ejecutar(canalMensajes chan string) {
 	e.Static("/css", "ejecucion/css")
 
 	fs.GenerarRutasRoot(e)
-	fs.GenerarRutaResto(e)
-
 	fs.GenerarRutaColeccion(e, bdd)
+	fs.GenerarRutaFacultad(e, bdd)
+	fs.GenerarRutaCursos(e, bdd)
 
 	e.Logger.Fatal(e.Start(":42069"))
 }

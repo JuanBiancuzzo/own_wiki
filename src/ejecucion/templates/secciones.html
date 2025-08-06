@@ -1,0 +1,20 @@
+{{ block "colecciones" . }}
+    {{ template "titulo" .Minimo }}
+    {{ range .Opciones }}
+        {{ template "opcion" . }}
+    {{ end }}
+{{ end }}
+
+{{ block "facultad" . }}
+    {{ template "titulo" .Minimo }}
+    {{ range .Opciones }}
+        {{ template "opcion" . }}
+    {{ end }}
+{{ end }}
+
+{{ block "cursos" . }}
+    {{ template "titulo" .Minimo }}
+    {{ range .Opciones }}
+        {{ template "opcion" . }}
+    {{ end }}
+{{ end }}
