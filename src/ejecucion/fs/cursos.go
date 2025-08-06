@@ -18,11 +18,11 @@ const (
 )
 
 const (
-	QUERY_OBTENER_CURSO = `SELECT id FROM cursos WHERE nombre = '%s'
+	QUERY_OBTENER_CURSO = `SELECT id, nombre FROM cursos WHERE nombre = '%s'
 		UNION ALL
-	SELECT idMateria AS id FROM materiasEquivalentes WHERE nombre = '%s'
+	SELECT idMateria, nombre AS id FROM materiasEquivalentes WHERE nombre = '%s'
 	`
-	QUERY_OBTENER_TEMA_CURSO = "SELECT id FROM temasCurso WHERE idCurso = %d AND nombre = '%s'"
+	QUERY_OBTENER_TEMA_CURSO = "SELECT id, nombre FROM temasCurso WHERE idCurso = %d AND nombre = '%s'"
 )
 
 type TipoCurso byte
@@ -34,16 +34,18 @@ const (
 )
 
 type Cursos struct {
-	Bdd  *sql.DB
-	Tipo TipoCurso
-	Path *u.Pila[int64]
+	Bdd    *sql.DB
+	Tipo   TipoCurso
+	Indice *u.Pila[int64]
+	Path   *u.Pila[string]
 }
 
 func NewCursos(bdd *sql.DB) *Cursos {
 	return &Cursos{
-		Bdd:  bdd,
-		Tipo: TCC_GENERAL,
-		Path: u.NewPila[int64](),
+		Bdd:    bdd,
+		Tipo:   TCC_GENERAL,
+		Indice: u.NewPila[int64](),
+		Path:   u.NewPila[string](),
 	}
 }
 
@@ -83,11 +85,11 @@ func (c *Cursos) Ls() (Data, error) {
 		query = QUERY_CURSOS_LS
 		returnPath = "/Root"
 	case TCC_DENTRO_CURSO:
-		if idCurso, err := c.Path.Pick(); err == nil {
+		if idCurso, err := c.Indice.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_TEMAS_CURSO_LS, idCurso)
 		}
 	case TCC_DENTRO_TEMA:
-		if idTema, err := c.Path.Pick(); err == nil {
+		if idTema, err := c.Indice.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_NOTA_CURSO_LS, idTema)
 		}
 	}
@@ -106,7 +108,18 @@ func (c *Cursos) Ls() (Data, error) {
 			)
 		}
 
-		return NewData(NewContenidoMinimo("Cursos", returnPath), opciones.Items()), nil
+		return NewData(NewContenidoMinimo(c.PathActual(), returnPath), opciones.Items()), nil
+	}
+}
+
+func (c *Cursos) PathActual() string {
+	if elemento, err := c.Path.Desapilar(); err != nil {
+		return "Cursos"
+
+	} else {
+		pathActual := fmt.Sprintf("%s > %s", c.PathActual(), elemento)
+		c.Path.Apilar(elemento)
+		return pathActual
 	}
 }
 
@@ -124,7 +137,7 @@ func (c *Cursos) Cd(subpath string) error {
 	case TCC_GENERAL:
 		query = fmt.Sprintf(QUERY_OBTENER_CURSO, subpath, subpath)
 	case TCC_DENTRO_CURSO:
-		if idCurso, err := c.Path.Pick(); err == nil {
+		if idCurso, err := c.Indice.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_OBTENER_TEMA_CURSO, idCurso, subpath)
 		}
 	case TCC_DENTRO_TEMA:
@@ -137,7 +150,8 @@ func (c *Cursos) Cd(subpath string) error {
 
 	fila := c.Bdd.QueryRow(query)
 	var id int64
-	if err := fila.Scan(&id); err != nil {
+	var nombre string
+	if err := fila.Scan(&id, &nombre); err != nil {
 		return fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
 	}
 
@@ -148,11 +162,13 @@ func (c *Cursos) Cd(subpath string) error {
 		c.Tipo = TCC_DENTRO_TEMA
 	}
 
-	c.Path.Apilar(id)
+	c.Indice.Apilar(id)
+	c.Path.Apilar(nombre)
 	return nil
 }
 
 func (c *Cursos) RutinaAtras() error {
+	_, _ = c.Indice.Desapilar()
 	_, _ = c.Path.Desapilar()
 
 	switch c.Tipo {

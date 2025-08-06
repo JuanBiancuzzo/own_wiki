@@ -14,12 +14,12 @@ import (
 const (
 	QUERY_LIBROS_LS       = "SELECT titulo FROM libros ORDER BY titulo"
 	QUERY_CAPITULO_LS     = "SELECT CONCAT('N° ', capitulo, ') ', nombre) FROM capitulos WHERE idLibro = %d ORDER BY capitulo"
-	QUERY_PAPERS_LS       = "SELECT titulo FROM papers"
+	QUERY_PAPERS_LS       = "SELECT titulo FROM papers ORDER BY titulo"
 	QUERY_DISTRIBUCION_LS = "SELECT nombre FROM distribuciones WHERE tipo = '%s'"
 )
 
 const (
-	QUERY_OBTENER_LIBRO = "SELECT id FROM libros WHERE titulo = '%s'"
+	QUERY_OBTENER_LIBRO = "SELECT id, titulo FROM libros WHERE titulo = '%s'"
 )
 
 type TipoColeccion string
@@ -39,16 +39,18 @@ const (
 )
 
 type Colecciones struct {
-	Bdd  *sql.DB
-	Tipo TipoColeccion
-	Path *u.Pila[int64]
+	Bdd    *sql.DB
+	Tipo   TipoColeccion
+	Indice *u.Pila[int64]
+	Path   *u.Pila[string]
 }
 
 func NewColeccion(bdd *sql.DB) *Colecciones {
 	return &Colecciones{
-		Bdd:  bdd,
-		Tipo: TCO_COLECCION,
-		Path: u.NewPila[int64](),
+		Bdd:    bdd,
+		Tipo:   TCO_COLECCION,
+		Indice: u.NewPila[int64](),
+		Path:   u.NewPila[string](),
 	}
 }
 
@@ -94,7 +96,7 @@ func (c *Colecciones) Ls() (Data, error) {
 	case TCO_LIBROS:
 		query = QUERY_LIBROS_LS
 	case TCO_CAPITULOS:
-		if idLibro, err := c.Path.Pick(); err == nil {
+		if idLibro, err := c.Indice.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_CAPITULO_LS, idLibro)
 		}
 
@@ -136,7 +138,18 @@ func (c *Colecciones) Ls() (Data, error) {
 		}
 	}
 
-	return NewData(NewContenidoMinimo("Colecciones", "/Colecciones?path=.."), opciones.Items()), nil
+	return NewData(NewContenidoMinimo(c.PathActual(), "/Colecciones?path=.."), opciones.Items()), nil
+}
+
+func (c *Colecciones) PathActual() string {
+	if elemento, err := c.Path.Desapilar(); err != nil {
+		return "Colecciones"
+
+	} else {
+		pathActual := fmt.Sprintf("%s > %s", c.PathActual(), elemento)
+		c.Path.Apilar(elemento)
+		return pathActual
+	}
 }
 
 func (c *Colecciones) Cd(subpath string) error {
@@ -161,6 +174,7 @@ func (c *Colecciones) Cd(subpath string) error {
 			return fmt.Errorf("en %s no existe la posibilidad del path dado por '%s', con posibilidades: %v", c.Tipo, subpath, posibilidades)
 		} else {
 			c.Tipo = TipoColeccion(posibilidades[eleccion])
+			c.Path.Apilar(posibilidades[eleccion])
 			return nil
 		}
 	}
@@ -171,16 +185,20 @@ func (c *Colecciones) Cd(subpath string) error {
 
 	fila := c.Bdd.QueryRow(fmt.Sprintf(QUERY_OBTENER_LIBRO, subpath))
 	var id int64
-	if err := fila.Scan(&id); err != nil {
+	var nombre string
+	if err := fila.Scan(&id, &nombre); err != nil {
 		return fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
 	}
 
 	c.Tipo = TCO_CAPITULOS
-	c.Path.Apilar(id)
+	c.Indice.Apilar(id)
+	c.Path.Apilar(nombre)
 	return nil
 }
 
 func (c *Colecciones) RutinaAtras() error {
+	_, _ = c.Path.Desapilar()
+
 	switch c.Tipo {
 	case TCO_COLECCION:
 		return fmt.Errorf("no deberia ser posible que pongan .. aca")
@@ -193,7 +211,7 @@ func (c *Colecciones) RutinaAtras() error {
 		c.Tipo = TCO_COLECCION
 
 	case TCO_CAPITULOS:
-		_, _ = c.Path.Desapilar()
+		_, _ = c.Indice.Desapilar()
 		c.Tipo = TCO_LIBROS
 
 	case TCO_DIST_DISCRETA:

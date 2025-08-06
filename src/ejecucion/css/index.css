@@ -7,6 +7,10 @@ body {
     background: #1e1e1e;
 }
 
+hr {
+    margin: 1rem 0 .5rem 0;
+}
+
 #header {
     height: 5rem;
     padding-left: 2rem;

@@ -40,16 +40,18 @@ const (
 )
 
 type Facultad struct {
-	Bdd  *sql.DB
-	Tipo TipoFacultad
-	Path *u.Pila[int64]
+	Bdd    *sql.DB
+	Tipo   TipoFacultad
+	Indice *u.Pila[int64]
+	Path   *u.Pila[string]
 }
 
 func NewFacultad(bdd *sql.DB) *Facultad {
 	return &Facultad{
-		Bdd:  bdd,
-		Tipo: TF_FACULTAD,
-		Path: u.NewPila[int64](),
+		Bdd:    bdd,
+		Tipo:   TF_FACULTAD,
+		Indice: u.NewPila[int64](),
+		Path:   u.NewPila[string](),
 	}
 }
 
@@ -89,15 +91,15 @@ func (f *Facultad) Ls() (Data, error) {
 		query = QUERY_CARRERAS_LS
 		returnPath = "/Root"
 	case TF_DENTRO_CARRERA:
-		if idCarrera, err := f.Path.Pick(); err == nil {
+		if idCarrera, err := f.Indice.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_MATERIAS_LS, idCarrera)
 		}
 	case TF_DENTRO_MATERIA:
-		if idMateria, err := f.Path.Pick(); err == nil {
+		if idMateria, err := f.Indice.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_TEMAS_MATERIA_LS, idMateria)
 		}
 	case TF_DENTRO_TEMA:
-		if idTema, err := f.Path.Pick(); err == nil {
+		if idTema, err := f.Indice.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_NOTA_MATERIA_LS, idTema)
 		}
 
@@ -117,7 +119,18 @@ func (f *Facultad) Ls() (Data, error) {
 			)
 		}
 
-		return NewData(NewContenidoMinimo("Facultad", returnPath), opciones.Items()), nil
+		return NewData(NewContenidoMinimo(f.PathActual(), returnPath), opciones.Items()), nil
+	}
+}
+
+func (f *Facultad) PathActual() string {
+	if elemento, err := f.Path.Desapilar(); err != nil {
+		return "Facultad"
+
+	} else {
+		pathActual := fmt.Sprintf("%s > %s", f.PathActual(), elemento)
+		f.Path.Apilar(elemento)
+		return pathActual
 	}
 }
 
@@ -135,11 +148,11 @@ func (f *Facultad) Cd(subpath string) error {
 	case TF_FACULTAD:
 		query = fmt.Sprintf(QUERY_OBTENER_CARRERA, subpath)
 	case TF_DENTRO_CARRERA:
-		if idCarrera, err := f.Path.Pick(); err == nil {
+		if idCarrera, err := f.Indice.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_OBTENER_MATERIA, idCarrera, subpath, idCarrera, subpath)
 		}
 	case TF_DENTRO_MATERIA:
-		if idMateria, err := f.Path.Pick(); err == nil {
+		if idMateria, err := f.Indice.Pick(); err == nil {
 			query = fmt.Sprintf(QUERY_OBTNER_TEMA_MATERIA, idMateria, subpath)
 		}
 	case TF_DENTRO_TEMA:
@@ -167,11 +180,13 @@ func (f *Facultad) Cd(subpath string) error {
 		f.Tipo = TF_DENTRO_TEMA
 	}
 
-	f.Path.Apilar(id)
+	f.Indice.Apilar(id)
+	f.Path.Apilar(nombre)
 	return nil
 }
 
 func (f *Facultad) RutinaAtras() error {
+	_, _ = f.Indice.Desapilar()
 	_, _ = f.Path.Desapilar()
 
 	switch f.Tipo {
