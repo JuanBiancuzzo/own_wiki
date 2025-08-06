@@ -91,7 +91,7 @@ func (c *Colecciones) Ls() (Data, error) {
 			)
 		}
 
-		return NewData(NewContenidoMinimo("Colecciones", "/Root"), opciones.Items()), nil
+		return NewData(NewContenidoMinimo(c.PathActual(), "/Root"), opciones.Items()), nil
 
 	case TCO_LIBROS:
 		query = QUERY_LIBROS_LS
@@ -110,7 +110,7 @@ func (c *Colecciones) Ls() (Data, error) {
 			)
 		}
 
-		return NewData(NewContenidoMinimo("Colecciones", "/Colecciones?path=.."), opciones.Items()), nil
+		return NewData(NewContenidoMinimo(c.PathActual(), "/Colecciones?path=.."), opciones.Items()), nil
 
 	case TCO_DIST_DISCRETA:
 		query = fmt.Sprintf(QUERY_DISTRIBUCION_LS, e.DISTRIBUCION_DISCRETA)
