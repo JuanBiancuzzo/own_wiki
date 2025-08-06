@@ -5,12 +5,15 @@ import (
 	"fmt"
 	bdd "own_wiki/system_protocol/bass_de_datos"
 	"strings"
+
+	"github.com/labstack/echo/v4"
 )
 
 type Directorio struct {
 	Subpath      Subpath
 	Bdd          *sql.DB
 	CacheSubpath *Cache
+	Echo         *echo.Echo
 }
 
 type Subpath interface {
@@ -18,12 +21,12 @@ type Subpath interface {
 	Cd(subpath string, cache *Cache) (Subpath, error)
 }
 
-func NewDirectorio(canalMensajes chan string) (*Directorio, error) {
+func NewDirectorio(echo *echo.Echo, canalMensajes chan string) (*Directorio, error) {
 	if bdd, err := bdd.EstablecerConexionRelacional(canalMensajes); err != nil {
 		return nil, fmt.Errorf("no se pudo establecer la conexion con la base de datos, con error: %v", err)
 
 	} else {
-		cache := NewCache(bdd)
+		cache := NewCache(bdd, echo)
 		if root, err := cache.ObtenerSubpath(PD_ROOT); err != nil {
 			return nil, err
 		} else {
@@ -32,6 +35,7 @@ func NewDirectorio(canalMensajes chan string) (*Directorio, error) {
 				Subpath:      root,
 				Bdd:          bdd,
 				CacheSubpath: cache,
+				Echo:         echo,
 			}, nil
 		}
 	}

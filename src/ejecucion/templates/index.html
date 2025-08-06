@@ -1,0 +1,67 @@
+{{ block "index" . }}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Own Wiki</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js" integrity="sha384-Akqfrbj/HpNVo8k11SXBb6TlBWmXXlYQrCSqEWmyKJe+hDm3Z/B2WVG4smwBkRVm" crossorigin="anonymous"></script>
+        <link rel="icon" type="image/x-icon" href="/imagenes/icono.ico">
+        <link rel="stylesheet" href="/css/index.css">
+    </head>
+    <body>
+        <header id="header">
+            <h3>Own wiki</h3>
+        </header>
+        <main id="main">
+            <div class="sidebar contenido" id="left-sidebar">
+
+            </div>
+            <div class="contenido" id="centro" hx-swap="innerHTML">
+                {{ template "root" . }}
+            </div>
+            <div class="sidebar contenido" id="right-sidebar">
+
+            </div>
+        </main>
+    </body>
+    </html>
+{{ end }}
+
+{{ block "root" . }}
+    <h1 style="display: flex;"> 
+        <p> Elecciones </p>
+    </h1>
+    <hr>
+    {{ range .Opciones }}
+        {{ template "opcion" . }}
+    {{ end }}
+{{ end }}
+
+{{ block "opcion" . }}
+    <h3 hx-target="#centro" hx-get="{{ .Path }}">
+        {{ .Nombre }}
+    </h3>
+{{ end }}
+
+{{ block "titulo" . }}
+    <h1 style="display: flex;"> 
+        <div hx-target="#centro" hx-get="{{ .Path }}">
+            <svg class="tempFlecha" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g> 
+                <g id="SVGRepo_iconCarrier"> 
+                    <path d="M15 5L9 12L15 19" stroke="inherit" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> 
+                </g>
+            </svg>
+        </div>
+        <p> {{ .Titulo }} </p>
+    </h1>
+    <hr>
+{{ end }}
+
+
+{{ block "otros" . }}
+    {{ template "titulo" . }}
+    <p>Todavia tengo que cargar esto</p>
+{{ end }}

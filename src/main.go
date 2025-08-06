@@ -15,10 +15,6 @@ func TerminarEjecucion(tiempoInicial time.Time, canalMensajes chan string, wg *s
 }
 
 func main() {
-	if len(os.Args) <= 1 {
-		fmt.Printf("No se ingresó que tipo de operacion se quiere ejecutar\n\tPuede ser -e para Encodear\n\tPuede ser -p para Procesar\n")
-	}
-
 	tiempoInicial := time.Now()
 	var waitMensajes sync.WaitGroup
 	canalMensajes := make(chan string, 100)
@@ -31,25 +27,15 @@ func main() {
 		wg.Done()
 	}(canalMensajes, &waitMensajes)
 
-	switch strings.TrimSpace(os.Args[1]) {
-	case "-e":
+	if len(os.Args) <= 1 {
+		ej.Ejecutar(canalMensajes)
+	} else {
 		switch len(os.Args) {
 		case 2:
 			canalMensajes <- "No tiene la cantidad suficiente de argumentos, necesitas pasar el directorio de input"
 		default:
 			en.Encodear(os.Args[2], canalMensajes)
 		}
-
-	case "-p":
-		switch len(os.Args) {
-		case 2:
-			canalMensajes <- "No tiene la cantidad suficiente de argumentos, necesitas pasar el directorio de input"
-		default:
-			ej.Ejecutar(os.Args[2], canalMensajes)
-		}
-
-	default:
-		canalMensajes <- fmt.Sprint("La eleccion elegida no fue una de las esperadas, esta fue: ", strings.TrimSpace(os.Args[1]))
 	}
 
 	close(canalMensajes)

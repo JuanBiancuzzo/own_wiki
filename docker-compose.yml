@@ -63,8 +63,6 @@ services:
       MONGO_PORT: ${MONGO_PORT}
       MONGO_DB_NAME: ${MONGO_DB_NAME}
       MONGO_HOST: ${MONGO_HOST}
-    ports:
-      - "8080:8080"
     volumes:
       - ../../Ashurbanipal:/var/lib/datos
       - ./volumenes/treesitter_bindings:/var/lib/treesitter_bindings
@@ -73,8 +71,9 @@ services:
     command: ["./own_wiki", "-e", "/var/lib/datos"] 
 
   app_process:
-    build: .
+    image: cosmtrek/air
     container_name: manejar_archivos
+    working_dir: /app/codigo
     depends_on:
       app_encoder:
         condition: service_completed_successfully
@@ -94,13 +93,11 @@ services:
       MONGO_DB_NAME: ${MONGO_DB_NAME}
       MONGO_HOST: ${MONGO_HOST}
     ports:
-      - "8080:8080"
+      - "42069:42069"
     volumes:
-      - ./volumenes/output:/var/lib/datos
-      - ./volumenes/treesitter_bindings:/var/lib/treesitter_bindings
+      - ./src:/app/codigo
     networks:
       - appnet
-    command: ["./own_wiki", "-p", "/var/lib/datos"] 
 
 volumes:
   my-db-mysql: 

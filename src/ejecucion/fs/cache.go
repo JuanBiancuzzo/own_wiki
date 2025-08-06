@@ -3,6 +3,8 @@ package fs
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/labstack/echo/v4"
 )
 
 type EstadoDirectorio string
@@ -17,12 +19,14 @@ const (
 type Cache struct {
 	Bdd      *sql.DB
 	Subpaths map[EstadoDirectorio]Subpath
+	Echo     *echo.Echo
 }
 
-func NewCache(bdd *sql.DB) *Cache {
+func NewCache(bdd *sql.DB, echo *echo.Echo) *Cache {
 	return &Cache{
 		Bdd:      bdd,
 		Subpaths: make(map[EstadoDirectorio]Subpath),
+		Echo:     echo,
 	}
 }
 
@@ -34,7 +38,7 @@ func (c *Cache) ObtenerSubpath(estado EstadoDirectorio) (Subpath, error) {
 	var nuevoEstado Subpath
 	switch estado {
 	case PD_ROOT:
-		nuevoEstado = NewRoot()
+		nuevoEstado = NewRoot(c.Echo)
 	case PD_FACULTAD:
 		nuevoEstado = NewFacultad(c.Bdd)
 	case PD_CURSOS:

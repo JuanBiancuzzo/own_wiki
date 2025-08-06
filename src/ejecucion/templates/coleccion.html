@@ -1,0 +1,6 @@
+{{ block "colecciones" . }}
+    {{ template "titulo" .Minimo }}
+    {{ range .Opciones }}
+        {{ template "opcion" . }}
+    {{ end }}
+{{ end }}

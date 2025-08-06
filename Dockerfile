@@ -11,7 +11,7 @@ RUN go mod download
 COPY .env .env
 
 # Copy source code
-COPY src/ .
+COPY src/. .
 
 # Build the Go app
 RUN go build -o own_wiki main.go

@@ -1,14 +1,15 @@
 package ejecucion
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"own_wiki/ejecucion/fs"
-	"strings"
+	t "own_wiki/ejecucion/web_view"
+	b "own_wiki/system_protocol/bass_de_datos"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 // mdp "github.com/gomarkdown/markdown/parser"
@@ -36,43 +37,28 @@ func Abs(valor int) int {
 	return valor
 }
 
-func Ejecutar(dirInput string, canalMensajes chan string) {
+func Ejecutar(canalMensajes chan string) {
 	_ = godotenv.Load()
 
-	directorio, err := fs.NewDirectorio(canalMensajes)
+	e := echo.New()
+	e.Use(middleware.Logger())
+
+	bdd, err := b.EstablecerConexionRelacional(canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
+
 	}
-	defer directorio.Close()
+	defer bdd.Close()
 
-	scanner := bufio.NewScanner(os.Stdin)
-	canalMensajes <- "Terminal prendida..."
+	e.Renderer = t.NewTemplate()
+	e.Static("/imagenes", "ejecucion/imagenes")
+	e.Static("/css", "ejecucion/css")
 
-	for {
-		if !scanner.Scan() {
-			break
-		}
+	fs.GenerarRutasRoot(e)
+	fs.GenerarRutaResto(e)
 
-		input := strings.TrimSpace(scanner.Text())
-		if input == "" {
-			continue
-		}
+	fs.GenerarRutaColeccion(e, bdd)
 
-		if Abs(strings.Index(input, "ls")) == 0 {
-			MostrarLs(directorio, canalMensajes)
-
-		} else if Abs(strings.Index(input, "cd ")) == 0 {
-			EjectuarCd(directorio, strings.TrimSpace(input[3:]), canalMensajes)
-
-		} else if input == "cd" {
-			EjectuarCd(directorio, "../../../../..", canalMensajes)
-
-		} else if input == "exit" {
-			break
-
-		} else {
-			canalMensajes <- "El comando '%s' no puede no es ls o cd"
-		}
-	}
+	e.Logger.Fatal(e.Start(":42069"))
 }
