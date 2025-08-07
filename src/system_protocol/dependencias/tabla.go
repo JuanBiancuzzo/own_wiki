@@ -23,7 +23,7 @@ type Tabla interface {
 	// Nombre de la tabla
 	Nombre() string
 	// Query para insertar los datos
-	Query() string
+	Query(bdd *b.Bdd, datos ...any) (int64, error)
 
 	// Es decir, que no aparezcan NOT NULL
 	CrearTablaRelajada(bdd *b.Bdd, info *b.InfoArchivos) error

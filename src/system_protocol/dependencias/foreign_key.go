@@ -5,14 +5,16 @@ import "hash/maphash"
 type IntFK uint64
 
 type ForeignKey struct {
-	Tabla     string
-	HashDatos IntFK
+	Key              string
+	TablaDestino     string
+	HashDatosDestino IntFK
 }
 
-func NewForeignKey(tabla string, hashDatos IntFK) ForeignKey {
+func NewForeignKey(key string, tabla string, hashDatos IntFK) ForeignKey {
 	return ForeignKey{
-		Tabla:     tabla,
-		HashDatos: hashDatos,
+		Key:              key,
+		TablaDestino:     tabla,
+		HashDatosDestino: hashDatos,
 	}
 }
 

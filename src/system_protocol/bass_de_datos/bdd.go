@@ -19,6 +19,27 @@ func NewBdd(mySQL *sql.DB, mongoDB *mongo.Database) *Bdd {
 	}
 }
 
+func (bdd *Bdd) CrearTabla(query string, datos ...any) error {
+	_, err := bdd.MySQL.Exec(query, datos...)
+	return err
+}
+
+func (bdd *Bdd) EliminarTabla(nombreTabla string) error {
+	_, err := bdd.MySQL.Exec(fmt.Sprintf("DROP TABLE %s", nombreTabla))
+	return err
+}
+
+func (bdd *Bdd) Obtener(query string, datos ...any) (int64, error) {
+	var id int64
+	fila := bdd.MySQL.QueryRow(query, datos...)
+
+	if err := fila.Scan(&id); err != nil {
+		return id, fmt.Errorf("error al intentar query la bdd, con error: %v", err)
+	}
+
+	return id, nil
+}
+
 func (bdd *Bdd) Insertar(query string, datos ...any) (int64, error) {
 	if filaAfectada, err := bdd.MySQL.Exec(query, datos...); err != nil {
 		return 0, fmt.Errorf("error al insertar con query, con error: %v", err)
@@ -29,4 +50,11 @@ func (bdd *Bdd) Insertar(query string, datos ...any) (int64, error) {
 	} else {
 		return id, nil
 	}
+}
+
+func (bdd *Bdd) ObtenerOInsertar(queryObtener, queryInsertar string, datos ...any) (int64, error) {
+	if id, err := bdd.Obtener(queryObtener, datos...); err == nil {
+		return id, nil
+	}
+	return bdd.Insertar(queryInsertar, datos...)
 }

@@ -44,7 +44,7 @@ func Encodear(dirInput string, canalMensajes chan string) {
 		return
 	}
 
-	if err = tracker.IniciarProcesoInsertarDatos(b.NewInfoArchivos()); err != nil {
+	if err = tracker.IniciarProcesoInsertarDatos(b.NewInfoArchivos(), canalMensajes); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo iniciar el proceso de insertar datos, se tuvo el error: %v", err)
 		return
 	}

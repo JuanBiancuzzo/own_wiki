@@ -34,22 +34,19 @@ func (a Archivos) Nombre() string {
 }
 
 func (a Archivos) CargarArchivo(path string) error {
-	return a.Tracker.InsertarIndependiente(a, path)
+	return a.Tracker.InsertarIndependiente(a, a.GenerarHash(path), path)
 }
 
-func (a Archivos) GenerarForeignKey(path string) d.ForeignKey {
-	return d.NewForeignKey(
-		ARCHIVOS,
-		a.Tracker.Hash.HasearDatos([]byte(path)),
-	)
+func (a Archivos) GenerarHash(path string) d.IntFK {
+	return a.Tracker.Hash.HasearDatos([]byte(path))
 }
 
-func (a Archivos) Query() string {
-	return INSERTAR_ARCHIVO
+func (a Archivos) Query(bdd *b.Bdd, datos ...any) (int64, error) {
+	return bdd.Insertar(INSERTAR_ARCHIVO, datos...)
 }
 
 func (a Archivos) CrearTablaRelajada(bdd *b.Bdd, info *b.InfoArchivos) error {
-	if _, err := bdd.MySQL.Exec(TABLA_ARCHIVOS, info.MaxPath); err != nil {
+	if err := bdd.CrearTabla(TABLA_ARCHIVOS, info.MaxPath); err != nil {
 		return fmt.Errorf("no se pudo crear la tabla de archivos, con error: %v", err)
 	}
 	return nil
