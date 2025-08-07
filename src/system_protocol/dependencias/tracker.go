@@ -2,67 +2,187 @@ package dependencias
 
 import (
 	"fmt"
+	"text/template"
+
 	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
-	"strings"
 )
-
-type TipoTabla byte
-
-const (
-	DEPENDIENTE_NO_DEPENDIBLE   byte = 0b00
-	DEPENDIENTE_DEPENDIBLE      byte = 0b10
-	INDEPENDIENTE_NO_DEPENDIBLE byte = 0b01
-	INDEPENDIENTE_DEPENDIBLE    byte = 0b11
-)
-
-func EsTipoDependiente(tipo TipoTabla) bool {
-	return tipo&0b01 != 0b01
-}
-
-func EsTipoDependible(tipo TipoTabla) bool {
-	return tipo&0b10 == 0b10
-}
 
 type TrackerDependencias struct {
 	BasesDeDatos    *b.Bdd
-	RegistrarTablas map[string]TipoTabla
+	RegistrarTablas map[Tabla]TipoTabla
+	Hash            *Hash
 
-	GuardarAccion map[string]map[IntFK]int64
-	GuardarUpdate map[string]map[IntFK]*u.Lista[*u.Par[string, int64]]
+	templateTablaDependibles *template.Template
+	templateTablaIncompletos *template.Template
+
+	permitirRegistro bool
+	tablasProcesar   *u.Cola[Tabla]
 }
 
 func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
+	templateTablaDependibles, err := template.New("dependibles").Parse(`
+		CREATE TABLE IF NOT EXISTE aux_dependibles (
+			nombreTabla ENUM({{ range . }} "{{ .Nombre() }}", {{ end }}),
+			hashDatos   INT,
+			idDatos     INT
+		);`)
+	if err != nil {
+		return nil, fmt.Errorf("error al crear el template para la tabla auxiliar de los dependibles")
+	}
+
+	templateTablaIncompletos, err := template.New("incompletos").Parse(`
+		CREATE TABLE IF NOT EXISTE aux_incompletos (
+			tablaDependiente 	ENUM({{ range . }} "{{ .Nombre() }}", {{ end }}),
+			idDependiente   	INT,
+			key 				VARCHAR(255),
+			tablaResultado 		ENUM({{ range . }} "{{ .Nombre() }}", {{ end }}),
+			hashDato   			INT
+		);`)
+	if err != nil {
+		return nil, fmt.Errorf("error al crear el template para la tabla auxiliar de los incompletos")
+	}
+
 	return &TrackerDependencias{
 		BasesDeDatos:    bdd,
-		RegistrarTablas: make(map[string]TipoTabla),
+		RegistrarTablas: make(map[Tabla]TipoTabla),
+		Hash:            NewHash(),
 
-		GuardarAccion: make(map[string]map[IntFK]int64),
-		GuardarUpdate: make(map[string]map[IntFK]*u.Lista[*u.Par[string, int64]]),
+		templateTablaDependibles: templateTablaDependibles,
+		templateTablaIncompletos: templateTablaIncompletos,
+
+		permitirRegistro: true,
+		tablasProcesar:   u.NewCola[Tabla](),
 	}, nil
 }
 
-func (td *TrackerDependencias) RegistrarTabla(tabla string, tipo TipoTabla) error {
+func (td *TrackerDependencias) RegistrarTabla(tabla Tabla, tipo TipoTabla) error {
+	if !td.permitirRegistro {
+		return fmt.Errorf("ya no se permiten los registros, esto es porque ya se ejecuto la configuracion auxiliar")
+	}
+
 	if _, ok := td.RegistrarTablas[tabla]; ok {
-		return fmt.Errorf("ya existe una tabla con esos parametros registrados")
-
-	} else {
-		td.RegistrarTablas[tabla] = tipo
+		return fmt.Errorf("ya existe una tabla con nombre: '%s'", tabla.Nombre())
 	}
 
-	if EsTipoDependiente(tipo) {
-		td.GuardarAccion[tabla] = make(map[IntFK]int64)
-	}
-
-	if EsTipoDependible(tipo) {
-		td.GuardarUpdate[tabla] = make(map[IntFK]*u.Lista[*u.Par[string, int64]])
+	td.RegistrarTablas[tabla] = tipo
+	if !EsTipoDependible(tipo) {
+		td.tablasProcesar.Encolar(tabla)
 	}
 
 	return nil
 }
 
-func (td *TrackerDependencias) CargarIndepentiente(tabla string, datos ...any) error {
-	return td.CargarDependientes(tabla, []ForeignKey{}, datos...)
+func (td *TrackerDependencias) IniciarProcesoInsertarDatos(infoArchivos *b.InfoArchivos) error {
+	if !td.permitirRegistro {
+		return fmt.Errorf("ya se inicio el proceso de insertar datos")
+	}
+	td.permitirRegistro = false
+
+	writer := u.NewInfiniteWriter()
+
+	// Creamos las tablas de sql para guardar esa informacion
+	if err := td.templateTablaDependibles.Execute(writer, td.RegistrarTablas); err != nil {
+		return fmt.Errorf("no se pudo ejecutar el template para crear la tabla de dependibles")
+
+	} else if _, err := td.BasesDeDatos.MySQL.Exec(string(writer.Items())); err != nil {
+		return fmt.Errorf("no se pudo crear la tabla de dependibles")
+	}
+
+	writer.Reset()
+
+	if err := td.templateTablaIncompletos.Execute(writer, td.RegistrarTablas); err != nil {
+		return fmt.Errorf("no se pudo ejecutar el template para crear la tabla de incompletos")
+
+	} else if _, err := td.BasesDeDatos.MySQL.Exec(string(writer.Items())); err != nil {
+		return fmt.Errorf("no se pudo crear la tabla de incompletos")
+	}
+
+	// Eliminar las tablas existentes
+	// TODO:
+
+	// Creando las tablas relajadas
+	var tablasOrdenadas []Tabla = []Tabla{}
+	for tabla := range td.tablasProcesar.DesencolarIterativamente {
+		nombreTabla := tabla.Nombre()
+
+		for i, tablaExistente := range tablasOrdenadas {
+			if tablaExistente.Nombre() == nombreTabla {
+				tablasOrdenadas = append(tablasOrdenadas[:i], tablasOrdenadas[i+1:]...)
+				break
+			}
+		}
+
+		tablasOrdenadas = append([]Tabla{tabla}, tablasOrdenadas...)
+		for _, tablaDependible := range tabla.ObtenerDependencias() {
+			td.tablasProcesar.Encolar(tablaDependible)
+		}
+	}
+
+	for _, tabla := range tablasOrdenadas {
+		if err := tabla.CrearTablaRelajada(td.BasesDeDatos, infoArchivos); err != nil {
+			return fmt.Errorf("error al crear tablas relajadas, especificamente en %s, con error: %v", tabla.Nombre(), err)
+		}
+	}
+
+	return nil
+}
+
+func (td *TrackerDependencias) TerminarProcesoInsertarDatos() error {
+	for tabla := range td.RegistrarTablas {
+		if err := tabla.RestringirTabla(td.BasesDeDatos); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (td *TrackerDependencias) InsertarIndependiente(tabla Tabla, datos ...any) error {
+	if tipo, ok := td.RegistrarTablas[tabla]; ok {
+		return fmt.Errorf("ya existe una tabla con esos parametros registrados")
+
+	} else if EsTipoDependiente(tipo) {
+		return fmt.Errorf("esta tabla (%s) no es independiente", tabla.Nombre())
+
+	} else if id, err := td.BasesDeDatos.Insertar(tabla.Query(), datos...); err != nil {
+		return fmt.Errorf("error al insertar elemento en la tabla %s", tabla.Nombre())
+
+	} else if EsTipoDependible(tipo) {
+		return td.procesoDependible(id)
+
+	} else {
+		return nil
+	}
+}
+
+func (td *TrackerDependencias) InsertarDependiente(tabla Tabla, fkeys []ForeignKey, datos ...any) error {
+	if tipo, ok := td.RegistrarTablas[tabla]; ok {
+		return fmt.Errorf("ya existe una tabla con esos parametros registrados")
+
+	} else if !EsTipoDependiente(tipo) {
+		return fmt.Errorf("Esta tabla (%s) no es dependiente", tabla.Nombre())
+
+	} else if id, err := td.BasesDeDatos.Insertar(tabla.Query(), datos...); err != nil {
+		return fmt.Errorf("error al insertar elemento en la tabla %s", tabla.Nombre())
+
+	} else if err := td.procesoDependiente(); err != nil {
+		return fmt.Errorf("error al verificar o actualizar el elemnto en la tabla tabla %s, con id: %d", tabla.Nombre(), id)
+
+	} else if EsTipoDependible(tipo) {
+		return td.procesoDependible(id)
+
+	} else {
+		return nil
+	}
+}
+
+// TODO: estas 2 funciones
+func (td *TrackerDependencias) procesoDependiente() error {
+	return nil
+}
+
+func (td *TrackerDependencias) procesoDependible(id int64) error {
+	return nil
 }
 
 /*
@@ -70,7 +190,6 @@ Necesitamos cargar los datos incluso si estan incompletos, esto nos va a permiti
 tener un id para guardar, y despues podemos (si es necesario) updatear el id que
 sea necesarip => tambien necesitamos tener el nombre de la key que se tiene que
 actualizar
-*/
 func (td *TrackerDependencias) CargarDependientes(tabla string, fKeys []ForeignKey, datos ...any) error {
 	if tipo, ok := td.RegistrarTablas[tabla]; ok {
 		return fmt.Errorf("ya existe una tabla con esos parametros registrados")
@@ -97,7 +216,7 @@ func (td *TrackerDependencias) CargarDependientes(tabla string, fKeys []ForeignK
 			td.GuardarUpdate[tabla][hashDatos] = lista
 
 
-			if 
+			if
 			// td.GuardarUpdate[tabla] = make(map[IntFK]*u.Lista[*u.Par[string, int64]])
 		}
 	}
@@ -151,6 +270,4 @@ func (td *TrackerDependencias) RegistrarDependible(tabla *Tabla, values []string
 	return 0, nil
 }
 
-func (td *TrackerDependencias) InsertarSQL(tabla *Tabla, datos ...any) (int64, error) {
-	return td.BasesDeDatos.Insertar(tabla.InsertarQuery(), datos)
-}
+*/

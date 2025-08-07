@@ -10,12 +10,14 @@ type InfoArchivos struct {
 	MaxUrl         uint32
 }
 
-func (info *InfoArchivos) Incrementar() {
-	info.MaxPath += 10
-	info.MaxTags += 10
-	info.MaxNombre += 10
-	info.MaxApellido += 10
-	info.MaxNombreLibro += 10
-	info.MaxEditorial += 10
-	info.MaxUrl += 10
+func NewInfoArchivos() *InfoArchivos {
+	return &InfoArchivos{
+		MaxPath:        255,
+		MaxTags:        255,
+		MaxNombre:      255,
+		MaxApellido:    255,
+		MaxNombreLibro: 255,
+		MaxEditorial:   255,
+		MaxUrl:         255,
+	}
 }

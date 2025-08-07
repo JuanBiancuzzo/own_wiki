@@ -1,147 +1,71 @@
 package encoding
 
 import (
-	"database/sql"
 	"fmt"
 
 	fs "own_wiki/encoding/fs"
 	b "own_wiki/system_protocol/bass_de_datos"
-	e "own_wiki/system_protocol/datos"
-	l "own_wiki/system_protocol/utilidades"
+	d "own_wiki/system_protocol/dependencias"
+	t "own_wiki/system_protocol/tablas"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
+type CrearTabla func(*d.TrackerDependencias) (d.Tabla, error)
 
 // mdp "github.com/gomarkdown/markdown/parser"
 // tp "github.com/BurntSushi/toml"
 // "github.com/go-sql-driver/mysql"
 
-func ProcesarArchivos(canalInfo chan b.InfoArchivos, canalDirectorio chan fs.Root, dirOrigen string, canalMensajes chan string) {
-	var infoArchivos b.InfoArchivos
-
-	canalMensajes <- "Creando estructura\n"
-	directorioRoot := fs.EstablecerDirectorio(dirOrigen, &infoArchivos, canalMensajes)
-
-	// Ajustar valores de info de los archivos
-	infoArchivos.Incrementar()
-	canalInfo <- infoArchivos
-	close(canalInfo)
-
-	canalMensajes <- "Se termino de procesar los archivos\n"
-	canalDirectorio <- *directorioRoot
-	close(canalDirectorio)
-}
-
-func ConstruirBaseRelacional(canalBDD chan *sql.DB, canalInfo chan b.InfoArchivos, canalMensajes chan string) {
-	bdd, err := b.EstablecerConexionRelacional(canalMensajes)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
-		canalBDD <- nil
-		return
-	}
-	infoArchivos := <-canalInfo
-
-	err = b.CrearTablas(bdd, &infoArchivos)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo crear las tablas para la base de datos, con error: %v\n", err)
-		canalBDD <- nil
-		return
-	}
-
-	canalBDD <- bdd
-	close(canalBDD)
-}
-
-func ConstruirBaseNoSQL(canalBDD chan *mongo.Database, canalMensajes chan string) {
-	bdd, err := b.EstablecerConexionNoSQL(canalMensajes)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
-		canalBDD <- nil
-		return
-	}
-
-	err = b.CrearColecciones(bdd)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo crear las colecciones para la base de datos, con error: %v\n", err)
-		canalBDD <- nil
-		return
-	}
-
-	canalBDD <- bdd
-	close(canalBDD)
-}
-
-func EvaluarCargable(bdd *b.Bdd, canalMensajes chan string, cargable e.Cargable, cola *l.Cola[e.Cargable]) {
-	if id, err := cargable.CargarDatos(bdd, canalMensajes); err == nil {
-		for _, cargable := range cargable.ResolverDependencias(id) {
-			cola.Encolar(cargable)
-		}
-
-	} else {
-		canalMensajes <- fmt.Sprintf("Error al cargar: %v", err)
-	}
-}
-
-func CargarDatos(bdd *b.Bdd, canalIndependiente chan e.Cargable, canalMensajes chan string) {
-	canalMensajes <- "Cargando los archivos sin dependencias"
-
-	cargablesListos := l.NewCola[e.Cargable]()
-	for cargable := range canalIndependiente {
-		EvaluarCargable(bdd, canalMensajes, cargable, cargablesListos)
-	}
-
-	canalMensajes <- "Cargados todos los archivos sin dependencias, ahora procesando los que tengan dependencias"
-
-	for cargable := range cargablesListos.DesencolarIterativamente {
-		EvaluarCargable(bdd, canalMensajes, cargable, cargablesListos)
-	}
-
-	if cargablesListos.Lista.Largo > 0 {
-		canalMensajes <- fmt.Sprint("Hubo un error, no se procesaron: ", cargablesListos.Lista.Largo, " cargables")
-	}
-}
-
 func Encodear(dirInput string, canalMensajes chan string) {
-	canalInfo := make(chan b.InfoArchivos)
-	canalDirectorio := make(chan fs.Root)
-	go ProcesarArchivos(canalInfo, canalDirectorio, dirInput, canalMensajes)
-
 	_ = godotenv.Load()
 
-	canalBddRelacional := make(chan *sql.DB)
-	go ConstruirBaseRelacional(canalBddRelacional, canalInfo, canalMensajes)
-
-	canalBddNoSQL := make(chan *mongo.Database)
-	go ConstruirBaseNoSQL(canalBddNoSQL, canalMensajes)
-
-	canalDatos := make(chan e.Cargable, 100)
-
-	go func(canalDatos chan e.Cargable, canalMensajes chan string) {
-		root := <-canalDirectorio
-		for _, archivo := range root.Archivos {
-			archivo.EstablecerDependencias(canalDatos, canalMensajes)
-		}
-
-		canalMensajes <- "Dejar de mandar archivos para procesar"
-		close(canalDatos)
-	}(canalDatos, canalMensajes)
-
-	bddRelacional := <-canalBddRelacional
-	defer b.CerrarBddRelacional(bddRelacional)
-
-	bddNoSQL := <-canalBddNoSQL
-	defer b.CerrarBddNoSQL(bddNoSQL)
-
-	if bddRelacional == nil || bddNoSQL == nil {
-		canalMensajes <- "No se pudo hacer una conexion con las bases de datos"
+	bddRelacional, err := b.EstablecerConexionRelacional(canalMensajes)
+	if err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
 	}
-	canalMensajes <- "Insertando datos en la base de datos"
+	defer b.CerrarBddRelacional(bddRelacional)
 
-	bdd := b.NewBdd(bddRelacional, bddNoSQL)
-	CargarDatos(bdd, canalDatos, canalMensajes)
+	bddNoSQL, err := b.EstablecerConexionNoSQL(canalMensajes)
+	if err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
+		return
+	}
+	defer b.CerrarBddNoSQL(bddNoSQL)
 
-	canalMensajes <- "Se termino de cargar a la base de datos"
+	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional, bddNoSQL))
+	if err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo crear el tracker, se tuvo el error: %v", err)
+		return
+	}
+
+	tablas := make(map[string]d.Tabla)
+	cargarTabla := func(crearTabla CrearTabla) {
+		if tabla, err := crearTabla(tracker); err != nil {
+			canalMensajes <- fmt.Sprintf("No se pudo crear tabla, se tuvo el error: %v", err)
+		} else {
+			tablas[tabla.Nombre()] = tabla
+		}
+	}
+
+	// Cargar todas las tablas
+	cargarTabla(t.NewArchivos)
+
+	if err = tracker.IniciarProcesoInsertarDatos(b.NewInfoArchivos()); err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo iniciar el proceso de insertar datos, se tuvo el error: %v", err)
+		return
+	}
+
+	if err = fs.RecorrerDirectorio(dirInput, tablas, canalMensajes); err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo recorrer todos los archivos, se tuvo el error: %v", err)
+		return
+	}
+
+	if err = tracker.TerminarProcesoInsertarDatos(); err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo terminar el proceso de insertar datos, se tuvo el error: %v", err)
+	} else {
+		canalMensajes <- "Se termino de cargar a la base de datos"
+	}
 }

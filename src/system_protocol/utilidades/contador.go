@@ -1,10 +1,8 @@
-package system_protocol
+package utilidades
 
 import (
 	"cmp"
 	"fmt"
-
-	l "own_wiki/system_protocol/utilidades"
 )
 
 type Inc[T cmp.Ordered] func(T) T
@@ -14,7 +12,7 @@ type ContadorGen[T cmp.Ordered] struct {
 	Incrementar  Inc[T]
 	Decrementar  Dec[T]
 	UltimoNumero T
-	Libres       *l.Lista[T] // Podriamos usar un heap
+	Libres       *Lista[T] // Podriamos usar un heap
 }
 
 func NewContadorGen[T cmp.Ordered](incrementar Inc[T], decrementar Dec[T], inicio T) *ContadorGen[T] {
@@ -22,7 +20,7 @@ func NewContadorGen[T cmp.Ordered](incrementar Inc[T], decrementar Dec[T], inici
 		Incrementar:  incrementar,
 		Decrementar:  decrementar,
 		UltimoNumero: inicio,
-		Libres:       l.NewLista[T](),
+		Libres:       NewLista[T](),
 	}
 }
 
@@ -43,7 +41,7 @@ func (c *ContadorGen[T]) Devolver(numero T) error {
 	}
 
 	if c.UltimoNumero < numero {
-		return fmt.Errorf("El numero a devolver (%v) es mayor al numero mas grande guardado (%v)", numero, c.UltimoNumero)
+		return fmt.Errorf("el numero a devolver (%v) es mayor al numero mas grande guardado (%v)", numero, c.UltimoNumero)
 	}
 
 	// Insertamos de forma ordenada para hacer el obtener mucho mas rapido
@@ -54,7 +52,7 @@ func (c *ContadorGen[T]) Devolver(numero T) error {
 		}
 
 		if numeroReservador == numero {
-			return fmt.Errorf("Se esta devolviendo (%v) un numero que ya se devolvio", numero)
+			return fmt.Errorf("se esta devolviendo (%v) un numero que ya se devolvio", numero)
 		}
 
 		indiceInsertar = i

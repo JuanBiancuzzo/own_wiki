@@ -3,7 +3,7 @@ package fs
 import (
 	"fmt"
 	"os"
-	db "own_wiki/system_protocol/bass_de_datos"
+	d "own_wiki/system_protocol/dependencias"
 	u "own_wiki/system_protocol/utilidades"
 	"slices"
 	"sync"
@@ -13,42 +13,29 @@ const CANTIDAD_WORKERS = 15
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
-type Root struct {
-	Path     string
-	Archivos map[string]*Archivo
-}
-
-func EstablecerDirectorio(dirOrigen string, infoArchivos *db.InfoArchivos, canalMensajes chan string) *Root {
+func RecorrerDirectorio(dirOrigen string, tablas map[string]d.Tabla, canalMensajes chan string) error {
 	var waitArchivos sync.WaitGroup
-	root := &Root{
-		Path:     dirOrigen,
-		Archivos: make(map[string]*Archivo),
-	}
 
 	canalInput := make(chan string, CANTIDAD_WORKERS)
+	defer close(canalInput)
 	waitArchivos.Add(1)
+	defer waitArchivos.Wait()
 
-	var mutexRoot sync.Mutex
 	procesarArchivo := func(path string) {
-		if archivo, err := NewArchivo(root, path, infoArchivos, canalMensajes); err != nil {
-			canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo, con error: %v", err)
-		} else {
-			mutexRoot.Lock()
-			root.Archivos[path] = archivo
-			mutexRoot.Unlock()
+		if err := CargarArchivo(dirOrigen, path, tablas, canalMensajes); err != nil {
+			canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo en el path: '%s', con error: %v", path, err)
 		}
 	}
 	go u.DividirTrabajo(canalInput, CANTIDAD_WORKERS, procesarArchivo, &waitArchivos)
 
 	colaDirectorios := u.NewCola[string]()
 	colaDirectorios.Encolar("")
-	canalMensajes <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", root.Path)
+	canalMensajes <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", dirOrigen)
 
 	for directorioPath := range colaDirectorios.DesencolarIterativamente {
-		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", root.Path, directorioPath))
+		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", dirOrigen, directorioPath))
 		if err != nil {
-			canalMensajes <- fmt.Sprintf("Se tuvo un error al leer el directorio dando el error: %v", err)
-			break
+			return fmt.Errorf("se tuvo un error al leer el directorio '%s' dando el error: %v", fmt.Sprintf("%s/%s", dirOrigen, directorioPath), err)
 		}
 
 		for _, archivo := range archivos {
@@ -67,14 +54,5 @@ func EstablecerDirectorio(dirOrigen string, infoArchivos *db.InfoArchivos, canal
 		}
 	}
 
-	close(canalInput)
-	waitArchivos.Wait()
-	return root
-}
-
-func (r *Root) EncontrarArchivo(path string) (*Archivo, error) {
-	if archivo, ok := r.Archivos[path]; ok {
-		return archivo, nil
-	}
-	return nil, fmt.Errorf("no existe el archivo con ese path")
+	return nil
 }
