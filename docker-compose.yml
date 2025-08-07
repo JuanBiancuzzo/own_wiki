@@ -72,6 +72,8 @@ services:
 
   app_process:
     image: cosmtrek/air
+    profiles:
+      - frontend
     container_name: manejar_archivos
     working_dir: /app/codigo
     depends_on:
