@@ -1,8 +1,3 @@
-CREATE TABLE IF NOT EXISTS archivos (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  path VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci 
-);
-
 CREATE TABLE IF NOT EXISTS personas (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
@@ -12,13 +7,6 @@ CREATE TABLE IF NOT EXISTS personas (
 CREATE TABLE IF NOT EXISTS editoriales (
   id INT AUTO_INCREMENT PRIMARY KEY,
   editorial VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-);
-
-CREATE TABLE IF NOT EXISTS tags (
-  tag VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
 );
 
 CREATE TABLE IF NOT EXISTS libros (

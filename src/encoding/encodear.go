@@ -12,11 +12,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type CrearTabla func(*d.TrackerDependencias) (d.Tabla, error)
-
 // mdp "github.com/gomarkdown/markdown/parser"
 // tp "github.com/BurntSushi/toml"
-// "github.com/go-sql-driver/mysql"
 
 func Encodear(dirInput string, canalMensajes chan string) {
 	_ = godotenv.Load()
@@ -41,17 +38,11 @@ func Encodear(dirInput string, canalMensajes chan string) {
 		return
 	}
 
-	tablas := make(map[string]d.Tabla)
-	cargarTabla := func(crearTabla CrearTabla) {
-		if tabla, err := crearTabla(tracker); err != nil {
-			canalMensajes <- fmt.Sprintf("No se pudo crear tabla, se tuvo el error: %v", err)
-		} else {
-			tablas[tabla.Nombre()] = tabla
-		}
+	tablas, err := t.NewTablas(tracker)
+	if err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo crear las tablas, se tuvo el error: %v", err)
+		return
 	}
-
-	// Cargar todas las tablas
-	cargarTabla(t.NewArchivos)
 
 	if err = tracker.IniciarProcesoInsertarDatos(b.NewInfoArchivos()); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo iniciar el proceso de insertar datos, se tuvo el error: %v", err)

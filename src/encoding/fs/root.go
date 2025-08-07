@@ -3,7 +3,7 @@ package fs
 import (
 	"fmt"
 	"os"
-	d "own_wiki/system_protocol/dependencias"
+	t "own_wiki/system_protocol/tablas"
 	u "own_wiki/system_protocol/utilidades"
 	"slices"
 	"sync"
@@ -13,7 +13,7 @@ const CANTIDAD_WORKERS = 15
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
-func RecorrerDirectorio(dirOrigen string, tablas map[string]d.Tabla, canalMensajes chan string) error {
+func RecorrerDirectorio(dirOrigen string, tablas *t.Tablas, canalMensajes chan string) error {
 	var waitArchivos sync.WaitGroup
 
 	canalInput := make(chan string, CANTIDAD_WORKERS)

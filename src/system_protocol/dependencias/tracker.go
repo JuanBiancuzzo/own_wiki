@@ -21,7 +21,8 @@ type TrackerDependencias struct {
 }
 
 func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
-	templateTablaDependibles, err := template.New("dependibles").Parse(`
+	templateTablaDependibles := template.New("dependibles")
+	templateTablaDependibles, err := templateTablaDependibles.Parse(`
 		CREATE TABLE IF NOT EXISTE aux_dependibles (
 			nombreTabla ENUM({{ range . }} "{{ .Nombre() }}", {{ end }}),
 			hashDatos   INT,
@@ -31,7 +32,8 @@ func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
 		return nil, fmt.Errorf("error al crear el template para la tabla auxiliar de los dependibles")
 	}
 
-	templateTablaIncompletos, err := template.New("incompletos").Parse(`
+	templateTablaIncompletos := template.New("incompletos")
+	templateTablaIncompletos, err = templateTablaIncompletos.Parse(`
 		CREATE TABLE IF NOT EXISTE aux_incompletos (
 			tablaDependiente 	ENUM({{ range . }} "{{ .Nombre() }}", {{ end }}),
 			idDependiente   	INT,
@@ -160,7 +162,7 @@ func (td *TrackerDependencias) InsertarDependiente(tabla Tabla, fkeys []ForeignK
 		return fmt.Errorf("ya existe una tabla con esos parametros registrados")
 
 	} else if !EsTipoDependiente(tipo) {
-		return fmt.Errorf("Esta tabla (%s) no es dependiente", tabla.Nombre())
+		return fmt.Errorf("esta tabla (%s) no es dependiente", tabla.Nombre())
 
 	} else if id, err := td.BasesDeDatos.Insertar(tabla.Query(), datos...); err != nil {
 		return fmt.Errorf("error al insertar elemento en la tabla %s", tabla.Nombre())
