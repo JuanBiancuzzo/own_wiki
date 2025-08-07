@@ -1,12 +1,12 @@
 package fs
 
-type ContenidoMinimo struct {
+type TextoVinculo struct {
 	Titulo string
 	Path   string
 }
 
-func NewContenidoMinimo(titulo string, path string) ContenidoMinimo {
-	return ContenidoMinimo{
+func NewTextoVinculo(titulo string, path string) TextoVinculo {
+	return TextoVinculo{
 		Titulo: titulo,
 		Path:   path,
 	}
@@ -25,13 +25,15 @@ func NewOpcion(nombre string, path string) Opcion {
 }
 
 type Data struct {
-	Minimo   ContenidoMinimo
+	Minimo   TextoVinculo
+	Path     []TextoVinculo
 	Opciones []Opcion
 }
 
-func NewData(minimo ContenidoMinimo, opciones []Opcion) Data {
+func NewData(minimo TextoVinculo, path []TextoVinculo, opciones []Opcion) Data {
 	return Data{
 		Minimo:   minimo,
+		Path:     path,
 		Opciones: opciones,
 	}
 }

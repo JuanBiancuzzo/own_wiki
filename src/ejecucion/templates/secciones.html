@@ -1,5 +1,7 @@
 {{ block "colecciones" . }}
     {{ template "titulo" .Minimo }}
+    {{ template "path" .Path }}
+
     {{ range .Opciones }}
         {{ template "opcion" . }}
     {{ end }}
@@ -7,6 +9,8 @@
 
 {{ block "facultad" . }}
     {{ template "titulo" .Minimo }}
+    {{ template "path" .Path }}
+
     {{ range .Opciones }}
         {{ template "opcion" . }}
     {{ end }}
@@ -14,7 +18,14 @@
 
 {{ block "cursos" . }}
     {{ template "titulo" .Minimo }}
+    {{ template "path" .Path }}
+
     {{ range .Opciones }}
         {{ template "opcion" . }}
     {{ end }}
+{{ end }}
+
+{{ block "nota" . }}
+    {{ template "titulo" .Minimo }}
+    <p> Aca deberia haber texto </p>
 {{ end }}

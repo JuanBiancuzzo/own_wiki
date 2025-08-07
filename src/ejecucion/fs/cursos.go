@@ -49,32 +49,37 @@ func NewCursos(bdd *sql.DB) *Cursos {
 	}
 }
 
-func GenerarRutaCursos(e *echo.Echo, bdd *sql.DB) {
-	cursos := NewCursos(bdd)
-
-	e.GET("/Cursos", func(c echo.Context) error {
-		data := cursos.DecidirSiguientePath(c)
-		return c.Render(200, "cursos", data)
-	})
-}
-
-func (c *Cursos) DecidirSiguientePath(ec echo.Context) Data {
+func (c *Cursos) DeterminarRuta(ec echo.Context) error {
 	path := strings.TrimSpace(ec.QueryParam("path"))
-	errCd := c.Cd(path)
-	data, errLs := c.Ls()
+
+	var carpetaActual string
+	var errCd error
+	for subpath := range strings.SplitSeq(path, "/") {
+		carpetaActual, errCd = c.Cd(subpath)
+		if errCd != nil {
+			break
+		}
+		if carpetaActual == PD_ROOT {
+			return ec.Render(200, "root", DATA_ROOT)
+		}
+	}
+
+	if carpetaActual == "" {
+		carpetaActual = "Cursos"
+	}
+	data, errLs := c.Ls(carpetaActual)
 
 	if errCd != nil {
 		data.Opciones = append(data.Opciones, NewOpcion(fmt.Sprintf("Cd tuvo el error: %v", errCd), "/Cursos"))
 	}
-
 	if errLs != nil {
 		data.Opciones = append(data.Opciones, NewOpcion(fmt.Sprintf("Ls tuvo el error: %v", errLs), "/Cursos"))
 	}
 
-	return data
+	return ec.Render(200, "cursos", data)
 }
 
-func (c *Cursos) Ls() (Data, error) {
+func (c *Cursos) Ls(carpetaActual string) (Data, error) {
 	var data Data
 	opciones := u.NewLista[Opcion]()
 	returnPath := "/Cursos?path=.."
@@ -108,24 +113,36 @@ func (c *Cursos) Ls() (Data, error) {
 			)
 		}
 
-		return NewData(NewContenidoMinimo(c.PathActual(), returnPath), opciones.Items()), nil
+		return NewData(
+			NewTextoVinculo(carpetaActual, returnPath), c.PathActual(0), opciones.Items(),
+		), nil
 	}
 }
 
-func (c *Cursos) PathActual() string {
-	if elemento, err := c.Path.Desapilar(); err != nil {
-		return "Cursos"
+func (c *Cursos) PathActual(profundidad int) []TextoVinculo {
+	if profundidad > 2 {
+		return []TextoVinculo{
+			NewTextoVinculo("...", fmt.Sprintf("/Cursos?path=%s", strings.Repeat("../", profundidad))),
+		}
+	}
 
+	if elemento, err := c.Path.Desapilar(); err != nil {
+		return []TextoVinculo{
+			NewTextoVinculo("Own_wiki", fmt.Sprintf("/Cursos?path=%s", strings.Repeat("../", profundidad+1))),
+			NewTextoVinculo("Cursos", fmt.Sprintf("/Cursos?path=%s", strings.Repeat("../", profundidad))),
+		}
 	} else {
-		pathActual := fmt.Sprintf("%s > %s", c.PathActual(), elemento)
+		textoVinculo := NewTextoVinculo(elemento, fmt.Sprintf("/Cursos?path=%s", strings.Repeat("../", profundidad)))
+		pathActual := append(c.PathActual(profundidad+1), textoVinculo)
 		c.Path.Apilar(elemento)
 		return pathActual
 	}
 }
 
-func (c *Cursos) Cd(subpath string) error {
+func (c *Cursos) Cd(subpath string) (string, error) {
 	if subpath == "" {
-		return nil
+		carpetaActual, _ := c.Path.Pick()
+		return carpetaActual, nil
 	}
 
 	if subpath == ".." {
@@ -141,18 +158,18 @@ func (c *Cursos) Cd(subpath string) error {
 			query = fmt.Sprintf(QUERY_OBTENER_TEMA_CURSO, idCurso, subpath)
 		}
 	case TCC_DENTRO_TEMA:
-		return fmt.Errorf("ya se esta viendo todos los archivos, no hay subcarpetas")
+		return "", fmt.Errorf("ya se esta viendo todos los archivos, no hay subcarpetas")
 	}
 
 	if query == "" {
-		return fmt.Errorf("hubo un error en la query, y esta vacia")
+		return "", fmt.Errorf("hubo un error en la query, y esta vacia")
 	}
 
 	fila := c.Bdd.QueryRow(query)
 	var id int64
 	var nombre string
 	if err := fila.Scan(&id, &nombre); err != nil {
-		return fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
+		return "", fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
 	}
 
 	switch c.Tipo {
@@ -164,16 +181,15 @@ func (c *Cursos) Cd(subpath string) error {
 
 	c.Indice.Apilar(id)
 	c.Path.Apilar(nombre)
-	return nil
+	return subpath, nil
 }
 
-func (c *Cursos) RutinaAtras() error {
+func (c *Cursos) RutinaAtras() (string, error) {
 	_, _ = c.Indice.Desapilar()
-	_, _ = c.Path.Desapilar()
 
 	switch c.Tipo {
 	case TCC_GENERAL:
-		return fmt.Errorf("no deberia ser posible que pongan .. aca")
+		return PD_ROOT, nil
 
 	case TCC_DENTRO_CURSO:
 		c.Tipo = TCC_GENERAL
@@ -181,5 +197,5 @@ func (c *Cursos) RutinaAtras() error {
 		c.Tipo = TCC_DENTRO_CURSO
 	}
 
-	return nil
+	return c.Path.Desapilar()
 }

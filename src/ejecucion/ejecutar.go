@@ -35,9 +35,10 @@ func Ejecutar(canalMensajes chan string) {
 	e.Static("/css", "ejecucion/css")
 
 	fs.GenerarRutasRoot(e)
-	fs.GenerarRutaColeccion(e, bdd)
-	fs.GenerarRutaFacultad(e, bdd)
-	fs.GenerarRutaCursos(e, bdd)
+
+	e.GET("/Facultad", fs.NewFacultad(bdd).DeterminarRuta)
+	e.GET("/Colecciones", fs.NewColeccion(bdd).DeterminarRuta)
+	e.GET("/Cursos", fs.NewCursos(bdd).DeterminarRuta)
 
 	e.Logger.Fatal(e.Start(":42069"))
 }

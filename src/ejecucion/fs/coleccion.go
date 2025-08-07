@@ -54,30 +54,37 @@ func NewColeccion(bdd *sql.DB) *Colecciones {
 	}
 }
 
-func GenerarRutaColeccion(e *echo.Echo, bdd *sql.DB) {
-	colecciones := NewColeccion(bdd)
-
-	e.GET("/Colecciones", func(c echo.Context) error {
-		data := colecciones.DecidirSiguientePath(c)
-		return c.Render(200, "colecciones", data)
-	})
-}
-
-func (c *Colecciones) DecidirSiguientePath(ec echo.Context) Data {
+func (c *Colecciones) DeterminarRuta(ec echo.Context) error {
 	path := strings.TrimSpace(ec.QueryParam("path"))
-	errCd := c.Cd(path)
-	data, errLs := c.Ls()
+
+	var carpetaActual string
+	var errCd error
+	for subpath := range strings.SplitSeq(path, "/") {
+		carpetaActual, errCd = c.Cd(subpath)
+		if errCd != nil {
+			break
+		}
+		if carpetaActual == PD_ROOT {
+			return ec.Render(200, "root", DATA_ROOT)
+		}
+	}
+
+	if carpetaActual == "" {
+		carpetaActual = "Colecciones"
+	}
+	data, errLs := c.Ls(carpetaActual)
+
 	if errCd != nil {
 		data.Opciones = append(data.Opciones, NewOpcion(fmt.Sprintf("Cd tuvo el error: %v", errCd), "/Colecciones"))
 	}
-
 	if errLs != nil {
 		data.Opciones = append(data.Opciones, NewOpcion(fmt.Sprintf("Ls tuvo el error: %v", errLs), "/Colecciones"))
 	}
-	return data
+
+	return ec.Render(200, "colecciones", data)
 }
 
-func (c *Colecciones) Ls() (Data, error) {
+func (c *Colecciones) Ls(carpetaActual string) (Data, error) {
 	var data Data
 	opciones := u.NewLista[Opcion]()
 
@@ -91,7 +98,9 @@ func (c *Colecciones) Ls() (Data, error) {
 			)
 		}
 
-		return NewData(NewContenidoMinimo(c.PathActual(), "/Root"), opciones.Items()), nil
+		return NewData(
+			NewTextoVinculo(carpetaActual, "/Root"), c.PathActual(0), opciones.Items(),
+		), nil
 
 	case TCO_LIBROS:
 		query = QUERY_LIBROS_LS
@@ -110,7 +119,9 @@ func (c *Colecciones) Ls() (Data, error) {
 			)
 		}
 
-		return NewData(NewContenidoMinimo(c.PathActual(), "/Colecciones?path=.."), opciones.Items()), nil
+		return NewData(
+			NewTextoVinculo(carpetaActual, "/Colecciones?path=.."), c.PathActual(0), opciones.Items(),
+		), nil
 
 	case TCO_DIST_DISCRETA:
 		query = fmt.Sprintf(QUERY_DISTRIBUCION_LS, e.DISTRIBUCION_DISCRETA)
@@ -138,23 +149,35 @@ func (c *Colecciones) Ls() (Data, error) {
 		}
 	}
 
-	return NewData(NewContenidoMinimo(c.PathActual(), "/Colecciones?path=.."), opciones.Items()), nil
+	return NewData(
+		NewTextoVinculo(carpetaActual, "/Colecciones?path=.."), c.PathActual(0), opciones.Items(),
+	), nil
 }
 
-func (c *Colecciones) PathActual() string {
-	if elemento, err := c.Path.Desapilar(); err != nil {
-		return "Colecciones"
+func (c *Colecciones) PathActual(profundidad int) []TextoVinculo {
+	if profundidad > 2 {
+		return []TextoVinculo{
+			NewTextoVinculo("...", fmt.Sprintf("/Colecciones?path=%s", strings.Repeat("../", profundidad))),
+		}
+	}
 
+	if elemento, err := c.Path.Desapilar(); err != nil {
+		return []TextoVinculo{
+			NewTextoVinculo("Own_wiki", fmt.Sprintf("/Colecciones?path=%s", strings.Repeat("../", profundidad+1))),
+			NewTextoVinculo("Colecciones", fmt.Sprintf("/Colecciones?path=%s", strings.Repeat("../", profundidad))),
+		}
 	} else {
-		pathActual := fmt.Sprintf("%s > %s", c.PathActual(), elemento)
+		textoVinculo := NewTextoVinculo(elemento, fmt.Sprintf("/Colecciones?path=%s", strings.Repeat("../", profundidad)))
+		pathActual := append(c.PathActual(profundidad+1), textoVinculo)
 		c.Path.Apilar(elemento)
 		return pathActual
 	}
 }
 
-func (c *Colecciones) Cd(subpath string) error {
+func (c *Colecciones) Cd(subpath string) (string, error) {
 	if subpath == "" {
-		return nil
+		carpetaActual, _ := c.Path.Pick()
+		return carpetaActual, nil
 	}
 
 	if subpath == ".." {
@@ -171,37 +194,35 @@ func (c *Colecciones) Cd(subpath string) error {
 		}
 
 		if eleccion := slices.Index(posibilidades, subpath); eleccion < 0 {
-			return fmt.Errorf("en %s no existe la posibilidad del path dado por '%s', con posibilidades: %v", c.Tipo, subpath, posibilidades)
+			return "", fmt.Errorf("en %s no existe la posibilidad del path dado por '%s', con posibilidades: %v", c.Tipo, subpath, posibilidades)
 		} else {
 			c.Tipo = TipoColeccion(posibilidades[eleccion])
 			c.Path.Apilar(posibilidades[eleccion])
-			return nil
+			return "", nil
 		}
 	}
 
 	if c.Tipo != TCO_LIBROS {
-		return fmt.Errorf("en %s no se puede buscar nada, por lo que la busqueda '%s' no tiene sentido", c.Tipo, subpath)
+		return "", fmt.Errorf("en %s no se puede buscar nada, por lo que la busqueda '%s' no tiene sentido", c.Tipo, subpath)
 	}
 
 	fila := c.Bdd.QueryRow(fmt.Sprintf(QUERY_OBTENER_LIBRO, subpath))
 	var id int64
 	var nombre string
 	if err := fila.Scan(&id, &nombre); err != nil {
-		return fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
+		return "", fmt.Errorf("no existe posible solucion para el cd a '%s', con error: %v", subpath, err)
 	}
 
 	c.Tipo = TCO_CAPITULOS
 	c.Indice.Apilar(id)
 	c.Path.Apilar(nombre)
-	return nil
+	return subpath, nil
 }
 
-func (c *Colecciones) RutinaAtras() error {
-	_, _ = c.Path.Desapilar()
-
+func (c *Colecciones) RutinaAtras() (string, error) {
 	switch c.Tipo {
 	case TCO_COLECCION:
-		return fmt.Errorf("no deberia ser posible que pongan .. aca")
+		return PD_ROOT, nil
 
 	case TCO_LIBROS:
 		fallthrough
@@ -222,5 +243,5 @@ func (c *Colecciones) RutinaAtras() error {
 		c.Tipo = TCO_DISTRIBUCIONES
 	}
 
-	return nil
+	return c.Path.Desapilar()
 }

@@ -57,11 +57,16 @@
         </div>
         <p> {{ .Titulo }} </p>
     </h1>
-    <hr>
 {{ end }}
 
-
-{{ block "otros" . }}
-    {{ template "titulo" . }}
-    <p>Todavia tengo que cargar esto</p>
+{{ block "path" . }}
+    <hr style="margin-bottom: 1rem;">
+    <div style="display: flex;">
+        {{ range . }}
+            <h5 hx-target="#centro" hx-get="{{ .Path }}" style="padding-right: 0.5rem;">
+                > {{ .Titulo }} 
+            </h5>
+        {{ end }}
+    </div>
+    <hr style="margin-top: 1rem;">
 {{ end }}
