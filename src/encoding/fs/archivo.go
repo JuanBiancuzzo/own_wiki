@@ -75,6 +75,7 @@ func CargarArchivo(dirInicio string, path string, tablas *t.Tablas, canalMensaje
 		return fmt.Errorf("error al decodificar en %s la metadata, con el error: %v", path, err)
 	}
 
+	// El resto del contenido del archivo
 	// a.Contenido = contenido[3+strings.Index(contenido[3:], "---")+len("---"):]
 
 	if err := tablas.Archivos.CargarArchivo(path); err != nil {
@@ -85,54 +86,45 @@ func CargarArchivo(dirInicio string, path string, tablas *t.Tablas, canalMensaje
 		if err := tablas.Tags.CargarTag(path, tag); err != nil {
 			return err
 		}
+
+		switch tag {
+		case TAG_CARRERA:
+
+		case TAG_MATERIA:
+
+		case TAG_MATERIA_EQUIVALENTE:
+
+		case TAG_RESUMEN_MATERIA:
+
+		case TAG_CURSO:
+
+		case TAG_CURSO_PRESENCIA:
+
+		case TAG_RESUMEN_CURSO:
+
+		case TAG_DISTRIBUCION:
+
+		case TAG_LIBRO:
+
+		case TAG_PAPER:
+
+		case TAG_NOTA_FACULTAD:
+			fallthrough
+		case TAG_NOTA_CURSO:
+			fallthrough
+		case TAG_NOTA_INVESTIGACION:
+			fallthrough
+		case TAG_NOTA_COLECCION:
+			fallthrough
+		case TAG_NOTA_PROYECTO:
+
+		}
 	}
 
 	return nil
 }
 
 /*
-	func (a *Archivo) CargarDependible(tipo e.TipoDependible, dependible e.Dependible) {
-		lista, ok := a.Dependibles[tipo]
-		if !ok {
-			lista = l.NewLista[e.Dependible]()
-		}
-		lista.Push(dependible)
-		a.Dependibles[tipo] = lista
-	}
-
-	func (a *Archivo) CargarDependencia(path string, tipo e.TipoDependible, relacion e.FnVincular) {
-		pathTipo := NewPathTipo(path, tipo)
-		lista, ok := a.FnDependencias[pathTipo]
-		if !ok {
-			lista = l.NewLista[e.FnVincular]()
-		}
-		lista.Push(relacion)
-		a.FnDependencias[pathTipo] = lista
-	}
-
-// Cambiar a establecer conexiones
-
-	func (a *Archivo) EstablecerDependencias(canalDatos chan e.Cargable, canalMensajes chan string) {
-		for pathTipo, listaRelacion := range a.FnDependencias {
-			if archivo, err := a.Root.EncontrarArchivo(pathTipo.Path); err != nil {
-				canalMensajes <- fmt.Sprintf("No se encontró el archivo '%s' para el archivo: '%s'", pathTipo.Path, a.Path)
-
-			} else if listaDependible, ok := archivo.Dependibles[pathTipo.Tipo]; !ok {
-				canalMensajes <- fmt.Sprintf("No se encontró el tipo '%s' para el archivo: '%s'", e.TipoDependible2String(pathTipo.Tipo), a.Path)
-
-			} else {
-				for dependible := range listaDependible.Iterar {
-					for relacion := range listaRelacion.Iterar {
-						relacion(dependible)
-					}
-				}
-			}
-		}
-
-		for cargable := range a.Cargables.Iterar {
-			canalDatos <- cargable
-		}
-	}
 
 	func (a *Archivo) ProcesarCarrera(path string, meta *Frontmatter, canalMensajes chan string) {
 		nombreCarrera := e.Nombre(path)

@@ -7,7 +7,8 @@ services:
       test: ["CMD", 'mysqladmin', 'ping', '-h', 'localhost', '-u', '$MYSQL_ROOT_USER', '-p$$MYSQL_ROOT_PASSWORD' ]
       interval: 1s
       timeout: 2s
-      start_period: 1s
+      start_period: 3s
+      retries: 5
 
     environment:
       MYSQL_ROOT_USER: ${MYSQL_ROOT_USER}
@@ -30,7 +31,8 @@ services:
       test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 1s
       timeout: 2s
-      start_period: 1s
+      start_period: 3s
+      retries: 5
 
     environment:
       MONGO_INITDB_ROOT_USER: ${MONGO_ROOT_USER}
@@ -48,8 +50,8 @@ services:
     depends_on:
       db_relacional:
         condition: service_healthy
-      db_nosql:
-        condition: service_healthy
+      # db_nosql:
+        # condition: service_healthy
     environment:
       # Necesario para mysql
       MYSQL_DB_NAME: ${MYSQL_DB_NAME}
@@ -67,7 +69,7 @@ services:
       - "8080:8080"
     volumes:
       - ../../Ashurbanipal:/var/lib/datos
-      - ./volumenes/treesitter_bindings:/var/lib/treesitter_bindings
+      # - ./volumenes/treesitter_bindings:/var/lib/treesitter_bindings
     networks:
       - appnet
     command: ["./own_wiki", "-e", "/var/lib/datos"] 
@@ -97,7 +99,7 @@ services:
       - "8080:8080"
     volumes:
       - ./volumenes/output:/var/lib/datos
-      - ./volumenes/treesitter_bindings:/var/lib/treesitter_bindings
+      # - ./volumenes/treesitter_bindings:/var/lib/treesitter_bindings
     networks:
       - appnet
     command: ["./own_wiki", "-p", "/var/lib/datos"] 

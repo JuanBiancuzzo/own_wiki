@@ -8,8 +8,9 @@ import (
 
 const TAGS = "tags"
 const TABLA_TAGS = `CREATE TABLE tags (
-  tag VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  idArchivo INT NOT NULL,
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tag VARCHAR(%d) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  idArchivo INT,
 
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
 )`
@@ -21,13 +22,13 @@ type Tags struct {
 	Tracker     *d.TrackerDependencias
 }
 
-func NewTags(refArchivos *Archivos, tracker *d.TrackerDependencias) (Tags, error) {
+func NewTags(refArchivos *Archivos, tracker *d.TrackerDependencias, canalMensajes chan string) (Tags, error) {
 	tags := Tags{
 		RefArchivos: refArchivos,
 		Tracker:     tracker,
 	}
 
-	if err := tracker.RegistrarTabla(tags, d.DEPENDIENTE_NO_DEPENDIBLE); err != nil {
+	if err := tracker.RegistrarTabla(tags, d.DEPENDIENTE_NO_DEPENDIBLE, canalMensajes); err != nil {
 		return tags, fmt.Errorf("error al registrar Tags con error: %v", err)
 	} else {
 		return tags, nil
@@ -52,11 +53,16 @@ func (t Tags) GenerarHash(tag string) d.IntFK {
 }
 
 func (t Tags) Query(bdd *b.Bdd, datos ...any) (int64, error) {
-	return bdd.ObtenerOInsertar(QUERY_TAG, INSERTAR_ARCHIVO, datos...)
+	return bdd.Insertar(INSERTAR_TAG, datos...)
+}
+
+func (t Tags) ObjetoExistente(bdd *b.Bdd, datos ...any) (bool, error) {
+	_, err := bdd.Obtener(QUERY_TAG, datos...)
+	return err == nil, nil
 }
 
 func (t Tags) CrearTablaRelajada(bdd *b.Bdd, info *b.InfoArchivos) error {
-	if err := bdd.CrearTabla(TABLA_TAGS, info.MaxTags); err != nil {
+	if err := bdd.CrearTabla(fmt.Sprintf(TABLA_TAGS, info.MaxTags)); err != nil {
 		return fmt.Errorf("no se pudo crear la tabla de tags, con error: %v", err)
 	}
 	return nil
@@ -67,5 +73,5 @@ func (t Tags) RestringirTabla(bdd *b.Bdd) error {
 }
 
 func (t Tags) ObtenerDependencias() []d.Tabla {
-	return []d.Tabla{}
+	return []d.Tabla{*t.RefArchivos}
 }

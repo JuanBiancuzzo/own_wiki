@@ -9,7 +9,7 @@ import (
 const ARCHIVOS = "archivos"
 const TABLA_ARCHIVOS = `CREATE TABLE archivos (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  path VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci 
+  path VARCHAR(%d) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci 
 )`
 const INSERTAR_ARCHIVO = "INSERT INTO archivos (path) VALUES (?)"
 
@@ -17,12 +17,12 @@ type Archivos struct {
 	Tracker *d.TrackerDependencias
 }
 
-func NewArchivos(tracker *d.TrackerDependencias) (Archivos, error) {
+func NewArchivos(tracker *d.TrackerDependencias, canalMensajes chan string) (Archivos, error) {
 	archivos := Archivos{
 		Tracker: tracker,
 	}
 
-	if err := tracker.RegistrarTabla(archivos, d.INDEPENDIENTE_DEPENDIBLE); err != nil {
+	if err := tracker.RegistrarTabla(archivos, d.INDEPENDIENTE_DEPENDIBLE, canalMensajes); err != nil {
 		return archivos, fmt.Errorf("error al registrar Archivos con error: %v", err)
 	} else {
 		return archivos, nil
@@ -45,8 +45,12 @@ func (a Archivos) Query(bdd *b.Bdd, datos ...any) (int64, error) {
 	return bdd.Insertar(INSERTAR_ARCHIVO, datos...)
 }
 
+func (a Archivos) ObjetoExistente(bdd *b.Bdd, datos ...any) (bool, error) {
+	return false, nil
+}
+
 func (a Archivos) CrearTablaRelajada(bdd *b.Bdd, info *b.InfoArchivos) error {
-	if err := bdd.CrearTabla(TABLA_ARCHIVOS, info.MaxPath); err != nil {
+	if err := bdd.CrearTabla(fmt.Sprintf(TABLA_ARCHIVOS, info.MaxPath)); err != nil {
 		return fmt.Errorf("no se pudo crear la tabla de archivos, con error: %v", err)
 	}
 	return nil

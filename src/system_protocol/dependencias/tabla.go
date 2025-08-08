@@ -12,11 +12,11 @@ const (
 )
 
 func EsTipoDependiente(tipo TipoTabla) bool {
-	return tipo&0b01 != 0b01
+	return tipo == DEPENDIENTE_DEPENDIBLE || tipo == DEPENDIENTE_NO_DEPENDIBLE
 }
 
 func EsTipoDependible(tipo TipoTabla) bool {
-	return tipo&0b10 == 0b10
+	return tipo == DEPENDIENTE_DEPENDIBLE || tipo == INDEPENDIENTE_DEPENDIBLE
 }
 
 type Tabla interface {
@@ -24,6 +24,7 @@ type Tabla interface {
 	Nombre() string
 	// Query para insertar los datos
 	Query(bdd *b.Bdd, datos ...any) (int64, error)
+	ObjetoExistente(bdd *b.Bdd, datos ...any) (bool, error)
 
 	// Es decir, que no aparezcan NOT NULL
 	CrearTablaRelajada(bdd *b.Bdd, info *b.InfoArchivos) error

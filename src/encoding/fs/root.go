@@ -17,9 +17,13 @@ func RecorrerDirectorio(dirOrigen string, tablas *t.Tablas, canalMensajes chan s
 	var waitArchivos sync.WaitGroup
 
 	canalInput := make(chan string, CANTIDAD_WORKERS)
-	defer close(canalInput)
 	waitArchivos.Add(1)
-	defer waitArchivos.Wait()
+
+	terminar := func(motivo string) {
+		canalMensajes <- "Esperando a que termine por: " + motivo
+		close(canalInput)
+		waitArchivos.Wait()
+	}
 
 	procesarArchivo := func(path string) {
 		if err := CargarArchivo(dirOrigen, path, tablas, canalMensajes); err != nil {
@@ -35,6 +39,7 @@ func RecorrerDirectorio(dirOrigen string, tablas *t.Tablas, canalMensajes chan s
 	for directorioPath := range colaDirectorios.DesencolarIterativamente {
 		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", dirOrigen, directorioPath))
 		if err != nil {
+			terminar("huvo un error")
 			return fmt.Errorf("se tuvo un error al leer el directorio '%s' dando el error: %v", fmt.Sprintf("%s/%s", dirOrigen, directorioPath), err)
 		}
 
@@ -54,5 +59,6 @@ func RecorrerDirectorio(dirOrigen string, tablas *t.Tablas, canalMensajes chan s
 		}
 	}
 
+	terminar("termino como lo esperado")
 	return nil
 }

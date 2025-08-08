@@ -2,7 +2,7 @@ package dependencias
 
 import "hash/maphash"
 
-type IntFK uint64
+type IntFK int32
 
 type ForeignKey struct {
 	Key              string
@@ -29,5 +29,7 @@ func NewHash() *Hash {
 }
 
 func (h *Hash) HasearDatos(datos []byte) IntFK {
-	return IntFK(maphash.Bytes(h.Seed, datos))
+	rep64 := maphash.Bytes(h.Seed, datos)
+	rep32 := rep64 >> 32 // Se mantiene con los ultimos 32 bits
+	return IntFK(rep32)
 }

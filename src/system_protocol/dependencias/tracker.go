@@ -3,15 +3,23 @@ package dependencias
 import (
 	"fmt"
 	"slices"
+	"strings"
+	"sync"
 	"text/template"
 
 	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 )
 
+const INSERTAR_TABLA_DEPENDIENTES = "INSERT INTO aux_dependibles (nombreTabla, idDatos, hashDatos) VALUES (?, ?, ?)"
 const QUERY_TABLA_DEPENDIENTES = "SELECT idDatos FROM aux_dependibles WHERE nombreTabla = ? AND hashDatos = ?"
-const INSERTAR_TABLA_INCOMPLETOS = "INSERT INTO aux_incompletos (tablaDependiente, idDependiente, key, tablaDestino, hashDatoDestino) VALUES (?, ?, ?, ?, ?)"
-const QUERY_TABLA_INCOMPLETOS = "SELECT tablaDependiente, idDependiente, key FROM aux_incompletos WHERE AND tablaDestino = ? AND hashDatoDestino = ?"
+
+const INSERTAR_TABLA_INCOMPLETOS = "INSERT INTO aux_incompletos (tablaDependiente, idDependiente, keyAlId, tablaDestino, hashDatosDestino) VALUES (?, ?, ?, ?, ?)"
+const QUERY_TABLA_INCOMPLETOS = "SELECT tablaDependiente, idDependiente, keyAlId FROM aux_incompletos WHERE tablaDestino = ? AND hashDatosDestino = ?"
+const ELIMINAR_TABLA_INCOMPLETOS = "DELETE FROM aux_incompletos WHERE tablaDestino = ? AND hashDatosDestino = ?"
+
+const QUERY_TODO_INCOMPLETOS = "SELECT tablaDependiente, idDependiente, keyAlId, tablaDestino, aux_dependibles.idDatos FROM aux_incompletos INNER JOIN aux_dependibles ON aux_dependibles.hashDatos = aux_incompletos.hashDatosDestino AND aux_dependibles.nombreTabla = aux_incompletos.tablaDestino;"
+const ELIMINAR_TODO_INCOMPLETOS = "DELETE FROM aux_incompletos"
 
 type TrackerDependencias struct {
 	BasesDeDatos    *b.Bdd
@@ -23,33 +31,35 @@ type TrackerDependencias struct {
 
 	permitirRegistro bool
 	tablasProcesar   *u.Cola[Tabla]
+	lockIncompletos  *sync.Mutex
 }
 
 func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
 	templateTablaDependibles := template.New("dependibles")
 	templateTablaDependibles, err := templateTablaDependibles.Parse(`
-		CREATE TABLE IF NOT EXISTE aux_dependibles (
-			nombreTabla ENUM({{ range . }} "{{ .Nombre() }}", {{ end }}),
-			hashDatos   INT,
+		CREATE TABLE IF NOT EXISTS aux_dependibles (
+			nombreTabla ENUM({{ range . }} {{ . }} {{ end }}) NOT NULL,
+			hashDatos   BIGINT,
 			idDatos     INT
 		);`)
 	if err != nil {
-		return nil, fmt.Errorf("error al crear el template para la tabla auxiliar de los dependibles")
+		return nil, fmt.Errorf("error al crear el template para la tabla auxiliar de los dependibles, con error: %v", err)
 	}
 
 	templateTablaIncompletos := template.New("incompletos")
 	templateTablaIncompletos, err = templateTablaIncompletos.Parse(`
-		CREATE TABLE IF NOT EXISTE aux_incompletos (
-			tablaDependiente 	ENUM({{ range . }} "{{ .Nombre() }}", {{ end }}),
+		CREATE TABLE IF NOT EXISTS aux_incompletos (
+			tablaDependiente 	ENUM({{ range . }} {{ . }} {{ end }}) NOT NULL,
 			idDependiente   	INT,
-			key 				VARCHAR(255),
-			tablaDestino 		ENUM({{ range . }} "{{ .Nombre() }}", {{ end }}),
-			hashDatosDestino   	INT
+			keyAlId 			VARCHAR(255),
+			tablaDestino 		ENUM({{ range . }} {{ . }} {{ end }}) NOT NULL,
+			hashDatosDestino   	BIGINT
 		);`)
 	if err != nil {
-		return nil, fmt.Errorf("error al crear el template para la tabla auxiliar de los incompletos")
+		return nil, fmt.Errorf("error al crear el template para la tabla auxiliar de los incompletos, con error: %v", err)
 	}
 
+	var lock sync.Mutex
 	return &TrackerDependencias{
 		BasesDeDatos:    bdd,
 		RegistrarTablas: make(map[Tabla]TipoTabla),
@@ -60,10 +70,11 @@ func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
 
 		permitirRegistro: true,
 		tablasProcesar:   u.NewCola[Tabla](),
+		lockIncompletos:  &lock,
 	}, nil
 }
 
-func (td *TrackerDependencias) RegistrarTabla(tabla Tabla, tipo TipoTabla) error {
+func (td *TrackerDependencias) RegistrarTabla(tabla Tabla, tipo TipoTabla, canalMensajes chan string) error {
 	if !td.permitirRegistro {
 		return fmt.Errorf("ya no se permiten los registros, esto es porque ya se ejecuto la configuracion auxiliar")
 	}
@@ -71,6 +82,8 @@ func (td *TrackerDependencias) RegistrarTabla(tabla Tabla, tipo TipoTabla) error
 	if _, ok := td.RegistrarTablas[tabla]; ok {
 		return fmt.Errorf("ya existe una tabla con nombre: '%s'", tabla.Nombre())
 	}
+
+	canalMensajes <- fmt.Sprintf("Registrando %s", tabla.Nombre())
 
 	td.RegistrarTablas[tabla] = tipo
 	if !EsTipoDependible(tipo) {
@@ -86,26 +99,30 @@ func (td *TrackerDependencias) IniciarProcesoInsertarDatos(infoArchivos *b.InfoA
 	}
 	td.permitirRegistro = false
 
+	var nombreTablas []string = []string{}
+	for tabla := range td.RegistrarTablas {
+		nombreTablas = append(nombreTablas, fmt.Sprintf("\"%s\"", tabla.Nombre()))
+	}
+	nombreTablas = strings.Split(strings.Join(nombreTablas, ",;"), ";")
+
 	writer := u.NewInfiniteWriter()
 
 	// Creamos las tablas de sql para guardar esa informacion
-	if err := td.templateTablaDependibles.Execute(writer, td.RegistrarTablas); err != nil {
+	if err := td.templateTablaDependibles.Execute(writer, nombreTablas); err != nil {
 		return fmt.Errorf("no se pudo ejecutar el template para crear la tabla de dependibles")
 
 	} else if _, err := td.BasesDeDatos.MySQL.Exec(string(writer.Items())); err != nil {
-		return fmt.Errorf("no se pudo crear la tabla de dependibles")
+		return fmt.Errorf("no se pudo crear la tabla de dependibles, con tabla: \n%s\nCon error: %v", string(writer.Items()), err)
 	}
 
 	writer.Reset()
 
-	if err := td.templateTablaIncompletos.Execute(writer, td.RegistrarTablas); err != nil {
+	if err := td.templateTablaIncompletos.Execute(writer, nombreTablas); err != nil {
 		return fmt.Errorf("no se pudo ejecutar el template para crear la tabla de incompletos")
 
 	} else if _, err := td.BasesDeDatos.MySQL.Exec(string(writer.Items())); err != nil {
-		return fmt.Errorf("no se pudo crear la tabla de incompletos")
+		return fmt.Errorf("no se pudo crear la tabla de incompletos, con tabla: \n%s\nCon error: %v", string(writer.Items()), err)
 	}
-
-	// TODO: Eliminar las tablas existentes
 
 	// Creando las tablas relajadas
 	var tablasOrdenadas []Tabla = []Tabla{}
@@ -132,7 +149,10 @@ func (td *TrackerDependencias) IniciarProcesoInsertarDatos(infoArchivos *b.InfoA
 		}
 	}
 
+	canalMensajes <- "Orden final de cargado:"
 	for _, tabla := range tablasOrdenadas {
+		canalMensajes <- "Tabla: " + tabla.Nombre()
+
 		if err := tabla.CrearTablaRelajada(td.BasesDeDatos, infoArchivos); err != nil {
 			return fmt.Errorf("error al crear tablas relajadas, especificamente en %s, con error: %v", tabla.Nombre(), err)
 		}
@@ -142,6 +162,10 @@ func (td *TrackerDependencias) IniciarProcesoInsertarDatos(infoArchivos *b.InfoA
 }
 
 func (td *TrackerDependencias) TerminarProcesoInsertarDatos() error {
+	if err := td.procesoUltimasActualizaciones(); err != nil {
+		return err
+	}
+
 	for tabla := range td.RegistrarTablas {
 		if err := tabla.RestringirTabla(td.BasesDeDatos); err != nil {
 			return err
@@ -159,14 +183,20 @@ func (td *TrackerDependencias) TerminarProcesoInsertarDatos() error {
 }
 
 func (td *TrackerDependencias) InsertarIndependiente(tabla Tabla, hashDatos IntFK, datos ...any) error {
-	if tipo, ok := td.RegistrarTablas[tabla]; ok {
-		return fmt.Errorf("ya existe una tabla con esos parametros registrados")
+	if tipo, ok := td.RegistrarTablas[tabla]; !ok {
+		return fmt.Errorf("no existe esa tabla")
 
 	} else if EsTipoDependiente(tipo) {
 		return fmt.Errorf("esta tabla (%s) no es independiente", tabla.Nombre())
 
+	} else if existe, err := tabla.ObjetoExistente(td.BasesDeDatos, datos...); err != nil {
+		return fmt.Errorf("error al obtener si existe elemento en la tabla %s, con error: %v", tabla.Nombre(), err)
+
+	} else if existe {
+		return nil
+
 	} else if id, err := tabla.Query(td.BasesDeDatos, datos...); err != nil {
-		return fmt.Errorf("error al insertar elemento en la tabla %s", tabla.Nombre())
+		return fmt.Errorf("error al insertar elemento en la tabla %s, con error: %v", tabla.Nombre(), err)
 
 	} else if EsTipoDependible(tipo) {
 		return td.procesoDependible(tabla, id, hashDatos)
@@ -177,17 +207,23 @@ func (td *TrackerDependencias) InsertarIndependiente(tabla Tabla, hashDatos IntF
 }
 
 func (td *TrackerDependencias) InsertarDependiente(tabla Tabla, hashDatos IntFK, fKeys []ForeignKey, datos ...any) error {
-	if tipo, ok := td.RegistrarTablas[tabla]; ok {
-		return fmt.Errorf("ya existe una tabla con esos parametros registrados")
+	if tipo, ok := td.RegistrarTablas[tabla]; !ok {
+		return fmt.Errorf("no existe esa tabla")
 
 	} else if !EsTipoDependiente(tipo) {
 		return fmt.Errorf("esta tabla (%s) no es dependiente", tabla.Nombre())
 
+	} else if existe, err := tabla.ObjetoExistente(td.BasesDeDatos, datos...); err != nil {
+		return fmt.Errorf("error al obtener si existe elemento en la tabla %s, con error: %v", tabla.Nombre(), err)
+
+	} else if existe {
+		return nil
+
 	} else if id, err := tabla.Query(td.BasesDeDatos, datos...); err != nil {
-		return fmt.Errorf("error al insertar elemento en la tabla %s", tabla.Nombre())
+		return fmt.Errorf("error al insertar elemento en la tabla %s, con error: %v", tabla.Nombre(), err)
 
 	} else if err := td.procesoDependiente(tabla, id, fKeys); err != nil {
-		return fmt.Errorf("error al verificar o actualizar el elemnto en la tabla tabla %s, con id: %d", tabla.Nombre(), id)
+		return fmt.Errorf("error al verificar o actualizar el elemnto en la tabla tabla %s, con id: %d, con error: %v", tabla.Nombre(), id, err)
 
 	} else if EsTipoDependible(tipo) {
 		return td.procesoDependible(tabla, id, hashDatos)
@@ -208,10 +244,16 @@ func (td *TrackerDependencias) procesoDependiente(tabla Tabla, idInsertado int64
 			}
 
 		} else {
+			td.lockIncompletos.Lock()
+
 			// Como no fue insertada, tenemos que guardar la información para que se carge correctamente la dependencia
 			datos := []any{tabla.Nombre(), idInsertado, fKey.Key, fKey.TablaDestino, fKey.HashDatosDestino}
 			if _, err := td.BasesDeDatos.Insertar(INSERTAR_TABLA_INCOMPLETOS, datos...); err != nil {
-				return fmt.Errorf("error al insertar en la tabla auxiliar de incompletos")
+				td.lockIncompletos.Unlock()
+				return fmt.Errorf("error al insertar en la tabla auxiliar de incompletos, con error: %v", err)
+
+			} else {
+				td.lockIncompletos.Unlock()
 			}
 		}
 	}
@@ -220,25 +262,73 @@ func (td *TrackerDependencias) procesoDependiente(tabla Tabla, idInsertado int64
 }
 
 func (td *TrackerDependencias) procesoDependible(tabla Tabla, idInsertado int64, hashDatos IntFK) error {
+	if _, err := td.BasesDeDatos.Insertar(INSERTAR_TABLA_DEPENDIENTES, tabla.Nombre(), idInsertado, hashDatos); err != nil {
+		return fmt.Errorf("error al insertar en dependientes: %s, con error: %v", tabla.Nombre(), err)
+	}
+
+	td.lockIncompletos.Lock()
 	if filas, err := td.BasesDeDatos.MySQL.Query(QUERY_TABLA_INCOMPLETOS, tabla.Nombre(), hashDatos); err != nil {
+		td.lockIncompletos.Unlock()
 		return fmt.Errorf("error al query cuales son los elementos incompletos con tabla: %s, con error: %v", tabla.Nombre(), err)
 
 	} else {
 		defer filas.Close()
 
+		hayFilasAfectadas := false
 		for filas.Next() {
+			hayFilasAfectadas = true
 			var tablaDependiente string
 			var idDependiente int64
 			var key string
 
+			if err = filas.Scan(&tablaDependiente, &idDependiente, &key); err != nil {
+				td.lockIncompletos.Unlock()
+				return fmt.Errorf("error al obtener datos de una query de incompletos, con error: %v", err)
+			}
+
+			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tablaDependiente, key, idInsertado, idDependiente)
+			if _, err = td.BasesDeDatos.MySQL.Exec(query); err != nil {
+				td.lockIncompletos.Unlock()
+				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tabla.Nombre(), err)
+			}
+		}
+
+		if hayFilasAfectadas {
+			if _, err = td.BasesDeDatos.MySQL.Exec(ELIMINAR_TABLA_INCOMPLETOS, tabla.Nombre(), hashDatos); err != nil {
+				td.lockIncompletos.Unlock()
+				return fmt.Errorf("error al eliminar %d en tabla %s, con error %v", idInsertado, tabla.Nombre(), err)
+			}
+		}
+
+		td.lockIncompletos.Unlock()
+		return nil
+	}
+}
+
+func (td *TrackerDependencias) procesoUltimasActualizaciones() error {
+	// Hacer un inner join pora obtener ya de por si los id, sin tener que buscarlos
+	if filas, err := td.BasesDeDatos.MySQL.Query(QUERY_TODO_INCOMPLETOS); err != nil {
+		return fmt.Errorf("error al query de todos los elementos de incompletos, con error: %v", err)
+
+	} else {
+		defer filas.Close()
+
+		var tablaDependiente, key, tablaDestino string
+		var idDependiente, idInsertado int64
+
+		for filas.Next() {
 			if err = filas.Scan(&tablaDependiente, &idDependiente, &key); err != nil {
 				return fmt.Errorf("error al obtener datos de una query de incompletos, con error: %v", err)
 			}
 
 			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tablaDependiente, key, idInsertado, idDependiente)
 			if _, err = td.BasesDeDatos.MySQL.Exec(query); err != nil {
-				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tabla.Nombre(), err)
+				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tablaDestino, err)
 			}
+		}
+
+		if _, err = td.BasesDeDatos.MySQL.Exec(ELIMINAR_TODO_INCOMPLETOS); err != nil {
+			return fmt.Errorf("error al eliminar el resto de la tabla de incompletos, con error %v", err)
 		}
 
 		return nil

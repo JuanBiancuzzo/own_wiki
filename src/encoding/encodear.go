@@ -31,6 +31,7 @@ func Encodear(dirInput string, canalMensajes chan string) {
 		return
 	}
 	defer b.CerrarBddNoSQL(bddNoSQL)
+	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
 	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional, bddNoSQL))
 	if err != nil {
@@ -38,25 +39,29 @@ func Encodear(dirInput string, canalMensajes chan string) {
 		return
 	}
 
-	tablas, err := t.NewTablas(tracker)
+	tablas, err := t.NewTablas(tracker, canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo crear las tablas, se tuvo el error: %v", err)
 		return
 	}
+	canalMensajes <- "Se crearon las tablas correctamente"
 
 	if err = tracker.IniciarProcesoInsertarDatos(b.NewInfoArchivos(), canalMensajes); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo iniciar el proceso de insertar datos, se tuvo el error: %v", err)
 		return
 	}
+	canalMensajes <- "Se inicio el proceso de insertar datos"
 
 	if err = fs.RecorrerDirectorio(dirInput, tablas, canalMensajes); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo recorrer todos los archivos, se tuvo el error: %v", err)
 		return
 	}
+	canalMensajes <- "Se termino el proceso de insertar datos"
 
 	if err = tracker.TerminarProcesoInsertarDatos(); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo terminar el proceso de insertar datos, se tuvo el error: %v", err)
 	} else {
 		canalMensajes <- "Se termino de cargar a la base de datos"
 	}
+	canalMensajes <- "Se hizo la limpieza de los datos auxiliares"
 }

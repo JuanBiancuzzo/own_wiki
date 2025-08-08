@@ -12,7 +12,7 @@ type InfoArchivos struct {
 
 func NewInfoArchivos() *InfoArchivos {
 	return &InfoArchivos{
-		MaxPath:        255,
+		MaxPath:        400,
 		MaxTags:        255,
 		MaxNombre:      255,
 		MaxApellido:    255,
