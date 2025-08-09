@@ -29,6 +29,17 @@ func (bdd *Bdd) EliminarTabla(nombreTabla string) error {
 	return err
 }
 
+func (bdd *Bdd) Existe(query string, datos ...any) (bool, error) {
+	lectura := make([]any, len(datos))
+	fila := bdd.MySQL.QueryRow(query, datos...)
+
+	if err := fila.Scan(lectura...); err != nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (bdd *Bdd) Obtener(query string, datos ...any) (int64, error) {
 	var id int64
 	fila := bdd.MySQL.QueryRow(query, datos...)

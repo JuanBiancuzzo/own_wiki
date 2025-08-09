@@ -15,7 +15,7 @@ const TABLA_TAGS = `CREATE TABLE tags (
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
 )`
 const INSERTAR_TAG = "INSERT INTO tags (tag) VALUES (?)"
-const QUERY_TAG = "SELECT id FROM tags WHERE tag = ?"
+const QUERY_TAG = "SELECT tag FROM tags WHERE tag = ?"
 
 type Tags struct {
 	RefArchivos *Archivos
@@ -57,8 +57,7 @@ func (t Tags) Query(bdd *b.Bdd, datos ...any) (int64, error) {
 }
 
 func (t Tags) ObjetoExistente(bdd *b.Bdd, datos ...any) (bool, error) {
-	_, err := bdd.Obtener(QUERY_TAG, datos...)
-	return err == nil, nil
+	return bdd.Existe(QUERY_TAG, datos...)
 }
 
 func (t Tags) CrearTablaRelajada(bdd *b.Bdd, info *b.InfoArchivos) error {

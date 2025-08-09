@@ -1,29 +1,3 @@
-CREATE TABLE IF NOT EXISTS personas (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  apellido VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-);
-
-CREATE TABLE IF NOT EXISTS editoriales (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  editorial VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-);
-
-CREATE TABLE IF NOT EXISTS libros (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  titulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  subtitulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  anio YEAR,
-  idEditorial INT NOT NULL,
-  edicion INT,
-  volumen INT,
-  url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idEditorial) REFERENCES editoriales(id),
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
 CREATE TABLE IF NOT EXISTS capitulos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   capitulo INT,
@@ -35,14 +9,6 @@ CREATE TABLE IF NOT EXISTS capitulos (
 
   FOREIGN KEY (idLibro) REFERENCES libros(id),
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
-CREATE TABLE IF NOT EXISTS autoresLibro (
-  idLibro INT NOT NULL,
-  idPersona INT NOT NULL,
-
-  FOREIGN KEY (idLibro) REFERENCES libros(id),
-  FOREIGN KEY (idPersona) REFERENCES personas(id)
 );
 
 CREATE TABLE IF NOT EXISTS editoresCapitulo (

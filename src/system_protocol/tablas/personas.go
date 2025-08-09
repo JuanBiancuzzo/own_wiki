@@ -13,6 +13,7 @@ const TABLA_PERSONAS = `CREATE TABLE personas (
   apellido VARCHAR(%d) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 )`
 const INSERTAR_PERSONA = "INSERT INTO personas (nombre, apellido) VALUES (?, ?)"
+const QUERY_PERSONA = "SELECT nombre, apellido FROM tags WHERE nombre = ? AND apellido = ?"
 
 type Personas struct {
 	Tracker *d.TrackerDependencias
@@ -34,7 +35,7 @@ func (p Personas) Nombre() string {
 	return PERSONAS
 }
 
-func (p Personas) CargarArchivo(nombre, apellido string) error {
+func (p Personas) CargarPersona(nombre, apellido string) error {
 	return p.Tracker.InsertarIndependiente(p, p.GenerarHash(nombre, apellido), nombre, apellido)
 }
 
@@ -47,7 +48,7 @@ func (p Personas) Query(bdd *b.Bdd, datos ...any) (int64, error) {
 }
 
 func (p Personas) ObjetoExistente(bdd *b.Bdd, datos ...any) (bool, error) {
-	return false, nil
+	return bdd.Existe(QUERY_PERSONA, datos...)
 }
 
 func (p Personas) CrearTablaRelajada(bdd *b.Bdd, info *b.InfoArchivos) error {
