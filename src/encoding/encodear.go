@@ -32,11 +32,12 @@ type InfoTabla struct {
 }
 
 type InfoValorGuardar struct {
-	Clave          string `json:"clave"`
-	Tipo           string `json:"tipo"`
-	Largo          int    `json:"largo"`
-	Representativo bool   `json:"representativo"`
-	Necesario      bool   `json:"necesario"`
+	Clave          string   `json:"clave"`
+	Tipo           string   `json:"tipo"`
+	Largo          int      `json:"largo"`
+	Valores        []string `json:"valores"`
+	Representativo bool     `json:"representativo"`
+	Necesario      bool     `json:"necesario"`
 }
 
 type InfoReferenciaTabla struct {
@@ -79,12 +80,21 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 		for _, vg := range info.ValoresGuardar {
 			var nuevoClaveTipo d.ParClaveTipo
 
+			necesario := vg.Necesario
+			representativo := vg.Representativo && necesario
+
 			switch vg.Tipo {
 			case "string":
-				nuevoClaveTipo = d.NewClaveString(vg.Representativo, vg.Clave, uint(vg.Largo), vg.Necesario)
+				nuevoClaveTipo = d.NewClaveString(representativo, vg.Clave, uint(vg.Largo), necesario)
 
 			case "int":
-				nuevoClaveTipo = d.NewClaveInt(vg.Representativo, vg.Clave, vg.Necesario)
+				nuevoClaveTipo = d.NewClaveInt(representativo, vg.Clave, necesario)
+
+			case "enum":
+				nuevoClaveTipo = d.NewClaveEnum(representativo, vg.Clave, vg.Valores, necesario)
+
+			case "bool":
+				nuevoClaveTipo = d.NewClaveBool(representativo, vg.Clave, necesario)
 
 			default:
 				return tablas, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)

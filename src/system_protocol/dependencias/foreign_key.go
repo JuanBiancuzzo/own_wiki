@@ -37,6 +37,14 @@ func (h *Hash) HasearDatos(datos ...any) IntFK {
 
 	for _, dato := range datos {
 		switch valor := dato.(type) {
+		case bool:
+			var numero uint32 = 0
+			if valor {
+				numero = 1
+			}
+			binary.BigEndian.PutUint32(bufInt, numero)
+			datosBytes = append(datosBytes, bufInt...)
+
 		case int:
 			binary.BigEndian.PutUint32(bufInt, uint32(valor))
 			datosBytes = append(datosBytes, bufInt...)

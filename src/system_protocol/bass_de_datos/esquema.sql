@@ -1,24 +1,3 @@
-CREATE TABLE IF NOT EXISTS capitulos (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  capitulo INT,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  paginaInicial INT,
-  paginaFinal INT,
-  idLibro INT NOT NULL,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idLibro) REFERENCES libros(id),
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
-CREATE TABLE IF NOT EXISTS editoresCapitulo (
-  idCapitulo INT NOT NULL,
-  idPersona INT NOT NULL,
-
-  FOREIGN KEY (idCapitulo) REFERENCES capitulos(id),
-  FOREIGN KEY (idPersona) REFERENCES personas(id)
-);
-
 CREATE TABLE IF NOT EXISTS distribuciones (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
@@ -35,16 +14,6 @@ CREATE TABLE IF NOT EXISTS relacionDistribuciones (
 
   FOREIGN KEY (idDistribucionA) REFERENCES distribuciones(id),
   FOREIGN KEY (idDistribucionB) REFERENCES distribuciones(id),
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
-CREATE TABLE IF NOT EXISTS carreras (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
-  tieneCodigoMateria BOOLEAN,
-  idArchivo INT NOT NULL,
-
   FOREIGN KEY (idArchivo) REFERENCES archivos(id)
 );
 

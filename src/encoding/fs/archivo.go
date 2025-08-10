@@ -13,12 +13,15 @@ import (
 )
 
 const (
-	TABLA_ARCHIVOS      = "Archivos"
-	TABLA_TAGS          = "Tags"
-	TABLA_PERSONAS      = "Personas"
-	TABLA_EDITORIALES   = "Editoriales"
-	TABLA_LIBROS        = "Libros"
-	TABLA_AUTORES_LIBRO = "AutoresLibro"
+	TABLA_ARCHIVOS          = "Archivos"
+	TABLA_TAGS              = "Tags"
+	TABLA_PERSONAS          = "Personas"
+	TABLA_EDITORIALES       = "Editoriales"
+	TABLA_LIBROS            = "Libros"
+	TABLA_AUTORES_LIBRO     = "AutoresLibro"
+	TABLA_CAPITULOS         = "Capitulos"
+	TABLA_EDITORES_CAPITULO = "EditoresCapitulo"
+	TABLA_CARRERAS          = "Carreras"
 )
 
 const (
@@ -104,7 +107,9 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 
 		switch tag {
 		case TAG_CARRERA:
-
+			if err = ProcesarCarrera(path, &meta, tracker, canalMensajes); err != nil {
+				return err
+			}
 		case TAG_MATERIA:
 
 		case TAG_MATERIA_EQUIVALENTE:
@@ -120,58 +125,9 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 		case TAG_DISTRIBUCION:
 
 		case TAG_LIBRO:
-			err = tracker.Cargar(TABLA_EDITORIALES, []d.ForeignKey{}, meta.Editorial)
-			if HABILITAR_ERROR && err != nil {
-				return fmt.Errorf("cargar editoriales con error: %v", err)
+			if err = ProcesarLibro(path, &meta, tracker, canalMensajes); err != nil {
+				return err
 			}
-
-			anio := NumeroODefault(meta.Anio, 0)
-			edicion := NumeroODefault(meta.Edicion, 1)
-			volumen := NumeroODefault(meta.Volumen, 0)
-
-			err = tracker.Cargar(
-				TABLA_LIBROS, []d.ForeignKey{
-					d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
-					d.NewForeignKey(tracker.Hash, TABLA_EDITORIALES, "refEditorial", meta.Editorial),
-				},
-				meta.TituloObra,
-				meta.SubtituloObra,
-				anio,
-				edicion,
-				volumen,
-				meta.Url,
-			)
-			if HABILITAR_ERROR && err != nil {
-				return fmt.Errorf("cargar libro con error: %v", err)
-			}
-
-			for _, autor := range meta.NombreAutores {
-				nombre := strings.TrimSpace(autor.Nombre)
-				apellido := strings.TrimSpace(autor.Apellido)
-
-				err = tracker.Cargar(TABLA_PERSONAS, []d.ForeignKey{}, nombre, apellido)
-				if HABILITAR_ERROR && err != nil {
-					return fmt.Errorf("cargar persona con error: %v", err)
-				}
-
-				err = tracker.Cargar(TABLA_AUTORES_LIBRO, []d.ForeignKey{
-					d.NewForeignKey(tracker.Hash, TABLA_LIBROS, "refLibro",
-						meta.TituloObra,
-						meta.SubtituloObra,
-						anio,
-						edicion,
-						volumen,
-					),
-					d.NewForeignKey(tracker.Hash, TABLA_PERSONAS, "refPersona",
-						nombre,
-						apellido,
-					),
-				})
-				if HABILITAR_ERROR && err != nil {
-					return fmt.Errorf("cargar autor libro con error: %v", err)
-				}
-			}
-
 		case TAG_PAPER:
 
 		case TAG_NOTA_FACULTAD:
@@ -190,18 +146,130 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 	return nil
 }
 
-/*
+func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencias, canalMensajes chan string) error {
+	err := tracker.Cargar(TABLA_EDITORIALES, []d.ForeignKey{}, meta.Editorial)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar editoriales con error: %v", err)
+	}
 
-	func (a *Archivo) ProcesarCarrera(path string, meta *Frontmatter, canalMensajes chan string) {
-		nombreCarrera := e.Nombre(path)
-		if constructor, err := e.NewCarrera(nombreCarrera, meta.Etapa, meta.TieneCodigo); err == nil {
-			a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+	anio := NumeroODefault(meta.Anio, 0)
+	edicion := NumeroODefault(meta.Edicion, 1)
+	volumen := NumeroODefault(meta.Volumen, 0)
 
-			a.CargarDependible(e.DEP_CARRERA, constructor)
-		} else {
-			canalMensajes <- fmt.Sprintf("Error: %v\n", err)
+	err = tracker.Cargar(
+		TABLA_LIBROS, []d.ForeignKey{
+			d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
+			d.NewForeignKey(tracker.Hash, TABLA_EDITORIALES, "refEditorial", meta.Editorial),
+		},
+		meta.TituloObra,
+		meta.SubtituloObra,
+		anio,
+		edicion,
+		volumen,
+		meta.Url,
+	)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar libro con error: %v", err)
+	}
+
+	for _, autor := range meta.NombreAutores {
+		nombre := strings.TrimSpace(autor.Nombre)
+		apellido := strings.TrimSpace(autor.Apellido)
+
+		err = tracker.Cargar(TABLA_PERSONAS, []d.ForeignKey{}, nombre, apellido)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar persona con error: %v", err)
+		}
+
+		err = tracker.Cargar(TABLA_AUTORES_LIBRO, []d.ForeignKey{
+			d.NewForeignKey(tracker.Hash, TABLA_LIBROS, "refLibro",
+				meta.TituloObra,
+				anio,
+				edicion,
+				volumen,
+			),
+			d.NewForeignKey(tracker.Hash, TABLA_PERSONAS, "refPersona",
+				nombre,
+				apellido,
+			),
+		})
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar autor libro con error: %v", err)
 		}
 	}
+
+	for _, capitulo := range meta.Capitulos {
+		numero := NumeroODefault(capitulo.NumeroCapitulo, 0)
+		paginaInicio := NumeroODefault(capitulo.Paginas.Inicio, 0)
+		paginaFinal := NumeroODefault(capitulo.Paginas.Final, 1)
+
+		err = tracker.Cargar(TABLA_CAPITULOS,
+			[]d.ForeignKey{
+				d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
+				d.NewForeignKey(tracker.Hash, TABLA_LIBROS, "refLibro",
+					meta.TituloObra,
+					anio,
+					edicion,
+					volumen,
+				),
+			},
+			numero,
+			capitulo.NombreCapitulo,
+			paginaInicio,
+			paginaFinal,
+		)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar capitulo con error: %v", err)
+		}
+
+		for _, editor := range capitulo.Editores {
+			nombre := strings.TrimSpace(editor.Nombre)
+			apellido := strings.TrimSpace(editor.Apellido)
+
+			err = tracker.Cargar(TABLA_PERSONAS, []d.ForeignKey{}, nombre, apellido)
+			if HABILITAR_ERROR && err != nil {
+				return fmt.Errorf("cargar persona con error: %v", err)
+			}
+
+			err = tracker.Cargar(TABLA_EDITORES_CAPITULO, []d.ForeignKey{
+				d.NewForeignKey(tracker.Hash, TABLA_CAPITULOS, "refCapitulo",
+					numero,
+					capitulo.NombreCapitulo,
+					paginaInicio,
+					paginaFinal,
+				),
+				d.NewForeignKey(tracker.Hash, TABLA_PERSONAS, "refPersona",
+					nombre,
+					apellido,
+				),
+			})
+			if HABILITAR_ERROR && err != nil {
+				return fmt.Errorf("cargar editor capitulo con error: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependencias, canalMensajes chan string) error {
+	nombreCarrera := Nombre(path)
+	err := tracker.Cargar(TABLA_CARRERAS,
+		[]d.ForeignKey{
+			d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
+		},
+		nombreCarrera,
+		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
+		meta.TieneCodigo == "true" || meta.TieneCodigo == "True",
+	)
+
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar carrera con error: %v", err)
+	}
+	return nil
+}
+
+/*
 
 	func (a *Archivo) ProcesarMateria(path string, meta *Frontmatter, canalMensajes chan string) {
 		if constructor, err := e.NewMateria(meta.NombreMateria, meta.Codigo, meta.Plan, meta.Cuatri, meta.Etapa); err == nil {
@@ -311,10 +379,6 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 		}
 	}
 
-	func (a *Archivo) ProcesarLibro(path string, meta *Frontmatter, canalMensajes chan string) {
-		constructor := meta.CrearLibro()
-		a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-	}
 
 	func (a *Archivo) ProcesarPaper(path string, meta *Frontmatter, canalMensajes chan string) {
 		if constructor, err := meta.CrearPaper(); err == nil {
@@ -334,6 +398,11 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 		}
 	}
 */
+
+func Nombre(path string) string {
+	separacion := strings.Split(path, "/")
+	return strings.ReplaceAll(separacion[len(separacion)-1], ".md", "")
+}
 
 func ObtenerWikiLink(link string) []string {
 	link = strings.TrimPrefix(link, "[[")
