@@ -3,7 +3,7 @@ package fs
 import (
 	"fmt"
 	"os"
-	t "own_wiki/system_protocol/tablas"
+	d "own_wiki/system_protocol/dependencias"
 	u "own_wiki/system_protocol/utilidades"
 	"slices"
 	"sync"
@@ -13,7 +13,7 @@ const CANTIDAD_WORKERS = 15
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
-func RecorrerDirectorio(dirOrigen string, tablas *t.Tablas, canalMensajes chan string) error {
+func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalMensajes chan string) error {
 	var waitArchivos sync.WaitGroup
 
 	canalInput := make(chan string, CANTIDAD_WORKERS)
@@ -26,7 +26,7 @@ func RecorrerDirectorio(dirOrigen string, tablas *t.Tablas, canalMensajes chan s
 	}
 
 	procesarArchivo := func(path string) {
-		if err := CargarArchivo(dirOrigen, path, tablas, canalMensajes); err != nil {
+		if err := CargarArchivo(dirOrigen, path, tracker, canalMensajes); err != nil {
 			canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo en el path: '%s', con error: %v", path, err)
 		}
 	}

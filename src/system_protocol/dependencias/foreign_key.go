@@ -1,6 +1,9 @@
 package dependencias
 
-import "hash/maphash"
+import (
+	"encoding/binary"
+	"hash/maphash"
+)
 
 type IntFK int32
 
@@ -10,11 +13,11 @@ type ForeignKey struct {
 	HashDatosDestino IntFK
 }
 
-func NewForeignKey(key string, tabla string, hashDatos IntFK) ForeignKey {
+func NewForeignKey(hash *Hash, tabla, key string, datos ...any) ForeignKey {
 	return ForeignKey{
 		Key:              key,
 		TablaDestino:     tabla,
-		HashDatosDestino: hashDatos,
+		HashDatosDestino: hash.HasearDatos(datos...),
 	}
 }
 
@@ -28,8 +31,22 @@ func NewHash() *Hash {
 	}
 }
 
-func (h *Hash) HasearDatos(datos []byte) IntFK {
-	rep64 := maphash.Bytes(h.Seed, datos)
+func (h *Hash) HasearDatos(datos ...any) IntFK {
+	bufInt := make([]byte, 4)
+	datosBytes := []byte{}
+
+	for _, dato := range datos {
+		switch valor := dato.(type) {
+		case int:
+			binary.BigEndian.PutUint32(bufInt, uint32(valor))
+			datosBytes = append(datosBytes, bufInt...)
+
+		case string:
+			datosBytes = append(datosBytes, []byte(valor)...)
+		}
+	}
+
+	rep64 := maphash.Bytes(h.Seed, datosBytes)
 	rep32 := rep64 >> 32 // Se mantiene con los ultimos 32 bits
 	return IntFK(rep32)
 }

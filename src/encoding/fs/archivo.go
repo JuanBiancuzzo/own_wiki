@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	e "own_wiki/system_protocol/datos"
-	t "own_wiki/system_protocol/tablas"
+	d "own_wiki/system_protocol/dependencias"
 	"strconv"
 	"strings"
 
@@ -39,6 +39,8 @@ const (
 	TAG_NOTA_PROYECTO      = "nota/proyecto"
 )
 
+const HABILITAR_ERROR = true
+
 type PathTipo struct {
 	Path string
 	Tipo e.TipoDependible
@@ -51,7 +53,7 @@ func NewPathTipo(path string, tipo e.TipoDependible) PathTipo {
 	}
 }
 
-func CargarArchivo(dirInicio string, path string, tablas *t.Tablas, canalMensajes chan string) error {
+func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias, canalMensajes chan string) error {
 	// Tal vez cambiarlo despues por la existencia de imagenes
 	if !strings.Contains(path, ".md") {
 		return nil
@@ -79,12 +81,14 @@ func CargarArchivo(dirInicio string, path string, tablas *t.Tablas, canalMensaje
 	// El resto del contenido del archivo
 	// a.Contenido = contenido[3+strings.Index(contenido[3:], "---")+len("---"):]
 
-	if err := tablas.Archivos.CargarArchivo(path); err != nil {
+	err := tracker.Cargar("Archivos", []d.ForeignKey{}, path)
+	if HABILITAR_ERROR && err != nil {
 		return err
 	}
 
 	for _, tag := range meta.Tags {
-		if err := tablas.Tags.CargarTag(path, tag); err != nil {
+		err = tracker.Cargar("Tags", []d.ForeignKey{d.NewForeignKey(tracker.Hash, "Archivos", "refArchivo", path)}, tag)
+		if HABILITAR_ERROR && err != nil {
 			return err
 		}
 
@@ -106,32 +110,40 @@ func CargarArchivo(dirInicio string, path string, tablas *t.Tablas, canalMensaje
 		case TAG_DISTRIBUCION:
 
 		case TAG_LIBRO:
-			tablas.Editoriales.CargarEditorial(meta.Editorial)
+			/*
+				_ = tracker.Cargar("Editoriales", []d.ForeignKey{}, meta.Editorial)
 
-			tablas.Libros.CargarLibro(
-				path,
-				meta.Editorial,
-				meta.TituloObra,
-				meta.SubtituloObra,
-				NumeroODefault(meta.Anio, 0),
-				NumeroODefault(meta.Edicion, 1),
-				NumeroODefault(meta.Volumen, 0),
-				meta.Url,
-			)
-
-			for _, autor := range meta.Autores {
-				tablas.Personas.CargarPersona(autor.Nombre, autor.Apellido)
-
-				tablas.AutoresLibro.CargarAutorLibro(
+				_ = tracker.Cargar(
+					"Libros", []d.ForeignKey{
+						d.NewForeignKey(tracker.Hash, "Archivos", "refArchivo", path),
+					},
+					meta.Editorial,
 					meta.TituloObra,
 					meta.SubtituloObra,
 					NumeroODefault(meta.Anio, 0),
 					NumeroODefault(meta.Edicion, 1),
 					NumeroODefault(meta.Volumen, 0),
-					autor.Nombre,
-					autor.Apellido,
+					meta.Url,
 				)
-			}
+
+				for _, autor := range meta.Autores {
+					_ = tracker.Cargar("Personas", []d.ForeignKey{}, autor.Nombre, autor.Apellido)
+
+					_ = tracker.Cargar("AutoresLibro", []d.ForeignKey{
+						d.NewForeignKey(tracker.Hash, "Libros", "refLibro",
+							meta.TituloObra,
+							meta.SubtituloObra,
+							NumeroODefault(meta.Anio, 0),
+							NumeroODefault(meta.Edicion, 1),
+							NumeroODefault(meta.Volumen, 0),
+						),
+						d.NewForeignKey(tracker.Hash, "Personas", "refPersona",
+							autor.Nombre,
+							autor.Apellido,
+						),
+					})
+				}
+			*/
 
 		case TAG_PAPER:
 

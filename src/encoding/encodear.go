@@ -6,7 +6,6 @@ import (
 	fs "own_wiki/encoding/fs"
 	b "own_wiki/system_protocol/bass_de_datos"
 	d "own_wiki/system_protocol/dependencias"
-	t "own_wiki/system_protocol/tablas"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -33,26 +32,27 @@ func Encodear(dirInput string, canalMensajes chan string) {
 	defer b.CerrarBddNoSQL(bddNoSQL)
 	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
-	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional, bddNoSQL))
+	// Hacer que lo lea del .json q se hizo, para crear las tablas -> en el futuro crear un
+	// lenguaje o una herramienta visual
+	archivos := d.ConstruirTabla("Archivos", d.INDEPENDIENTE_DEPENDIBLE, false, []d.ParClaveTipo{
+		d.NewClaveString(true, "path", 400, true),
+	}, []d.ReferenciaTabla{})
+
+	tags := d.ConstruirTabla("Tags", d.DEPENDIENTE_NO_DEPENDIBLE, true, []d.ParClaveTipo{
+		d.NewClaveString(true, "tag", 255, true),
+	}, []d.ReferenciaTabla{
+		d.NewReferenciaTabla("refArchivo", archivos),
+	})
+
+	tablas := []d.DescripcionTabla{archivos, tags}
+
+	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional, bddNoSQL), tablas, canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo crear el tracker, se tuvo el error: %v", err)
 		return
 	}
 
-	tablas, err := t.NewTablas(tracker, canalMensajes)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo crear las tablas, se tuvo el error: %v", err)
-		return
-	}
-	canalMensajes <- "Se crearon las tablas correctamente"
-
-	if err = tracker.IniciarProcesoInsertarDatos(b.NewInfoArchivos(), canalMensajes); err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo iniciar el proceso de insertar datos, se tuvo el error: %v", err)
-		return
-	}
-	canalMensajes <- "Se inicio el proceso de insertar datos"
-
-	if err = fs.RecorrerDirectorio(dirInput, tablas, canalMensajes); err != nil {
+	if err = fs.RecorrerDirectorio(dirInput, tracker, canalMensajes); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo recorrer todos los archivos, se tuvo el error: %v", err)
 		return
 	}
