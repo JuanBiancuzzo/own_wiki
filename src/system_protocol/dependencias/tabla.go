@@ -92,18 +92,6 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosUnicos boo
 		insertarValues = append(insertarValues, "0")
 	}
 
-	fmt.Printf(
-		"INSERT INTO %s (%s) VALUES (%s)\n",
-		nombreTabla,
-		strings.Join(insertarParam, ", "),
-		strings.Join(insertarValues, ", "),
-	)
-	fmt.Printf(
-		"SELECT id FROM %s WHERE %s\n",
-		nombreTabla,
-		strings.Join(queryParam, " AND "),
-	)
-
 	return DescripcionTabla{
 		NombreTabla: nombreTabla,
 		TipoTabla:   tipoTabla,
@@ -158,6 +146,21 @@ func (dt DescripcionTabla) CrearTablaRelajada(bdd *b.Bdd) error {
 // TODO
 func (dt DescripcionTabla) RestringirTabla(bdd *b.Bdd) error {
 	return nil
+}
+
+func (dt DescripcionTabla) Hash(hash *Hash, datos ...any) (IntFK, error) {
+	if len(datos) != len(dt.ClavesTipo) {
+		return 0, fmt.Errorf("en la tabla %s, al hashear %T, no tenia la misma estructura que la esperada", dt.NombreTabla, datos)
+	}
+
+	datosRepresentativos := []any{}
+	for i, claveTipo := range dt.ClavesTipo {
+		if claveTipo.Representativa {
+			datosRepresentativos = append(datosRepresentativos, datos[i])
+		}
+	}
+
+	return hash.HasearDatos(datosRepresentativos...), nil
 }
 
 func (dt DescripcionTabla) Existe(bdd *b.Bdd, datos ...any) (bool, error) {

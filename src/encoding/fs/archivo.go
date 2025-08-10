@@ -13,6 +13,15 @@ import (
 )
 
 const (
+	TABLA_ARCHIVOS      = "Archivos"
+	TABLA_TAGS          = "Tags"
+	TABLA_PERSONAS      = "Personas"
+	TABLA_EDITORIALES   = "Editoriales"
+	TABLA_LIBROS        = "Libros"
+	TABLA_AUTORES_LIBRO = "AutoresLibro"
+)
+
+const (
 	TAG_CARRERA             = "facultad/carrera"
 	TAG_MATERIA             = "facultad/materia"
 	TAG_MATERIA_EQUIVALENTE = "facultad/materia-equivalente"
@@ -26,6 +35,7 @@ const (
 )
 
 const (
+	// Agregar representativo
 	TAG_DISTRIBUCION = "colección/distribuciones/distribución"
 	TAG_LIBRO        = "colección/biblioteca/libro"
 	TAG_PAPER        = "colección/biblioteca/paper"
@@ -81,15 +91,15 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 	// El resto del contenido del archivo
 	// a.Contenido = contenido[3+strings.Index(contenido[3:], "---")+len("---"):]
 
-	err := tracker.Cargar("Archivos", []d.ForeignKey{}, path)
+	err := tracker.Cargar(TABLA_ARCHIVOS, []d.ForeignKey{}, path)
 	if HABILITAR_ERROR && err != nil {
-		return err
+		return fmt.Errorf("cargar archivo con error: %v", err)
 	}
 
 	for _, tag := range meta.Tags {
-		err = tracker.Cargar("Tags", []d.ForeignKey{d.NewForeignKey(tracker.Hash, "Archivos", "refArchivo", path)}, tag)
+		err = tracker.Cargar("Tags", []d.ForeignKey{d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path)}, tag)
 		if HABILITAR_ERROR && err != nil {
-			return err
+			return fmt.Errorf("cargar tags con error: %v", err)
 		}
 
 		switch tag {
@@ -110,40 +120,57 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 		case TAG_DISTRIBUCION:
 
 		case TAG_LIBRO:
-			/*
-				_ = tracker.Cargar("Editoriales", []d.ForeignKey{}, meta.Editorial)
+			err = tracker.Cargar(TABLA_EDITORIALES, []d.ForeignKey{}, meta.Editorial)
+			if HABILITAR_ERROR && err != nil {
+				return fmt.Errorf("cargar editoriales con error: %v", err)
+			}
 
-				_ = tracker.Cargar(
-					"Libros", []d.ForeignKey{
-						d.NewForeignKey(tracker.Hash, "Archivos", "refArchivo", path),
-					},
-					meta.Editorial,
-					meta.TituloObra,
-					meta.SubtituloObra,
-					NumeroODefault(meta.Anio, 0),
-					NumeroODefault(meta.Edicion, 1),
-					NumeroODefault(meta.Volumen, 0),
-					meta.Url,
-				)
+			anio := NumeroODefault(meta.Anio, 0)
+			edicion := NumeroODefault(meta.Edicion, 1)
+			volumen := NumeroODefault(meta.Volumen, 0)
 
-				for _, autor := range meta.Autores {
-					_ = tracker.Cargar("Personas", []d.ForeignKey{}, autor.Nombre, autor.Apellido)
+			err = tracker.Cargar(
+				TABLA_LIBROS, []d.ForeignKey{
+					d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
+					d.NewForeignKey(tracker.Hash, TABLA_EDITORIALES, "refEditorial", meta.Editorial),
+				},
+				meta.TituloObra,
+				meta.SubtituloObra,
+				anio,
+				edicion,
+				volumen,
+				meta.Url,
+			)
+			if HABILITAR_ERROR && err != nil {
+				return fmt.Errorf("cargar libro con error: %v", err)
+			}
 
-					_ = tracker.Cargar("AutoresLibro", []d.ForeignKey{
-						d.NewForeignKey(tracker.Hash, "Libros", "refLibro",
-							meta.TituloObra,
-							meta.SubtituloObra,
-							NumeroODefault(meta.Anio, 0),
-							NumeroODefault(meta.Edicion, 1),
-							NumeroODefault(meta.Volumen, 0),
-						),
-						d.NewForeignKey(tracker.Hash, "Personas", "refPersona",
-							autor.Nombre,
-							autor.Apellido,
-						),
-					})
+			for _, autor := range meta.NombreAutores {
+				nombre := strings.TrimSpace(autor.Nombre)
+				apellido := strings.TrimSpace(autor.Apellido)
+
+				err = tracker.Cargar(TABLA_PERSONAS, []d.ForeignKey{}, nombre, apellido)
+				if HABILITAR_ERROR && err != nil {
+					return fmt.Errorf("cargar persona con error: %v", err)
 				}
-			*/
+
+				err = tracker.Cargar(TABLA_AUTORES_LIBRO, []d.ForeignKey{
+					d.NewForeignKey(tracker.Hash, TABLA_LIBROS, "refLibro",
+						meta.TituloObra,
+						meta.SubtituloObra,
+						anio,
+						edicion,
+						volumen,
+					),
+					d.NewForeignKey(tracker.Hash, TABLA_PERSONAS, "refPersona",
+						nombre,
+						apellido,
+					),
+				})
+				if HABILITAR_ERROR && err != nil {
+					return fmt.Errorf("cargar autor libro con error: %v", err)
+				}
+			}
 
 		case TAG_PAPER:
 

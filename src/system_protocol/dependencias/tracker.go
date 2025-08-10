@@ -180,7 +180,11 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, fKeys []ForeignKey, da
 	}
 
 	if EsTipoDependible(tabla.TipoTabla) {
-		return td.procesoDependible(tabla, id, td.Hash.HasearDatos(datos...))
+		if hashDatos, err := tabla.Hash(td.Hash, datos...); err != nil {
+			return err
+		} else {
+			return td.procesoDependible(tabla, id, hashDatos)
+		}
 	}
 
 	return nil

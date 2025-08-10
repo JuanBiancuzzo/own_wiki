@@ -34,17 +34,44 @@ func Encodear(dirInput string, canalMensajes chan string) {
 
 	// Hacer que lo lea del .json q se hizo, para crear las tablas -> en el futuro crear un
 	// lenguaje o una herramienta visual
-	archivos := d.ConstruirTabla("Archivos", d.INDEPENDIENTE_DEPENDIBLE, false, []d.ParClaveTipo{
+	archivos := d.ConstruirTabla(fs.TABLA_ARCHIVOS, d.INDEPENDIENTE_DEPENDIBLE, false, []d.ParClaveTipo{
 		d.NewClaveString(true, "path", 400, true),
 	}, []d.ReferenciaTabla{})
 
-	tags := d.ConstruirTabla("Tags", d.DEPENDIENTE_NO_DEPENDIBLE, true, []d.ParClaveTipo{
+	tags := d.ConstruirTabla(fs.TABLA_TAGS, d.DEPENDIENTE_NO_DEPENDIBLE, true, []d.ParClaveTipo{
 		d.NewClaveString(true, "tag", 255, true),
 	}, []d.ReferenciaTabla{
 		d.NewReferenciaTabla("refArchivo", archivos),
 	})
 
-	tablas := []d.DescripcionTabla{archivos, tags}
+	personas := d.ConstruirTabla(fs.TABLA_PERSONAS, d.INDEPENDIENTE_DEPENDIBLE, true, []d.ParClaveTipo{
+		d.NewClaveString(true, "nombre", 255, true),
+		d.NewClaveString(true, "apellido", 255, true),
+	}, []d.ReferenciaTabla{})
+
+	editoriales := d.ConstruirTabla(fs.TABLA_EDITORIALES, d.INDEPENDIENTE_DEPENDIBLE, true, []d.ParClaveTipo{
+		d.NewClaveString(true, "editorial", 255, true),
+	}, []d.ReferenciaTabla{})
+
+	libros := d.ConstruirTabla(fs.TABLA_LIBROS, d.DEPENDIENTE_DEPENDIBLE, true, []d.ParClaveTipo{
+		d.NewClaveString(true, "titulo", 255, true),
+		d.NewClaveString(true, "subtitulo", 255, false),
+		d.NewClaveInt(true, "anio", true),
+		d.NewClaveInt(true, "edicion", true),
+		d.NewClaveInt(true, "volumen", true),
+		d.NewClaveString(false, "url", 255, false),
+	}, []d.ReferenciaTabla{
+		d.NewReferenciaTabla("refArchivo", archivos),
+		d.NewReferenciaTabla("refEditorial", editoriales),
+	})
+
+	autoresLibro := d.ConstruirTabla(fs.TABLA_AUTORES_LIBRO, d.DEPENDIENTE_NO_DEPENDIBLE, true, []d.ParClaveTipo{},
+		[]d.ReferenciaTabla{
+			d.NewReferenciaTabla("refLibro", libros),
+			d.NewReferenciaTabla("refPersona", personas),
+		})
+
+	tablas := []d.DescripcionTabla{archivos, tags, personas, editoriales, libros, autoresLibro}
 
 	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional, bddNoSQL), tablas, canalMensajes)
 	if err != nil {
