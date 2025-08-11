@@ -61,6 +61,7 @@ type Frontmatter struct {
 	NombreReducido       string        `yaml:"nombreReducido,omitempty"`
 	PathCarrera          string        `yaml:"pathCarrera,omitempty"`
 	NombreCarrera        string        `yaml:"nombreCarrera,omitempty"`
+	MateriaEquivalente   InfoMateria   `yaml:"materiaEquivalente,omitempty"`
 	Plan                 string        `yaml:"plan,omitempty"`
 	Codigo               string        `yaml:"codigo,omitempty"`
 	Correlativas         []Correlativa `yaml:"correlativas,omitempty"`
@@ -73,6 +74,7 @@ type Frontmatter struct {
 	Equivalencia         string        `yaml:"equivalencia,omitempty"`
 	NombreSubtema        string        `yaml:"nombreSubtema,omitempty"`
 }
+
 type Capitulo struct {
 	NumeroCapitulo string    `yaml:"numeroCapitulo"`
 	NombreCapitulo string    `yaml:"nombreCapitulo,omitempty"`
@@ -94,6 +96,11 @@ type Pagina struct {
 type Correlativa struct {
 	Path string        `yaml:"path"`
 	Tipo e.TipoMateria `yaml:"tipo"`
+}
+
+type InfoMateria struct {
+	NombreMateria string `yaml:"nombre"`
+	Carrera       string `yaml:"carrera"`
 }
 
 type Articulo struct {

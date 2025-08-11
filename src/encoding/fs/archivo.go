@@ -18,10 +18,11 @@ const (
 	TABLA_PERSONAS    = "Personas"
 	TABLA_EDITORIALES = "Editoriales"
 
-	TABLA_PLANES   = "PlanesCarrera"
-	TABLA_CUATRI   = "CuatrimestresCarrera"
-	TABLA_CARRERAS = "Carreras"
-	TABLA_MATERIAS = "Materias"
+	TABLA_PLANES      = "PlanesCarrera"
+	TABLA_CUATRI      = "CuatrimestresCarrera"
+	TABLA_CARRERAS    = "Carreras"
+	TABLA_MATERIAS    = "Materias"
+	TABLA_MATERIAS_EQ = "MateriasEquivalentes"
 
 	TABLA_COLECCIONES               = "Colecciones"
 	TABLA_LIBROS                    = "Libros"
@@ -112,7 +113,7 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 	// Carrera
 	funcionesProcesar[TAG_CARRERA] = ProcesarCarrera
 	funcionesProcesar[TAG_MATERIA] = ProcesarMateria
-	// funcionesProcesar[TAG_MATERIA_EQUIVALENTE] =
+	funcionesProcesar[TAG_MATERIA_EQUIVALENTE] = ProcesarMateriaEquivalente
 	// funcionesProcesar[TAG_RESUMEN_MATERIA] =
 
 	// Cursos:
@@ -189,6 +190,25 @@ func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 		},
 		meta.NombreMateria,
 		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
+		meta.Codigo,
+	)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar materia con error: %v", err)
+	}
+	return nil
+}
+
+func ProcesarMateriaEquivalente(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	infoMateria := meta.MateriaEquivalente
+	err := tracker.Cargar(TABLA_MATERIAS_EQ,
+		[]d.ForeignKey{
+			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
+			tracker.CrearReferencia(TABLA_CARRERAS, "refCarrera", []d.ForeignKey{}, meta.NombreCarrera),
+			tracker.CrearReferencia(TABLA_MATERIAS, "refMateria", []d.ForeignKey{
+				tracker.CrearReferencia(TABLA_CARRERAS, "refCarrera", []d.ForeignKey{}, infoMateria.Carrera),
+			}, infoMateria.NombreMateria),
+		},
+		meta.NombreMateria,
 		meta.Codigo,
 	)
 	if HABILITAR_ERROR && err != nil {
