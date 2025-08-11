@@ -144,6 +144,63 @@
         ]
     },
     {
+        "nombre": "PaginasCursos",
+        "elementosRepetidos": true,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 400,
+                "representativo": true, "necesario": true
+            }
+        ]
+    },
+    {
+        "nombre": "CursosOnline",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "etapa", "tipo": "enum", "valores": ["SinEmpezar", "Empezado", "Ampliar", "Terminado"], 
+                "representativo": false, "necesario": true
+            },
+            { 
+                "clave": "anio", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "url", "tipo": "string", "largo": 255,
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "PaginasCursos", "clave": "refPagina" }
+        ]
+    },
+    {
+        "nombre": "CursosPresencial",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "etapa", "tipo": "enum", "valores": ["SinEmpezar", "Empezado", "Ampliar", "Terminado"], 
+                "representativo": false, "necesario": true
+            },
+            { 
+                "clave": "anio", "tipo": "int", 
+                "representativo": true, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" }
+        ]
+    },
+    {
         "nombre": "Colecciones",
         "elementosRepetidos": false,
         "valoresGuardar": [

@@ -5,34 +5,6 @@ CREATE TABLE IF NOT EXISTS materiasCorrelativas (
   idCorrelativa INT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS paginasCursos (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombrePagina VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-);
-
-CREATE TABLE IF NOT EXISTS cursos (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
-  anioCurso YEAR,
-  idPagina INT NOT NULL,
-  url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idPagina) REFERENCES paginasCursos(id),
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
-CREATE TABLE IF NOT EXISTS cursosPresencial (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
-  anioCurso YEAR,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
 CREATE TABLE IF NOT EXISTS temasCurso (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,

@@ -18,6 +18,10 @@ const (
 	TABLA_PERSONAS    = "Personas"
 	TABLA_EDITORIALES = "Editoriales"
 
+	TABLA_PAGINAS_CURSOS     = "PaginasCursos"
+	TABLA_CURSOS_ONLINE      = "CursosOnline"
+	TABLA_CURSOS_PRESENECIAL = "CursosPresencial"
+
 	TABLA_PLANES       = "PlanesCarrera"
 	TABLA_CUATRI       = "CuatrimestresCarrera"
 	TABLA_CARRERAS     = "Carreras"
@@ -118,8 +122,8 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 	funcionesProcesar[TAG_RESUMEN_MATERIA] = ProcesarTemaMateria
 
 	// Cursos:
-	// funcionesProcesar[TAG_CURSO] =
-	// funcionesProcesar[TAG_CURSO_PRESENCIA] =
+	funcionesProcesar[TAG_CURSO] = ProcesarCursoOnline
+	funcionesProcesar[TAG_CURSO_PRESENCIA] = ProcesarCursoPresencial
 	// funcionesProcesar[TAG_RESUMEN_CURSO] =
 
 	// Colecciones:
@@ -146,6 +150,53 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 		}
 	}
 
+	return nil
+}
+
+func ProcesarCursoOnline(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	err := tracker.Cargar(TABLA_PAGINAS_CURSOS, []d.ForeignKey{}, meta.NombrePagina)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar paginas cursos con error: %v", err)
+	}
+
+	anio, err := strconv.Atoi(meta.FechaCurso)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("obtener anio del curso online con error: %v", err)
+	}
+
+	err = tracker.Cargar(TABLA_CURSOS_ONLINE,
+		[]d.ForeignKey{
+			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
+			tracker.CrearReferencia(TABLA_PAGINAS_CURSOS, "refPagina", []d.ForeignKey{}, meta.NombrePagina),
+		},
+		meta.NombreCurso,
+		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
+		anio,
+		meta.Url,
+	)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar curso online con error: %v", err)
+	}
+	return nil
+}
+
+func ProcesarCursoPresencial(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	anio, err := strconv.Atoi(meta.FechaCurso)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("obtener anio del curso presencial con error: %v", err)
+	}
+
+	err = tracker.Cargar(TABLA_CURSOS_PRESENECIAL,
+		[]d.ForeignKey{
+			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
+		},
+		meta.NombreCurso,
+		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
+		anio,
+	)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar curso presencial con error: %v", err)
+	}
 	return nil
 }
 
@@ -394,34 +445,6 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 			case e.MATERIA_EQUIVALENTE:
 				a.CargarDependencia(correlativa.Path, e.DEP_MATERIA_EQUIVALENTE, constructor.CrearDependenciaCorrelativa)
 			}
-		}
-	}
-
-	func (a *Archivo) ProcesarTemaMateria(path string, meta *Frontmatter, canalMensajes chan string) {
-		constructor := e.NewTemaMateria(meta.NombreResumen, meta.Capitulo, meta.Parte)
-		a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-		a.CargarDependencia(meta.MateriaResumen, e.DEP_MATERIA, constructor.CrearDependenciaMateria)
-
-		a.CargarDependible(e.DEP_TEMA_MATERIA, constructor)
-	}
-
-	func (a *Archivo) ProcesarCurso(path string, meta *Frontmatter, canalMensajes chan string) {
-		if constructor, err := meta.CrearCurso(); err == nil {
-			a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-
-			a.CargarDependible(e.DEP_CURSO, constructor)
-		} else {
-			canalMensajes <- fmt.Sprintf("Error: %v\n", err)
-		}
-	}
-
-	func (a *Archivo) ProcesarCursoPresencial(path string, meta *Frontmatter, canalMensajes chan string) {
-		if constructor, err := meta.CrearCursoPresencial(); err == nil {
-			a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-
-			a.CargarDependible(e.DEP_CURSO_PRESENCIAL, constructor)
-		} else {
-			canalMensajes <- fmt.Sprintf("Error: %v\n", err)
 		}
 	}
 
