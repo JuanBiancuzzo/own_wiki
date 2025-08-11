@@ -2,7 +2,6 @@ package encoding
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	fs "own_wiki/encoding/fs"
@@ -55,24 +54,38 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 		return tablas, err
 	}
 
-	mapaTablas := make(map[string]*d.DescripcionTabla)
+	listaInfo := []InfoTabla{}
+	mapaReferenciados := make(map[string]bool)
 
 	for decodificador.More() {
 		var info InfoTabla
 		err := decodificador.Decode(&info)
 		if err != nil {
-			log.Fatal(err)
+			return tablas, fmt.Errorf("error al codificar tablas")
 		}
 
-		var nuevaTabla d.DescripcionTabla
-		mapaTablas[info.Nombre] = &nuevaTabla
+		listaInfo = append(listaInfo, info)
+		for _, referencia := range info.ReferenciasTabla {
+			mapaReferenciados[referencia.Tabla] = true
+		}
+	}
+
+	// read closing bracket
+	if _, err := decodificador.Token(); err != nil {
+		return tablas, err
+	}
+
+	mapaTablas := make(map[string]d.DescripcionTabla)
+	for _, info := range listaInfo {
+		independiente := len(info.ReferenciasTabla) > 0
+		_, dependible := mapaReferenciados[info.Nombre]
 
 		var tipoTabla d.TipoTabla = d.DEPENDIENTE_NO_DEPENDIBLE
-		if info.Independiente && info.Dependible {
+		if independiente && dependible {
 			tipoTabla = d.INDEPENDIENTE_DEPENDIBLE
-		} else if info.Independiente && !info.Dependible {
+		} else if independiente && !dependible {
 			tipoTabla = d.INDEPENDIENTE_NO_DEPENDIBLE
-		} else if !info.Independiente && info.Dependible {
+		} else if !independiente && dependible {
 			tipoTabla = d.DEPENDIENTE_DEPENDIBLE
 		}
 
@@ -112,18 +125,15 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 				}
 				return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", rt.Tabla, strings.Join(nombreTablas, ", "))
 			} else {
-				nuevaReferencia := d.NewReferenciaTabla(rt.Clave, *tabla)
+				nuevaReferencia := d.NewReferenciaTabla(rt.Clave, tabla)
 				referenciasTablas = append(referenciasTablas, nuevaReferencia)
 			}
 		}
 
-		nuevaTabla = d.ConstruirTabla(info.Nombre, tipoTabla, info.ElementosUnicos, paresClaveTipo, referenciasTablas)
-		tablas = append(tablas, nuevaTabla)
-	}
+		nuevaTabla := d.ConstruirTabla(info.Nombre, tipoTabla, info.ElementosUnicos, paresClaveTipo, referenciasTablas)
+		mapaTablas[info.Nombre] = nuevaTabla
 
-	// read closing bracket
-	if _, err := decodificador.Token(); err != nil {
-		return tablas, err
+		tablas = append(tablas, nuevaTabla)
 	}
 
 	return tablas, nil

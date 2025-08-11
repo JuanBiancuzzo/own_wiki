@@ -1,8 +1,6 @@
 [
     {
         "nombre": "Archivos",
-        "independiente": true,
-        "dependible": true,
         "elementosUnicos": false,
         "valoresGuardar": [
             { 
@@ -13,8 +11,6 @@
     },
     {
         "nombre": "Tags",
-        "independiente": false,
-        "dependible": false,
         "elementosUnicos": true,
         "valoresGuardar": [
             { 
@@ -28,8 +24,6 @@
     },
     {
         "nombre": "Personas",
-        "independiente": true,
-        "dependible": true,
         "elementosUnicos": true,
         "valoresGuardar": [
             { 
@@ -44,8 +38,6 @@
     },
     {
         "nombre": "Editoriales",
-        "independiente": true,
-        "dependible": true,
         "elementosUnicos": true,
         "valoresGuardar": [
             { 
@@ -56,8 +48,6 @@
     }, 
     {
         "nombre": "Libros",
-        "independiente": false,
-        "dependible": true,
         "elementosUnicos": false,
         "valoresGuardar": [
             { 
@@ -92,8 +82,6 @@
     },
     {
         "nombre": "AutoresLibro",
-        "independiente": false,
-        "dependible": false,
         "elementosUnicos": false,
         "referenciasTabla": [
             { "tabla": "Libros", "clave": "refLibro" },
@@ -102,8 +90,6 @@
     },
     {
         "nombre": "Capitulos",
-        "independiente": false,
-        "dependible": true,
         "elementosUnicos": false,
         "valoresGuardar": [
             { 
@@ -130,8 +116,6 @@
     },
     {
         "nombre": "EditoresCapitulo",
-        "independiente": false,
-        "dependible": false,
         "elementosUnicos": false,
         "referenciasTabla": [
             { "tabla": "Capitulos", "clave": "refCapitulo" },
@@ -140,8 +124,6 @@
     },
     {
         "nombre": "Carreras",
-        "independiente": false,
-        "dependible": false, 
         "elementosUnicos": false,
         "valoresGuardar": [
             { 
@@ -159,6 +141,32 @@
         ],
         "referenciasTabla": [
             { "tabla": "Archivos", "clave": "refArchivo" }
+        ]
+    },
+    {
+        "nombre": "Distribuciones",
+        "elementosUnicos": false,
+        "valoresGuardar": [
+            {
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            {
+                "clave": "tipo", "tipo": "enum", "valores": ["Discreta", "Continua", "Multivariada"],
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" }
+        ]
+    },
+    {
+        "nombre": "RelacionesDistribuciones",
+        "elementosUnicos": false,
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "Distribuciones", "clave": "refDistribucionA" },
+            { "tabla": "Distribuciones", "clave": "refDistribucionB" }
         ]
     }
 ]
