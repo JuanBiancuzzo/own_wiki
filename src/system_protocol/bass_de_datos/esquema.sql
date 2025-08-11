@@ -5,18 +5,6 @@ CREATE TABLE IF NOT EXISTS materiasCorrelativas (
   idCorrelativa INT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS temasMateria (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  capitulo INT,
-  parte INT,
-  idMateria INT NOT NULL,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idMateria) REFERENCES materias(id),
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
 CREATE TABLE IF NOT EXISTS paginasCursos (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombrePagina VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci

@@ -18,11 +18,12 @@ const (
 	TABLA_PERSONAS    = "Personas"
 	TABLA_EDITORIALES = "Editoriales"
 
-	TABLA_PLANES      = "PlanesCarrera"
-	TABLA_CUATRI      = "CuatrimestresCarrera"
-	TABLA_CARRERAS    = "Carreras"
-	TABLA_MATERIAS    = "Materias"
-	TABLA_MATERIAS_EQ = "MateriasEquivalentes"
+	TABLA_PLANES       = "PlanesCarrera"
+	TABLA_CUATRI       = "CuatrimestresCarrera"
+	TABLA_CARRERAS     = "Carreras"
+	TABLA_MATERIAS     = "Materias"
+	TABLA_MATERIAS_EQ  = "MateriasEquivalentes"
+	TABLA_TEMA_MATERIA = "TemasMateria"
 
 	TABLA_COLECCIONES               = "Colecciones"
 	TABLA_LIBROS                    = "Libros"
@@ -114,7 +115,7 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 	funcionesProcesar[TAG_CARRERA] = ProcesarCarrera
 	funcionesProcesar[TAG_MATERIA] = ProcesarMateria
 	funcionesProcesar[TAG_MATERIA_EQUIVALENTE] = ProcesarMateriaEquivalente
-	// funcionesProcesar[TAG_RESUMEN_MATERIA] =
+	funcionesProcesar[TAG_RESUMEN_MATERIA] = ProcesarTemaMateria
 
 	// Cursos:
 	// funcionesProcesar[TAG_CURSO] =
@@ -212,7 +213,26 @@ func ProcesarMateriaEquivalente(path string, meta *Frontmatter, tracker *d.Track
 		meta.Codigo,
 	)
 	if HABILITAR_ERROR && err != nil {
-		return fmt.Errorf("cargar materia con error: %v", err)
+		return fmt.Errorf("cargar materia equivalente con error: %v", err)
+	}
+	return nil
+}
+
+func ProcesarTemaMateria(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	infoTema := meta.InfoTemaMateria
+	err := tracker.Cargar(TABLA_TEMA_MATERIA,
+		[]d.ForeignKey{
+			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
+			tracker.CrearReferencia(TABLA_MATERIAS, "refMateria", []d.ForeignKey{
+				tracker.CrearReferencia(TABLA_CARRERAS, "refCarrera", []d.ForeignKey{}, infoTema.Carrera),
+			}, infoTema.Materia),
+		},
+		meta.NombreResumen,
+		NumeroODefault(meta.Capitulo, 1),
+		NumeroODefault(meta.Parte, 0),
+	)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar tema materia con error: %v", err)
 	}
 	return nil
 }

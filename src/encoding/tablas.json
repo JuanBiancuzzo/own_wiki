@@ -122,6 +122,28 @@
         ]
     },
     {
+        "nombre": "TemasMateria",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "capitulo", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "parte", "tipo": "int", 
+                "necesario": false
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "Materias", "clave": "refMateria", "representativo": true }
+        ]
+    },
+    {
         "nombre": "Colecciones",
         "elementosRepetidos": false,
         "valoresGuardar": [
