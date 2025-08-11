@@ -22,12 +22,12 @@ import (
 var infoTablas string
 
 type InfoTabla struct {
-	Nombre           string                `json:"nombre"`
-	Independiente    bool                  `json:"independiente"`
-	Dependible       bool                  `json:"dependible"`
-	ElementosUnicos  bool                  `json:"elementosUnicos"`
-	ValoresGuardar   []InfoValorGuardar    `json:"valoresGuardar"`
-	ReferenciasTabla []InfoReferenciaTabla `json:"referenciasTabla"`
+	Nombre             string                `json:"nombre"`
+	Independiente      bool                  `json:"independiente"`
+	Dependible         bool                  `json:"dependible"`
+	ElementosRepetidos bool                  `json:"elementosRepetidos"`
+	ValoresGuardar     []InfoValorGuardar    `json:"valoresGuardar"`
+	ReferenciasTabla   []InfoReferenciaTabla `json:"referenciasTabla"`
 }
 
 type InfoValorGuardar struct {
@@ -55,7 +55,7 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 	}
 
 	listaInfo := []InfoTabla{}
-	mapaReferenciados := make(map[string]bool)
+	mapaReferenciados := make(map[string]uint8)
 
 	for decodificador.More() {
 		var info InfoTabla
@@ -66,7 +66,7 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 
 		listaInfo = append(listaInfo, info)
 		for _, referencia := range info.ReferenciasTabla {
-			mapaReferenciados[referencia.Tabla] = true
+			mapaReferenciados[referencia.Tabla] = 0
 		}
 	}
 
@@ -77,16 +77,18 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 
 	mapaTablas := make(map[string]d.DescripcionTabla)
 	for _, info := range listaInfo {
-		independiente := len(info.ReferenciasTabla) > 0
+		independiente := len(info.ReferenciasTabla) == 0
 		_, dependible := mapaReferenciados[info.Nombre]
 
-		var tipoTabla d.TipoTabla = d.DEPENDIENTE_NO_DEPENDIBLE
+		var tipoTabla d.TipoTabla
 		if independiente && dependible {
 			tipoTabla = d.INDEPENDIENTE_DEPENDIBLE
 		} else if independiente && !dependible {
 			tipoTabla = d.INDEPENDIENTE_NO_DEPENDIBLE
 		} else if !independiente && dependible {
 			tipoTabla = d.DEPENDIENTE_DEPENDIBLE
+		} else {
+			tipoTabla = d.DEPENDIENTE_NO_DEPENDIBLE
 		}
 
 		paresClaveTipo := []d.ParClaveTipo{}
@@ -130,7 +132,7 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 			}
 		}
 
-		nuevaTabla := d.ConstruirTabla(info.Nombre, tipoTabla, info.ElementosUnicos, paresClaveTipo, referenciasTablas)
+		nuevaTabla := d.ConstruirTabla(info.Nombre, tipoTabla, info.ElementosRepetidos, paresClaveTipo, referenciasTablas)
 		mapaTablas[info.Nombre] = nuevaTabla
 
 		tablas = append(tablas, nuevaTabla)

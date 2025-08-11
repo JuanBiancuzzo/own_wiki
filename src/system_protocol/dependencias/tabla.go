@@ -87,7 +87,7 @@ type DescripcionTabla struct {
 	insertar       string
 }
 
-func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosUnicos bool, clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) DescripcionTabla {
+func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) DescripcionTabla {
 	insertarParam := []string{}
 	insertarValues := []string{}
 	queryParam := []string{}
@@ -107,7 +107,7 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosUnicos boo
 		ClavesTipo:  clavesTipo,
 		Referencias: referencias,
 
-		necesarioQuery: elementosUnicos,
+		necesarioQuery: elementosRepetidos,
 		insertar: fmt.Sprintf(
 			"INSERT INTO %s (%s) VALUES (%s)",
 			nombreTabla,

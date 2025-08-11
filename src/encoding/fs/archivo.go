@@ -13,15 +13,18 @@ import (
 )
 
 const (
-	TABLA_ARCHIVOS                  = "Archivos"
-	TABLA_TAGS                      = "Tags"
-	TABLA_PERSONAS                  = "Personas"
-	TABLA_EDITORIALES               = "Editoriales"
+	TABLA_ARCHIVOS    = "Archivos"
+	TABLA_TAGS        = "Tags"
+	TABLA_PERSONAS    = "Personas"
+	TABLA_EDITORIALES = "Editoriales"
+
+	TABLA_CARRERAS = "Carreras"
+
+	TABLA_COLECCIONES               = "Colecciones"
 	TABLA_LIBROS                    = "Libros"
 	TABLA_AUTORES_LIBRO             = "AutoresLibro"
 	TABLA_CAPITULOS                 = "Capitulos"
 	TABLA_EDITORES_CAPITULO         = "EditoresCapitulo"
-	TABLA_CARRERAS                  = "Carreras"
 	TABLA_DISTRIBUCIONES            = "Distribuciones"
 	TABLA_RELACIONES_DISTRIBUCIONES = "RelacionesDistribuciones"
 )
@@ -40,10 +43,10 @@ const (
 )
 
 const (
-	// Agregar representativo
-	TAG_DISTRIBUCION = "colección/distribuciones/distribución"
-	TAG_LIBRO        = "colección/biblioteca/libro"
-	TAG_PAPER        = "colección/biblioteca/paper"
+	TAG_REPRESENTANTE = "colección/representante"
+	TAG_DISTRIBUCION  = "colección/distribuciones/distribución"
+	TAG_LIBRO         = "colección/biblioteca/libro"
+	TAG_PAPER         = "colección/biblioteca/paper"
 )
 
 const (
@@ -101,56 +104,95 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 		return fmt.Errorf("cargar archivo con error: %v", err)
 	}
 
+	funcionesProcesar := make(map[string]func(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error)
+
+	// Carrera
+	funcionesProcesar[TAG_CARRERA] = ProcesarCarrera
+	// funcionesProcesar[TAG_MATERIA] =
+	// funcionesProcesar[TAG_MATERIA_EQUIVALENTE] =
+	// funcionesProcesar[TAG_RESUMEN_MATERIA] =
+
+	// Cursos:
+	// funcionesProcesar[TAG_CURSO] =
+	// funcionesProcesar[TAG_CURSO_PRESENCIA] =
+	// funcionesProcesar[TAG_RESUMEN_CURSO] =
+
+	// Colecciones:
+	funcionesProcesar[TAG_REPRESENTANTE] = ProcesarColeccion
+	funcionesProcesar[TAG_DISTRIBUCION] = ProcesarDistribucion
+	funcionesProcesar[TAG_LIBRO] = ProcesarLibro
+	// funcionesProcesar[TAG_PAPER] =
+
+	// Notas:
+	// funcionesProcesar[TAG_NOTA_FACULTAD] =
+	// funcionesProcesar[TAG_NOTA_CURSO] =
+	// funcionesProcesar[TAG_NOTA_INVESTIGACION] =
+	// funcionesProcesar[TAG_NOTA_COLECCION] =
+	// funcionesProcesar[TAG_NOTA_PROYECTO] =
+
 	for _, tag := range meta.Tags {
-		err = tracker.Cargar("Tags", []d.ForeignKey{d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path)}, tag)
-		if HABILITAR_ERROR && err != nil {
-			return fmt.Errorf("cargar tags con error: %v", err)
+		funcionProcesar, ok := funcionesProcesar[tag]
+		if !ok {
+			continue
 		}
 
-		switch tag {
-		case TAG_CARRERA:
-			if err = ProcesarCarrera(path, &meta, tracker, canalMensajes); err != nil {
-				return err
-			}
-		case TAG_MATERIA:
-
-		case TAG_MATERIA_EQUIVALENTE:
-
-		case TAG_RESUMEN_MATERIA:
-
-		case TAG_CURSO:
-
-		case TAG_CURSO_PRESENCIA:
-
-		case TAG_RESUMEN_CURSO:
-
-		case TAG_DISTRIBUCION:
-			if err = ProcesarDistribucion(path, &meta, tracker, canalMensajes); err != nil {
-				return err
-			}
-		case TAG_LIBRO:
-			if err = ProcesarLibro(path, &meta, tracker, canalMensajes); err != nil {
-				return err
-			}
-		case TAG_PAPER:
-
-		case TAG_NOTA_FACULTAD:
-			fallthrough
-		case TAG_NOTA_CURSO:
-			fallthrough
-		case TAG_NOTA_INVESTIGACION:
-			fallthrough
-		case TAG_NOTA_COLECCION:
-			fallthrough
-		case TAG_NOTA_PROYECTO:
-
+		if err = funcionProcesar(path, &meta, tracker); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencias, canalMensajes chan string) error {
+func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	nombreCarrera := Nombre(path)
+	err := tracker.Cargar(TABLA_CARRERAS,
+		[]d.ForeignKey{
+			d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
+		},
+		nombreCarrera,
+		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
+		strings.ToLower(strings.TrimSpace(meta.TieneCodigo)) == "true",
+	)
+
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar carrera con error: %v", err)
+	}
+	return nil
+}
+
+func ProcesarColeccion(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	err := tracker.Cargar(TABLA_COLECCIONES,
+		[]d.ForeignKey{d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path)},
+		Nombre(path),
+	)
+	if HABILITAR_ERROR && err != nil {
+		return err
+	}
+	return nil
+}
+
+func ProcesarDistribucion(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	tipoDistribucion, err := ObtenerTipoDistribucion(meta.TipoDistribucion)
+	if HABILITAR_ERROR && err != nil {
+		return err
+	}
+
+	err = tracker.Cargar(TABLA_DISTRIBUCIONES,
+		[]d.ForeignKey{
+			d.NewForeignKey(tracker.Hash, TABLA_COLECCIONES, "refColeccion", "Distribuciones"),
+			d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
+		},
+		meta.NombreDistribuucion,
+		tipoDistribucion,
+	)
+	if HABILITAR_ERROR && err != nil {
+		return err
+	}
+	return nil
+}
+
+func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	err := tracker.Cargar(TABLA_EDITORIALES, []d.ForeignKey{}, meta.Editorial)
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar editoriales con error: %v", err)
@@ -164,6 +206,7 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		TABLA_LIBROS, []d.ForeignKey{
 			d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
 			d.NewForeignKey(tracker.Hash, TABLA_EDITORIALES, "refEditorial", meta.Editorial),
+			d.NewForeignKey(tracker.Hash, TABLA_COLECCIONES, "refColeccion", "Biblioteca"),
 		},
 		meta.TituloObra,
 		meta.SubtituloObra,
@@ -253,40 +296,6 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		}
 	}
 
-	return nil
-}
-
-func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependencias, canalMensajes chan string) error {
-	nombreCarrera := Nombre(path)
-	err := tracker.Cargar(TABLA_CARRERAS,
-		[]d.ForeignKey{
-			d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
-		},
-		nombreCarrera,
-		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
-		meta.TieneCodigo == "true" || meta.TieneCodigo == "True",
-	)
-
-	if HABILITAR_ERROR && err != nil {
-		return fmt.Errorf("cargar carrera con error: %v", err)
-	}
-	return nil
-}
-
-func ProcesarDistribucion(path string, meta *Frontmatter, tracker *d.TrackerDependencias, canalMensajes chan string) error {
-	tipoDistribucion, err := ObtenerTipoDistribucion(meta.TipoDistribucion)
-	if HABILITAR_ERROR && err != nil {
-		return err
-	}
-
-	err = tracker.Cargar(TABLA_DISTRIBUCIONES,
-		[]d.ForeignKey{d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path)},
-		meta.NombreDistribuucion,
-		tipoDistribucion,
-	)
-	if HABILITAR_ERROR && err != nil {
-		return err
-	}
 	return nil
 }
 
