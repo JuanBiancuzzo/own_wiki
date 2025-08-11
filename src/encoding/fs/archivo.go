@@ -18,7 +18,10 @@ const (
 	TABLA_PERSONAS    = "Personas"
 	TABLA_EDITORIALES = "Editoriales"
 
+	TABLA_PLANES   = "PlanesCarrera"
+	TABLA_CUATRI   = "CuatrimestresCarrera"
 	TABLA_CARRERAS = "Carreras"
+	TABLA_MATERIAS = "Materias"
 
 	TABLA_COLECCIONES               = "Colecciones"
 	TABLA_LIBROS                    = "Libros"
@@ -108,7 +111,7 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 
 	// Carrera
 	funcionesProcesar[TAG_CARRERA] = ProcesarCarrera
-	// funcionesProcesar[TAG_MATERIA] =
+	funcionesProcesar[TAG_MATERIA] = ProcesarMateria
 	// funcionesProcesar[TAG_MATERIA_EQUIVALENTE] =
 	// funcionesProcesar[TAG_RESUMEN_MATERIA] =
 
@@ -148,7 +151,7 @@ func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 	nombreCarrera := Nombre(path)
 	err := tracker.Cargar(TABLA_CARRERAS,
 		[]d.ForeignKey{
-			d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
+			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
 		},
 		nombreCarrera,
 		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
@@ -161,13 +164,46 @@ func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 	return nil
 }
 
+func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	err := tracker.Cargar(TABLA_PLANES, []d.ForeignKey{}, meta.Plan)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar plan con error: %v", err)
+	}
+
+	anio, cuatrimestre, err := ObtenerCuatrimestreParte(meta.Cuatri)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("obtener cuatrimestre con error: %v", err)
+	}
+
+	err = tracker.Cargar(TABLA_CUATRI, []d.ForeignKey{}, anio, cuatrimestre)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar cuatri con error: %v", err)
+	}
+
+	err = tracker.Cargar(TABLA_MATERIAS,
+		[]d.ForeignKey{
+			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
+			tracker.CrearReferencia(TABLA_CARRERAS, "refCarrera", []d.ForeignKey{}, meta.NombreCarrera),
+			tracker.CrearReferencia(TABLA_PLANES, "refPlan", []d.ForeignKey{}, meta.Plan),
+			tracker.CrearReferencia(TABLA_CUATRI, "refCuatrimestre", []d.ForeignKey{}, anio, cuatrimestre),
+		},
+		meta.NombreMateria,
+		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
+		meta.Codigo,
+	)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar materia con error: %v", err)
+	}
+	return nil
+}
+
 func ProcesarColeccion(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	err := tracker.Cargar(TABLA_COLECCIONES,
-		[]d.ForeignKey{d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path)},
+		[]d.ForeignKey{tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path)},
 		Nombre(path),
 	)
 	if HABILITAR_ERROR && err != nil {
-		return err
+		return fmt.Errorf("cargar colecciones con error: %v", err)
 	}
 	return nil
 }
@@ -175,19 +211,19 @@ func ProcesarColeccion(path string, meta *Frontmatter, tracker *d.TrackerDepende
 func ProcesarDistribucion(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	tipoDistribucion, err := ObtenerTipoDistribucion(meta.TipoDistribucion)
 	if HABILITAR_ERROR && err != nil {
-		return err
+		return fmt.Errorf("obtener tipo distribucion con error: %v", err)
 	}
 
 	err = tracker.Cargar(TABLA_DISTRIBUCIONES,
 		[]d.ForeignKey{
-			d.NewForeignKey(tracker.Hash, TABLA_COLECCIONES, "refColeccion", "Distribuciones"),
-			d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
+			tracker.CrearReferencia(TABLA_COLECCIONES, "refColeccion", []d.ForeignKey{}, "Distribuciones"),
+			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
 		},
 		meta.NombreDistribuucion,
 		tipoDistribucion,
 	)
 	if HABILITAR_ERROR && err != nil {
-		return err
+		return fmt.Errorf("cargar distribuciones con error: %v", err)
 	}
 	return nil
 }
@@ -204,9 +240,9 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 
 	err = tracker.Cargar(
 		TABLA_LIBROS, []d.ForeignKey{
-			d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
-			d.NewForeignKey(tracker.Hash, TABLA_EDITORIALES, "refEditorial", meta.Editorial),
-			d.NewForeignKey(tracker.Hash, TABLA_COLECCIONES, "refColeccion", "Biblioteca"),
+			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
+			tracker.CrearReferencia(TABLA_EDITORIALES, "refEditorial", []d.ForeignKey{}, meta.Editorial),
+			tracker.CrearReferencia(TABLA_COLECCIONES, "refColeccion", []d.ForeignKey{}, "Biblioteca"),
 		},
 		meta.TituloObra,
 		meta.SubtituloObra,
@@ -229,13 +265,13 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		}
 
 		err = tracker.Cargar(TABLA_AUTORES_LIBRO, []d.ForeignKey{
-			d.NewForeignKey(tracker.Hash, TABLA_LIBROS, "refLibro",
+			tracker.CrearReferencia(TABLA_LIBROS, "refLibro", []d.ForeignKey{},
 				meta.TituloObra,
 				anio,
 				edicion,
 				volumen,
 			),
-			d.NewForeignKey(tracker.Hash, TABLA_PERSONAS, "refPersona",
+			tracker.CrearReferencia(TABLA_PERSONAS, "refPersona", []d.ForeignKey{},
 				nombre,
 				apellido,
 			),
@@ -252,8 +288,8 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 
 		err = tracker.Cargar(TABLA_CAPITULOS,
 			[]d.ForeignKey{
-				d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path),
-				d.NewForeignKey(tracker.Hash, TABLA_LIBROS, "refLibro",
+				tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
+				tracker.CrearReferencia(TABLA_LIBROS, "refLibro", []d.ForeignKey{},
 					meta.TituloObra,
 					anio,
 					edicion,
@@ -279,13 +315,13 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 			}
 
 			err = tracker.Cargar(TABLA_EDITORES_CAPITULO, []d.ForeignKey{
-				d.NewForeignKey(tracker.Hash, TABLA_CAPITULOS, "refCapitulo",
+				tracker.CrearReferencia(TABLA_CAPITULOS, "refCapitulo", []d.ForeignKey{},
 					numero,
 					capitulo.NombreCapitulo,
 					paginaInicio,
 					paginaFinal,
 				),
-				d.NewForeignKey(tracker.Hash, TABLA_PERSONAS, "refPersona",
+				tracker.CrearReferencia(TABLA_PERSONAS, "refPersona", []d.ForeignKey{},
 					nombre,
 					apellido,
 				),
@@ -300,31 +336,6 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 }
 
 /*
-
-	func (a *Archivo) ProcesarMateria(path string, meta *Frontmatter, canalMensajes chan string) {
-		if constructor, err := e.NewMateria(meta.NombreMateria, meta.Codigo, meta.Plan, meta.Cuatri, meta.Etapa); err == nil {
-			pathCarrera := ObtenerWikiLink(meta.PathCarrera)[0]
-			a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-			a.CargarDependencia(pathCarrera, e.DEP_CARRERA, constructor.CrearDependenciaCarrera)
-
-			a.CargarDependible(e.DEP_MATERIA, constructor)
-		} else {
-			canalMensajes <- fmt.Sprintf("Error: %v\n", err)
-		}
-
-		for _, correlativa := range meta.Correlativas {
-			constructor := e.NewMateriasCorrelativas(e.MATERIA_REAL, correlativa.Tipo)
-
-			a.CargarDependencia(path, e.DEP_MATERIA, constructor.CrearDependenciaMateria)
-			switch correlativa.Tipo {
-			case e.MATERIA_REAL:
-				a.CargarDependencia(correlativa.Path, e.DEP_MATERIA, constructor.CrearDependenciaCorrelativa)
-			case e.MATERIA_EQUIVALENTE:
-				a.CargarDependencia(correlativa.Path, e.DEP_MATERIA_EQUIVALENTE, constructor.CrearDependenciaCorrelativa)
-			}
-		}
-	}
-
 	func (a *Archivo) ProcesarMateriaEquivalente(path string, meta *Frontmatter, canalMensajes chan string) {
 		constructor := e.NewMateriaEquivalente(meta.NombreMateria, meta.Codigo)
 		a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
@@ -449,6 +460,13 @@ const (
 	DISTRIBUCION_MULTIVARIADA = "Multivariada"
 )
 
+type ParteCuatrimestre string
+
+const (
+	CUATRIMESTRE_PRIMERO = "Primero"
+	CUATRIMESTRE_SEGUNDO = "Segundo"
+)
+
 func NumeroODefault(representacion string, valorDefault int) int {
 	if nuevoValor, err := strconv.Atoi(representacion); err == nil {
 		return nuevoValor
@@ -517,4 +535,25 @@ func ObtenerTipoDistribucion(representacion string) (TipoDistribucion, error) {
 	}
 
 	return tipoDistribucion, nil
+}
+
+func ObtenerCuatrimestreParte(representacionCuatri string) (int, ParteCuatrimestre, error) {
+	var anio int
+	var cuatriNum int
+	var cuatri ParteCuatrimestre
+
+	if _, err := fmt.Sscanf(representacionCuatri, "%dC%d", &anio, &cuatriNum); err != nil {
+		return anio, cuatri, fmt.Errorf("el tipo de anio-cuatri (%s) no es uno de los esperados", representacionCuatri)
+	}
+
+	switch cuatriNum {
+	case 1:
+		cuatri = CUATRIMESTRE_PRIMERO
+	case 2:
+		cuatri = CUATRIMESTRE_SEGUNDO
+	default:
+		return anio, cuatri, fmt.Errorf("el cuatri dado por %d no es posible representar", cuatriNum)
+	}
+
+	return anio, cuatri, nil
 }

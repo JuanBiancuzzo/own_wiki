@@ -60,6 +60,7 @@ type Frontmatter struct {
 	NombreMateria        string        `yaml:"nombreMateria,omitempty"`
 	NombreReducido       string        `yaml:"nombreReducido,omitempty"`
 	PathCarrera          string        `yaml:"pathCarrera,omitempty"`
+	NombreCarrera        string        `yaml:"nombreCarrera,omitempty"`
 	Plan                 string        `yaml:"plan,omitempty"`
 	Codigo               string        `yaml:"codigo,omitempty"`
 	Correlativas         []Correlativa `yaml:"correlativas,omitempty"`

@@ -1,30 +1,3 @@
-CREATE TABLE IF NOT EXISTS planesCarrera (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-);
-
-CREATE TABLE IF NOT EXISTS cuatrimestreCarrera (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  anio YEAR NOT NULL,
-  cuatrimestre ENUM ("Primero", "Segundo") NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS materias (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  idCarrera INT NOT NULL,
-  idPlan INT NOT NULL,
-  idCuatrimestre INT NOT NULL,
-  codigo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idCarrera) REFERENCES carreras(id),
-  FOREIGN KEY (idPlan) REFERENCES planesCarrera(id),
-  FOREIGN KEY (idCuatrimestre) REFERENCES cuatrimestreCarrera(id),
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
 CREATE TABLE IF NOT EXISTS materiasEquivalentes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,

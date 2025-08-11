@@ -15,67 +15,6 @@ const (
 	INDEPENDIENTE_DEPENDIBLE    = 0b11
 )
 
-type ParClaveTipo struct {
-	Representativa bool
-	Clave          string
-	Tipo           string
-	Necesario      bool
-}
-
-func NewClaveInt(representativo bool, clave string, necesario bool) ParClaveTipo {
-	return ParClaveTipo{
-		Representativa: representativo,
-		Clave:          clave,
-		Tipo:           "INT",
-		Necesario:      necesario,
-	}
-}
-
-func NewClaveBool(representativo bool, clave string, necesario bool) ParClaveTipo {
-	return ParClaveTipo{
-		Representativa: representativo,
-		Clave:          clave,
-		Tipo:           "BOOLEAN",
-		Necesario:      necesario,
-	}
-}
-
-func NewClaveString(representativo bool, clave string, largo uint, necesario bool) ParClaveTipo {
-	tipo := fmt.Sprintf("VARCHAR(%d) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", largo)
-	return ParClaveTipo{
-		Representativa: representativo,
-		Clave:          clave,
-		Tipo:           tipo,
-		Necesario:      necesario,
-	}
-}
-
-func NewClaveEnum(representativo bool, clave string, valores []string, necesario bool) ParClaveTipo {
-	valoresRep := []string{}
-	for _, valor := range valores {
-		valoresRep = append(valoresRep, fmt.Sprintf("\"%s\"", valor))
-	}
-
-	return ParClaveTipo{
-		Representativa: representativo,
-		Clave:          clave,
-		Tipo:           fmt.Sprintf("ENUM(%s)", strings.Join(valoresRep, ", ")),
-		Necesario:      necesario,
-	}
-}
-
-type ReferenciaTabla struct {
-	Clave string
-	Tabla DescripcionTabla
-}
-
-func NewReferenciaTabla(clave string, tabla DescripcionTabla) ReferenciaTabla {
-	return ReferenciaTabla{
-		Clave: clave,
-		Tabla: tabla,
-	}
-}
-
 type DescripcionTabla struct {
 	NombreTabla string
 	TipoTabla   TipoTabla
@@ -157,7 +96,31 @@ func (dt DescripcionTabla) RestringirTabla(bdd *b.Bdd) error {
 	return nil
 }
 
-func (dt DescripcionTabla) Hash(hash *Hash, datos ...any) (IntFK, error) {
+func (dt DescripcionTabla) CrearForeignKey(hash *Hash, clave string, fKeys []ForeignKey, datos ...any) (ForeignKey, error) {
+	var fKey ForeignKey
+	for _, referencia := range dt.Referencias {
+		if !referencia.Representativo {
+			continue
+		}
+
+		encontrado := false
+		for _, fKey := range fKeys {
+			if referencia.Clave == fKey.Clave && referencia.Tabla.NombreTabla == fKey.TablaDestino {
+				encontrado = true
+				datos = append(datos, fKey.HashDatosDestino)
+				break
+			}
+		}
+
+		if !encontrado {
+			return fKey, fmt.Errorf("no tiene la foreign key necesaria para hacer su hash")
+		}
+	}
+
+	return NewForeignKey(hash, dt.NombreTabla, clave, datos...), nil
+}
+
+func (dt DescripcionTabla) Hash(hash *Hash, fKeys []ForeignKey, datos ...any) (IntFK, error) {
 	if len(datos) != len(dt.ClavesTipo) {
 		return 0, fmt.Errorf("en la tabla %s, al hashear %T, no tenia la misma estructura que la esperada", dt.NombreTabla, datos)
 	}
@@ -166,6 +129,25 @@ func (dt DescripcionTabla) Hash(hash *Hash, datos ...any) (IntFK, error) {
 	for i, claveTipo := range dt.ClavesTipo {
 		if claveTipo.Representativa {
 			datosRepresentativos = append(datosRepresentativos, datos[i])
+		}
+	}
+
+	for _, referencia := range dt.Referencias {
+		if !referencia.Representativo {
+			continue
+		}
+
+		encontrado := false
+		for _, fKey := range fKeys {
+			if referencia.Clave == fKey.Clave && referencia.Tabla.NombreTabla == fKey.TablaDestino {
+				encontrado = true
+				datosRepresentativos = append(datosRepresentativos, fKey.HashDatosDestino)
+				break
+			}
+		}
+
+		if !encontrado {
+			return 0, fmt.Errorf("no tiene la foreign key necesaria para hacer su hash")
 		}
 	}
 

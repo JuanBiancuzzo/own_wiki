@@ -40,8 +40,9 @@ type InfoValorGuardar struct {
 }
 
 type InfoReferenciaTabla struct {
-	Tabla string `json:"tabla"`
-	Clave string `json:"clave"`
+	Tabla          string `json:"tabla"`
+	Clave          string `json:"clave"`
+	Representativo bool   `json:"representativo"`
 }
 
 func CrearTablas() ([]d.DescripcionTabla, error) {
@@ -127,7 +128,7 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 				}
 				return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", rt.Tabla, strings.Join(nombreTablas, ", "))
 			} else {
-				nuevaReferencia := d.NewReferenciaTabla(rt.Clave, tabla)
+				nuevaReferencia := d.NewReferenciaTabla(rt.Clave, tabla, rt.Representativo)
 				referenciasTablas = append(referenciasTablas, nuevaReferencia)
 			}
 		}

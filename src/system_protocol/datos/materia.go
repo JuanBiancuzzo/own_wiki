@@ -1,5 +1,7 @@
 package datos
 
+/*
+
 import (
 	"database/sql"
 	"fmt"
@@ -19,13 +21,6 @@ const QUERY_CUATRIMESTRES = "SELECT id FROM cuatrimestreCarrera WHERE anio = ? A
 const INSERTAR_CUATRIMESTRE = "INSERT INTO cuatrimestreCarrera (anio, cuatrimestre) VALUES (?, ?)"
 
 const INSERTAR_CORRELATIVAS = "INSERT INTO materiasCorrelativas (idMateria, idCorrelativa) VALUES (?, ?)"
-
-type ParteCuatrimestre string
-
-const (
-	CUATRIMESTRE_PRIMERO = "Primero"
-	CUATRIMESTRE_SEGUNDO = "Segundo"
-)
 
 type Materia struct {
 	IdArchivo         *u.Opcional[int64]
@@ -137,3 +132,5 @@ func ObtenerCuatrimestreParte(representacionCuatri string) (int, ParteCuatrimest
 
 	return anio, cuatri, nil
 }
+
+*/

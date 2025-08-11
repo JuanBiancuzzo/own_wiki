@@ -8,14 +8,14 @@ import (
 type IntFK int32
 
 type ForeignKey struct {
-	Key              string
+	Clave            string
 	TablaDestino     string
 	HashDatosDestino IntFK
 }
 
-func NewForeignKey(hash *Hash, tabla, key string, datos ...any) ForeignKey {
+func NewForeignKey(hash *Hash, tabla, clave string, datos ...any) ForeignKey {
 	return ForeignKey{
-		Key:              key,
+		Clave:            clave,
 		TablaDestino:     tabla,
 		HashDatosDestino: hash.HasearDatos(datos...),
 	}
@@ -43,6 +43,10 @@ func (h *Hash) HasearDatos(datos ...any) IntFK {
 				numero = 1
 			}
 			binary.BigEndian.PutUint32(bufInt, numero)
+			datosBytes = append(datosBytes, bufInt...)
+
+		case IntFK:
+			binary.BigEndian.PutUint32(bufInt, uint32(valor))
 			datosBytes = append(datosBytes, bufInt...)
 
 		case int:

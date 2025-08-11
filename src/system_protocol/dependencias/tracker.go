@@ -180,7 +180,7 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, fKeys []ForeignKey, da
 	}
 
 	if EsTipoDependible(tabla.TipoTabla) {
-		if hashDatos, err := tabla.Hash(td.Hash, datos...); err != nil {
+		if hashDatos, err := tabla.Hash(td.Hash, fKeys, datos...); err != nil {
 			return err
 		} else {
 			return td.procesoDependible(tabla, id, hashDatos)
@@ -190,12 +190,18 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, fKeys []ForeignKey, da
 	return nil
 }
 
+func (td *TrackerDependencias) CrearReferencia(nombreTabla string, clave string, fKeys []ForeignKey, datos ...any) ForeignKey {
+	tabla := td.RegistrarTablas[nombreTabla]
+	fKey, _ := tabla.CrearForeignKey(td.Hash, clave, fKeys, datos...)
+	return fKey
+}
+
 func (td *TrackerDependencias) procesoDependiente(tabla DescripcionTabla, idInsertado int64, fKeys []ForeignKey) error {
 	for _, fKey := range fKeys {
 		// Vemos si ya fue insertado la dependencia
 		if id, err := td.BasesDeDatos.Obtener(QUERY_TABLA_DEPENDIENTES, fKey.TablaDestino, fKey.HashDatosDestino); err == nil {
 			// Si fueron insertados, por lo que actualizamos la tabla
-			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tabla.NombreTabla, fKey.Key, id, idInsertado)
+			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tabla.NombreTabla, fKey.Clave, id, idInsertado)
 			if _, err = td.BasesDeDatos.MySQL.Exec(query); err != nil {
 				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tabla.NombreTabla, err)
 			}
@@ -204,7 +210,7 @@ func (td *TrackerDependencias) procesoDependiente(tabla DescripcionTabla, idInse
 			td.lockIncompletos.Lock()
 
 			// Como no fue insertada, tenemos que guardar la información para que se carge correctamente la dependencia
-			datos := []any{tabla.NombreTabla, idInsertado, fKey.Key, fKey.TablaDestino, fKey.HashDatosDestino}
+			datos := []any{tabla.NombreTabla, idInsertado, fKey.Clave, fKey.TablaDestino, fKey.HashDatosDestino}
 			if _, err := td.BasesDeDatos.Insertar(INSERTAR_TABLA_INCOMPLETOS, datos...); err != nil {
 				td.lockIncompletos.Unlock()
 				return fmt.Errorf("error al insertar en la tabla auxiliar de incompletos, con error: %v", err)
