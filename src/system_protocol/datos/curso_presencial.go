@@ -1,5 +1,7 @@
 package datos
 
+/*
+
 import (
 	"database/sql"
 	"fmt"
@@ -85,3 +87,4 @@ func (cp *CursoPresencial) CargarDatos(bdd *b.Bdd, canal chan string) (int64, er
 func (cp *CursoPresencial) ResolverDependencias(id int64) []Cargable {
 	return ResolverDependencias(id, cp.ListaDependencias.Items())
 }
+*/

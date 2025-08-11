@@ -3,7 +3,6 @@ package fs
 import (
 	"database/sql"
 	"fmt"
-	e "own_wiki/system_protocol/datos"
 	l "own_wiki/system_protocol/utilidades"
 	"slices"
 )
@@ -33,6 +32,14 @@ const (
 	TCO_DIST_DISCRETA   = "Discretas"
 	TCO_DIST_CONTINUA   = "Continuas"
 	TCO_DIST_MULTIVARIA = "Multivarias"
+)
+
+type TipoDistribucion string
+
+const (
+	DISTRIBUCION_DISCRETA     = "Discreta"
+	DISTRIBUCION_CONTINUA     = "Continua"
+	DISTRIBUCION_MULTIVARIADA = "Multivariada"
 )
 
 type Colecciones struct {
@@ -70,13 +77,13 @@ func (c *Colecciones) Ls() ([]string, error) {
 		return []string{TCO_DIST_DISCRETA, TCO_DIST_CONTINUA, TCO_DIST_MULTIVARIA}, nil
 
 	case TCO_DIST_DISCRETA:
-		query = fmt.Sprintf(QUERY_DISTRIBUCION_LS, e.DISTRIBUCION_DISCRETA)
+		query = fmt.Sprintf(QUERY_DISTRIBUCION_LS, DISTRIBUCION_DISCRETA)
 
 	case TCO_DIST_CONTINUA:
-		query = fmt.Sprintf(QUERY_DISTRIBUCION_LS, e.DISTRIBUCION_CONTINUA)
+		query = fmt.Sprintf(QUERY_DISTRIBUCION_LS, DISTRIBUCION_CONTINUA)
 
 	case TCO_DIST_MULTIVARIA:
-		query = fmt.Sprintf(QUERY_DISTRIBUCION_LS, e.DISTRIBUCION_MULTIVARIADA)
+		query = fmt.Sprintf(QUERY_DISTRIBUCION_LS, DISTRIBUCION_MULTIVARIADA)
 	}
 
 	if rows, err := c.Bdd.Query(query); err != nil {

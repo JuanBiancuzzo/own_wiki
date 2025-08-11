@@ -1,22 +1,3 @@
-CREATE TABLE IF NOT EXISTS distribuciones (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  tipo ENUM ("Discreta", "Continua", "Multivariada") NOT NULL,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
-CREATE TABLE IF NOT EXISTS relacionDistribuciones (
-  idDistribucionA INT NOT NULL,
-  idDistribucionB INT NOT NULL,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idDistribucionA) REFERENCES distribuciones(id),
-  FOREIGN KEY (idDistribucionB) REFERENCES distribuciones(id),
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
 CREATE TABLE IF NOT EXISTS planesCarrera (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci

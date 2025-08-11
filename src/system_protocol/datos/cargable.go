@@ -50,7 +50,7 @@ func Obtener(query func() *sql.Row) (int64, bool) {
 
 func ObtenerDirecto(bdd *b.Bdd, query string, datos ...any) (int64, bool) {
 	var id int64
-	row := bdd.MySQL.QueryRow(QUERY_PERSONAS, datos...)
+	row := bdd.MySQL.QueryRow(query, datos...)
 	if err := row.Scan(&id); err != nil {
 		return 0, false
 	}

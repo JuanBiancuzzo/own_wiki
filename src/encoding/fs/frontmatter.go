@@ -1,7 +1,6 @@
 package fs
 
 import (
-	db "own_wiki/system_protocol/bass_de_datos"
 	e "own_wiki/system_protocol/datos"
 )
 
@@ -106,41 +105,7 @@ type Articulo struct {
 	} `yaml:"textos,omitempty"`
 }
 
-func (f *Frontmatter) CrearLibro() *e.Libro {
-
-	autores := make([]*e.Persona, len(f.Autores))
-	for i, autor := range f.Autores {
-		autores[i] = e.NewPersona(autor.Nombre, autor.Apellido)
-	}
-	capitulos := make([]*e.Capitulo, len(f.Capitulos))
-	for i, capitulo := range f.Capitulos {
-		editores := make([]*e.Persona, len(capitulo.Editores))
-		for i, editor := range capitulo.Editores {
-			editores[i] = e.NewPersona(editor.Nombre, editor.Apellido)
-		}
-
-		capitulos[i] = e.NewCapitulo(
-			capitulo.NumeroCapitulo,
-			capitulo.NombreCapitulo,
-			editores,
-			capitulo.Paginas.Inicio,
-			capitulo.Paginas.Final,
-		)
-	}
-
-	return e.NewLibro(
-		f.TituloObra,
-		f.SubtituloObra,
-		f.Editorial,
-		f.Anio,
-		f.Edicion,
-		f.Volumen,
-		f.Url,
-		autores,
-		capitulos,
-	)
-}
-
+/*
 func (f *Frontmatter) CrearPaper() (*e.Paper, error) {
 	if f.NombreRevista == "" {
 		f.NombreRevista = "No fue ingresado"
@@ -221,3 +186,5 @@ func CargarInfo(info *db.InfoArchivos, meta *Frontmatter) {
 
 	// Distribuciones
 }
+
+*/

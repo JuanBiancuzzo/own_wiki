@@ -13,15 +13,17 @@ import (
 )
 
 const (
-	TABLA_ARCHIVOS          = "Archivos"
-	TABLA_TAGS              = "Tags"
-	TABLA_PERSONAS          = "Personas"
-	TABLA_EDITORIALES       = "Editoriales"
-	TABLA_LIBROS            = "Libros"
-	TABLA_AUTORES_LIBRO     = "AutoresLibro"
-	TABLA_CAPITULOS         = "Capitulos"
-	TABLA_EDITORES_CAPITULO = "EditoresCapitulo"
-	TABLA_CARRERAS          = "Carreras"
+	TABLA_ARCHIVOS                  = "Archivos"
+	TABLA_TAGS                      = "Tags"
+	TABLA_PERSONAS                  = "Personas"
+	TABLA_EDITORIALES               = "Editoriales"
+	TABLA_LIBROS                    = "Libros"
+	TABLA_AUTORES_LIBRO             = "AutoresLibro"
+	TABLA_CAPITULOS                 = "Capitulos"
+	TABLA_EDITORES_CAPITULO         = "EditoresCapitulo"
+	TABLA_CARRERAS                  = "Carreras"
+	TABLA_DISTRIBUCIONES            = "Distribuciones"
+	TABLA_RELACIONES_DISTRIBUCIONES = "RelacionesDistribuciones"
 )
 
 const (
@@ -123,7 +125,9 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 		case TAG_RESUMEN_CURSO:
 
 		case TAG_DISTRIBUCION:
-
+			if err = ProcesarDistribucion(path, &meta, tracker, canalMensajes); err != nil {
+				return err
+			}
 		case TAG_LIBRO:
 			if err = ProcesarLibro(path, &meta, tracker, canalMensajes); err != nil {
 				return err
@@ -269,6 +273,23 @@ func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 	return nil
 }
 
+func ProcesarDistribucion(path string, meta *Frontmatter, tracker *d.TrackerDependencias, canalMensajes chan string) error {
+	tipoDistribucion, err := ObtenerTipoDistribucion(meta.TipoDistribucion)
+	if HABILITAR_ERROR && err != nil {
+		return err
+	}
+
+	err = tracker.Cargar(TABLA_DISTRIBUCIONES,
+		[]d.ForeignKey{d.NewForeignKey(tracker.Hash, TABLA_ARCHIVOS, "refArchivo", path)},
+		meta.NombreDistribuucion,
+		tipoDistribucion,
+	)
+	if HABILITAR_ERROR && err != nil {
+		return err
+	}
+	return nil
+}
+
 /*
 
 	func (a *Archivo) ProcesarMateria(path string, meta *Frontmatter, canalMensajes chan string) {
@@ -389,14 +410,6 @@ func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 		}
 	}
 
-	func (a *Archivo) ProcesarDistribucion(path string, meta *Frontmatter, canalMensajes chan string) {
-		if constructor, err := e.NewDistribucion(meta.NombreDistribuucion, meta.TipoDistribucion); err == nil {
-			a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-
-		} else {
-			canalMensajes <- fmt.Sprintf("Error: %v\n", err)
-		}
-	}
 */
 
 func Nombre(path string) string {
@@ -417,6 +430,14 @@ const (
 	ETAPA_EMPEZADO    = "Empezado"
 	ETAPA_AMPLIAR     = "Ampliar"
 	ETAPA_TERMINADO   = "Terminado"
+)
+
+type TipoDistribucion string
+
+const (
+	DISTRIBUCION_DISCRETA     = "Discreta"
+	DISTRIBUCION_CONTINUA     = "Continua"
+	DISTRIBUCION_MULTIVARIADA = "Multivariada"
 )
 
 func NumeroODefault(representacion string, valorDefault int) int {
@@ -471,4 +492,20 @@ func ObtenerEtapa(representacionEtapa string) (Etapa, error) {
 	}
 
 	return etapa, nil
+}
+
+func ObtenerTipoDistribucion(representacion string) (TipoDistribucion, error) {
+	var tipoDistribucion TipoDistribucion
+	switch representacion {
+	case "discreta":
+		tipoDistribucion = DISTRIBUCION_DISCRETA
+	case "continua":
+		tipoDistribucion = DISTRIBUCION_CONTINUA
+	case "multivariada":
+		tipoDistribucion = DISTRIBUCION_MULTIVARIADA
+	default:
+		return DISTRIBUCION_DISCRETA, fmt.Errorf("el tipo de distribucion (%s) no es uno de los esperados", representacion)
+	}
+
+	return tipoDistribucion, nil
 }

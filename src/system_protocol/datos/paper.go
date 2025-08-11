@@ -1,5 +1,7 @@
 package datos
 
+/*
+
 import (
 	"database/sql"
 	"fmt"
@@ -123,3 +125,5 @@ func (p *Paper) ResolverDependencias(id int64) []Cargable {
 }
 
 func (p *Paper) CargarDependencia(dependencia Dependencia) {}
+
+*/
