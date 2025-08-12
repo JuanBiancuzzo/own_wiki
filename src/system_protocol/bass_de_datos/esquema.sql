@@ -14,37 +14,6 @@ CREATE TABLE IF NOT EXISTS subtemasInvestigacion (
   FOREIGN KEY (idSubtema) REFERENCES temasInvestigacion(id)
 );
 
-CREATE TABLE IF NOT EXISTS revistasDePapers (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?)  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-);
-
-CREATE TABLE IF NOT EXISTS papers (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  titulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  subtitulo VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  idRevista INT NOT NULL,
-  volumenRevista INT,
-  numeroRevista INT,
-  paginaInicio INT,
-  paginaFinal INT,
-  anio YEAR,
-  url VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idRevista) REFERENCES revistasDePapers(id),
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
-CREATE TABLE IF NOT EXISTS escritoresPaper (
-  tipo ENUM ("Editor", "Autor"),
-  idPaper INT NOT NULL,
-  idPersona INT NOT NULL,
-
-  FOREIGN KEY (idPaper) REFERENCES papers(id),
-  FOREIGN KEY (idPersona) REFERENCES personas(id)
-);
-
 CREATE TABLE IF NOT EXISTS temasMatematica (
   id INT AUTO_INCREMENT PRIMARY KEY,
   numRepresentante INT,

@@ -39,6 +39,9 @@ const (
 	TABLA_EDITORES_CAPITULO         = "EditoresCapitulo"
 	TABLA_DISTRIBUCIONES            = "Distribuciones"
 	TABLA_RELACIONES_DISTRIBUCIONES = "RelacionesDistribuciones"
+	TABLA_REVISTAS_PAPER            = "RevistasDePaper"
+	TABLA_PAPERS                    = "Papers"
+	TABLA_ESCRITORES_PAPER          = "EscritoresPaper"
 )
 
 const (
@@ -133,7 +136,7 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 	funcionesProcesar[TAG_REPRESENTANTE] = ProcesarColeccion
 	funcionesProcesar[TAG_DISTRIBUCION] = ProcesarDistribucion
 	funcionesProcesar[TAG_LIBRO] = ProcesarLibro
-	// funcionesProcesar[TAG_PAPER] =
+	funcionesProcesar[TAG_PAPER] = ProcesarPaper
 
 	// Notas:
 	// funcionesProcesar[TAG_NOTA_FACULTAD] =
@@ -458,7 +461,11 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		return fmt.Errorf("cargar editoriales con error: %v", err)
 	}
 
-	anio := NumeroODefault(meta.Anio, 0)
+	anio, err := strconv.Atoi(meta.Anio)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("obtener anio del libro con error: %v", err)
+	}
+
 	edicion := NumeroODefault(meta.Edicion, 1)
 	volumen := NumeroODefault(meta.Volumen, 0)
 
@@ -559,41 +566,96 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 	return nil
 }
 
-/*
-	func (a *Archivo) ProcesarTemaCurso(path string, meta *Frontmatter, canalMensajes chan string) {
+func ProcesarPaper(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	nombreRevista := strings.TrimSpace(meta.NombreRevista)
+	if nombreRevista == "" {
+		nombreRevista = "No fue ingresado - TODO"
+	}
+	err := tracker.Cargar(TABLA_REVISTAS_PAPER, []d.RelacionTabla{}, nombreRevista)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar revista con error: %v", err)
 	}
 
-	func (a *Archivo) ProcesarNota(path string, meta *Frontmatter, canalMensajes chan string) {
-		constructor := meta.CrearNota(e.Nombre(path))
-		a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-		a.CargarDependible(e.DEP_NOTA, constructor)
+	anio, err := strconv.Atoi(meta.Anio)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("obtener anio del paper con error: %v", err)
+	}
 
-		vinculosNota := [][]string{meta.VinculoFacultad, meta.VinculoCurso}
-		tipoNota := []e.TipoNota{e.TN_FACULTAD, e.TN_CURSO}
-		tipoDependencia := []e.TipoDependible{e.DEP_TEMA_MATERIA, e.DEP_TEMA_CURSO}
+	volumen := NumeroODefault(meta.VolumenInforme, 0)
+	numero := NumeroODefault(meta.NumeroInforme, 0)
+	paginaInicio := NumeroODefault(meta.Paginas.Inicio, 0)
+	paginaFinal := NumeroODefault(meta.Paginas.Final, 1)
 
-		for i, vinculos := range vinculosNota {
-			for _, vinculo := range vinculos {
-				pathVinculo := ObtenerWikiLink(vinculo)[0]
+	err = tracker.Cargar(TABLA_PAPERS,
+		[]d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
+			d.NewRelacionSimple(TABLA_REVISTAS_PAPER, "refRevista", nombreRevista),
+			d.NewRelacionSimple(TABLA_COLECCIONES, "refColeccion", "Papers"),
+		},
+		meta.TituloInforme,
+		meta.SubtituloInforme,
+		anio,
+		volumen,
+		numero,
+		paginaInicio,
+		paginaFinal,
+		meta.Url,
+	)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar paper con error: %v", err)
+	}
 
-				notaVinculo := e.NewNotaVinculo(tipoNota[i])
-				a.CargarDependencia(path, e.DEP_NOTA, notaVinculo.CrearDependenciaNota)
-				a.CargarDependencia(pathVinculo, tipoDependencia[i], notaVinculo.CrearDependenciaVinculo)
-			}
+	datosCaracteristicosPaper := []any{meta.TituloInforme, anio, volumen, numero, paginaInicio, paginaFinal}
+
+	for _, autor := range meta.Autores {
+		nombre := strings.TrimSpace(autor.Nombre)
+		apellido := strings.TrimSpace(autor.Apellido)
+
+		err = tracker.Cargar(TABLA_PERSONAS, []d.RelacionTabla{}, nombre, apellido)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar persona con error: %v", err)
+		}
+
+		err = tracker.Cargar(TABLA_ESCRITORES_PAPER,
+			[]d.RelacionTabla{
+				d.NewRelacionSimple(TABLA_PAPERS, "refPaper", datosCaracteristicosPaper...),
+				d.NewRelacionSimple(TABLA_PERSONAS, "refPersona",
+					nombre,
+					apellido,
+				),
+			},
+			PAPER_AUTOR,
+		)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar autor del paper con error: %v", err)
 		}
 	}
 
+	for _, editor := range meta.Editores {
+		nombre := strings.TrimSpace(editor.Nombre)
+		apellido := strings.TrimSpace(editor.Apellido)
 
-	func (a *Archivo) ProcesarPaper(path string, meta *Frontmatter, canalMensajes chan string) {
-		if constructor, err := meta.CrearPaper(); err == nil {
-			a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
+		err = tracker.Cargar(TABLA_PERSONAS, []d.RelacionTabla{}, nombre, apellido)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar persona con error: %v", err)
+		}
 
-		} else {
-			canalMensajes <- fmt.Sprintf("Error: %v\n", err)
+		err = tracker.Cargar(TABLA_ESCRITORES_PAPER,
+			[]d.RelacionTabla{
+				d.NewRelacionSimple(TABLA_PAPERS, "refPaper", datosCaracteristicosPaper...),
+				d.NewRelacionSimple(TABLA_PERSONAS, "refPersona",
+					nombre,
+					apellido,
+				),
+			},
+			PAPER_EDITOR,
+		)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar editor del paper con error: %v", err)
 		}
 	}
-
-*/
+	return nil
+}
 
 func Nombre(path string) string {
 	separacion := strings.Split(path, "/")
@@ -642,6 +704,13 @@ type TipoCurso string
 const (
 	CURSO_ONLINE     = "Online"
 	CURSO_PRESENCIAL = "Presencial"
+)
+
+type TipoEscritorPaper string
+
+const (
+	PAPER_EDITOR = "Editor"
+	PAPER_AUTOR  = "Autor"
 )
 
 func NumeroODefault(representacion string, valorDefault int) int {
