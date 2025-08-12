@@ -11,14 +11,14 @@ import (
 )
 
 const (
-	QUERY_LIBROS_LS       = "SELECT titulo FROM libros ORDER BY titulo"
-	QUERY_CAPITULO_LS     = "SELECT CONCAT('N° ', capitulo, ') ', nombre) FROM capitulos WHERE idLibro = %d ORDER BY capitulo"
-	QUERY_PAPERS_LS       = "SELECT titulo FROM papers ORDER BY titulo"
-	QUERY_DISTRIBUCION_LS = "SELECT nombre FROM distribuciones WHERE tipo = '%s'"
+	QUERY_LIBROS_LS       = "SELECT titulo FROM Libros ORDER BY titulo"
+	QUERY_CAPITULO_LS     = "SELECT CONCAT('N° ', capitulo, ') ', nombre) FROM Capitulos WHERE refLibro = %d ORDER BY capitulo"
+	QUERY_PAPERS_LS       = "SELECT titulo FROM Papers ORDER BY titulo"
+	QUERY_DISTRIBUCION_LS = "SELECT nombre FROM Distribuciones WHERE tipo = '%s'"
 )
 
 const (
-	QUERY_OBTENER_LIBRO = "SELECT id, titulo FROM libros WHERE titulo = '%s'"
+	QUERY_OBTENER_LIBRO = "SELECT id, titulo FROM Libros WHERE titulo = '%s'"
 )
 
 type TipoColeccion string

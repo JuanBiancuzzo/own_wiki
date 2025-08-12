@@ -11,23 +11,23 @@ import (
 )
 
 const (
-	QUERY_CARRERAS_LS = "SELECT nombre FROM carreras"
-	QUERY_MATERIAS_LS = `SELECT materiasGlobal.nombre FROM (
-		SELECT idCarrera, nombre FROM materias UNION ALL SELECT idCarrera, nombre FROM materiasEquivalentes
-	) AS materiasGlobal WHERE materiasGlobal.idCarrera = %d`
-	QUERY_TEMAS_MATERIA_LS = "SELECT nombre FROM temasMateria WHERE idMateria = %d ORDER BY capitulo, parte"
-	QUERY_NOTA_MATERIA_LS  = `SELECT DISTINCT notas.nombre FROM notas INNER JOIN (
-		SELECT idNota, idVinculo FROM notasVinculo WHERE tipoVinculo = "Facultad"
-	) AS vinculo ON notas.id = vinculo.idNota WHERE vinculo.idVinculo = %d`
+	QUERY_CARRERAS_LS = "SELECT nombre FROM Carreras"
+	QUERY_MATERIAS_LS = `SELECT MateriasGlobal.nombre FROM (
+		SELECT refCarrera, nombre FROM Materias UNION ALL SELECT refCarrera, nombre FROM MateriasEquivalentes
+	) AS MateriasGlobal WHERE MateriasGlobal.refCarrera = %d`
+	QUERY_TEMAS_MATERIA_LS = "SELECT nombre FROM TemasMateria WHERE refMateria = %d ORDER BY capitulo, parte"
+	QUERY_NOTA_MATERIA_LS  = `SELECT DISTINCT Notas.nombre FROM Notas INNER JOIN (
+		SELECT refNota, refVinculo FROM NotasVinculo WHERE vinculo = "Facultad"
+	) AS Vinculo ON Notas.id = Vinculo.refNota WHERE Vinculo.refVinculo = %d`
 )
 
 const (
-	QUERY_OBTENER_CARRERA = "SELECT id, nombre FROM carreras WHERE nombre = '%s'"
-	QUERY_OBTENER_MATERIA = `SELECT id, nombre FROM materias WHERE idCarrera = %d AND nombre = '%s'
+	QUERY_OBTENER_CARRERA = "SELECT id, nombre FROM Carreras WHERE nombre = '%s'"
+	QUERY_OBTENER_MATERIA = `SELECT id, nombre FROM Materias WHERE refCarrera = %d AND nombre = '%s'
 		UNION ALL
-	SELECT idMateria AS id, nombre FROM materiasEquivalentes WHERE idCarrera = %d AND nombre = '%s'
+	SELECT refMateria AS id, nombre FROM MateriasEquivalentes WHERE refCarrera = %d AND nombre = '%s'
 	`
-	QUERY_OBTNER_TEMA_MATERIA = "SELECT id, nombre FROM temasMateria WHERE idMateria = %d AND nombre = '%s'"
+	QUERY_OBTNER_TEMA_MATERIA = "SELECT id, nombre FROM TemasMateria WHERE refMateria = %d AND nombre = '%s'"
 )
 
 type TipoFacultad byte

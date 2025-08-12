@@ -10,19 +10,19 @@ import (
 )
 
 const (
-	QUERY_CURSOS_LS      = "SELECT nombre FROM cursos UNION ALL SELECT nombre FROM cursosPresencial"
-	QUERY_TEMAS_CURSO_LS = "SELECT nombre FROM temasCurso WHERE idCurso = %d ORDER BY capitulo, parte"
-	QUERY_NOTA_CURSO_LS  = `SELECT DISTINCT notas.nombre FROM notas INNER JOIN (
-		SELECT idNota, idVinculo FROM notasVinculo WHERE tipoVinculo = "Curso"
-	) AS vinculo ON notas.id = vinculo.idNota WHERE vinculo.idVinculo = %d`
+	QUERY_CURSOS_LS      = "SELECT nombre FROM CursosOnline UNION ALL SELECT nombre FROM CursosPresencial"
+	QUERY_TEMAS_CURSO_LS = "SELECT nombre FROM TemasCurso WHERE refCurso = %d ORDER BY capitulo, parte"
+	QUERY_NOTA_CURSO_LS  = `SELECT DISTINCT Notas.nombre FROM Notas INNER JOIN (
+		SELECT refNota, refVinculo FROM NotasVinculo WHERE vinculo = "Curso"
+	) AS Vinculo ON Notas.id = Vinculo.refNota WHERE Vinculo.refVinculo = %d`
 )
 
 const (
-	QUERY_OBTENER_CURSO = `SELECT id, nombre FROM cursos WHERE nombre = '%s'
+	QUERY_OBTENER_CURSO = `SELECT id, nombre FROM CursosOnline WHERE nombre = '%s'
 		UNION ALL
-	SELECT idMateria, nombre AS id FROM materiasEquivalentes WHERE nombre = '%s'
+	SELECT id, nombre AS id FROM CursosPresencial WHERE nombre = '%s'
 	`
-	QUERY_OBTENER_TEMA_CURSO = "SELECT id, nombre FROM temasCurso WHERE idCurso = %d AND nombre = '%s'"
+	QUERY_OBTENER_TEMA_CURSO = "SELECT id, nombre FROM TemasCurso WHERE refCurso = %d AND nombre = '%s'"
 )
 
 type TipoCurso byte
