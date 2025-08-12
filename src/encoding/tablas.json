@@ -122,6 +122,24 @@
         ]
     },
     {
+        "nombre": "MateriasCorrelativas",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "tipoMateria", "tipo": "enum", "valores": ["Materia", "Equivalente"],
+                "representativo": false, "necesario": true
+            },
+            { 
+                "clave": "tipoCorrelativa", "tipo": "enum", "valores": ["Materia", "Equivalente"],
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tablas": ["Materias", "MateriasEquivalentes"], "clave": "refMateria" },
+            { "tablas": ["Materias", "MateriasEquivalentes"], "clave": "refCorrelativa" }
+        ]
+    },
+    {
         "nombre": "TemasMateria",
         "elementosRepetidos": false,
         "valoresGuardar": [

@@ -21,15 +21,17 @@ type DescripcionTabla struct {
 	ClavesTipo  []ParClaveTipo
 	Referencias []ReferenciaTabla
 
-	necesarioQuery bool
-	query          string
-	insertar       string
+	necesarioQuery    bool
+	query             string
+	insertar          string
+	tablasReferencias map[string]*DescripcionTabla
 }
 
 func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) DescripcionTabla {
 	insertarParam := []string{}
 	insertarValues := []string{}
 	queryParam := []string{}
+	tablasReferencias := make(map[string]*DescripcionTabla)
 	for _, claveTipo := range clavesTipo {
 		insertarParam = append(insertarParam, claveTipo.Clave)
 		insertarValues = append(insertarValues, "?")
@@ -38,6 +40,9 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 	for _, referencia := range referencias {
 		insertarParam = append(insertarParam, referencia.Clave)
 		insertarValues = append(insertarValues, "0")
+		for _, tabla := range referencia.Tablas {
+			tablasReferencias[tabla.NombreTabla+referencia.Clave] = tabla
+		}
 	}
 
 	return DescripcionTabla{
@@ -58,6 +63,7 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 			nombreTabla,
 			strings.Join(queryParam, " AND "),
 		),
+		tablasReferencias: tablasReferencias,
 	}
 }
 
@@ -96,28 +102,33 @@ func (dt DescripcionTabla) RestringirTabla(bdd *b.Bdd) error {
 	return nil
 }
 
-func (dt DescripcionTabla) CrearForeignKey(hash *Hash, clave string, fKeys []ForeignKey, datos ...any) (ForeignKey, error) {
-	var fKey ForeignKey
-	for _, referencia := range dt.Referencias {
-		if !referencia.Representativo {
-			continue
+func (dt DescripcionTabla) CrearForeignKey(hash *Hash, relaciones []RelacionTabla) ([]ForeignKey, error) {
+	fKeys := make([]ForeignKey, len(relaciones))
+
+	// d.NewRelacionCompleja(TABLA_MATERIAS_EQ, "refMateria", []d.RelacionTabla{relacionCarrera}, meta.NombreMateria),
+	// d.NewRelacionCompleja(tablaCorrelativa, "refCorrelativa", []d.RelacionTabla{relacionCarrera}, infoCorrelativa.Materia),
+
+	for i, relacion := range relaciones {
+		datos := relacion.Datos
+		tabla, ok := dt.tablasReferencias[relacion.Tabla+relacion.Clave]
+		if !ok {
+			return fKeys, fmt.Errorf("no hay tabla para esa relacion")
 		}
 
-		encontrado := false
-		for _, fKey := range fKeys {
-			if referencia.Clave == fKey.Clave && referencia.Tabla.NombreTabla == fKey.TablaDestino {
-				encontrado = true
-				datos = append(datos, fKey.HashDatosDestino)
-				break
+		if len(relacion.InfoRelacionada) > 0 {
+			if fKeysRelacionados, err := tabla.CrearForeignKey(hash, relacion.InfoRelacionada); err != nil {
+				return fKeys, fmt.Errorf("error info relacionada con error: %v", err)
+			} else {
+				for _, fKey := range fKeysRelacionados {
+					datos = append(datos, fKey.HashDatosDestino)
+				}
 			}
 		}
 
-		if !encontrado {
-			return fKey, fmt.Errorf("no tiene la foreign key necesaria para hacer su hash")
-		}
+		fKeys[i] = NewForeignKey(hash, relacion.Tabla, relacion.Clave, datos...)
 	}
 
-	return NewForeignKey(hash, dt.NombreTabla, clave, datos...), nil
+	return fKeys, nil
 }
 
 func (dt DescripcionTabla) Hash(hash *Hash, fKeys []ForeignKey, datos ...any) (IntFK, error) {
@@ -139,10 +150,12 @@ func (dt DescripcionTabla) Hash(hash *Hash, fKeys []ForeignKey, datos ...any) (I
 
 		encontrado := false
 		for _, fKey := range fKeys {
-			if referencia.Clave == fKey.Clave && referencia.Tabla.NombreTabla == fKey.TablaDestino {
-				encontrado = true
-				datosRepresentativos = append(datosRepresentativos, fKey.HashDatosDestino)
-				break
+			for _, tabla := range referencia.Tablas {
+				if referencia.Clave == fKey.Clave && tabla.NombreTabla == fKey.TablaDestino {
+					encontrado = true
+					datosRepresentativos = append(datosRepresentativos, fKey.HashDatosDestino)
+					break
+				}
 			}
 		}
 
@@ -167,7 +180,9 @@ func (dt DescripcionTabla) ObtenerDependencias() []DescripcionTabla {
 	tablas := []DescripcionTabla{}
 
 	for _, referencia := range dt.Referencias {
-		tablas = append(tablas, referencia.Tabla)
+		for _, tabla := range referencia.Tablas {
+			tablas = append(tablas, *tabla)
+		}
 	}
 
 	return tablas

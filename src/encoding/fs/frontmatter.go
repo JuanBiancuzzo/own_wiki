@@ -95,8 +95,8 @@ type Pagina struct {
 }
 
 type Correlativa struct {
-	Path string        `yaml:"path"`
-	Tipo e.TipoMateria `yaml:"tipo"`
+	Materia string      `yaml:"materia"`
+	Tipo    TipoMateria `yaml:"tipo"`
 }
 
 type InfoMateria struct {

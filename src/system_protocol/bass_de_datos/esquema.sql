@@ -1,10 +1,3 @@
-CREATE TABLE IF NOT EXISTS materiasCorrelativas (
-  tipoMateria ENUM ("Materia", "Equivalente"),
-  idMateria INT NOT NULL,
-  tipoCorrelativa ENUM ("Materia", "Equivalente"),
-  idCorrelativa INT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS temasCurso (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,

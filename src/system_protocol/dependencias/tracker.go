@@ -149,7 +149,7 @@ func (td *TrackerDependencias) TerminarProcesoInsertarDatos() error {
 	return nil
 }
 
-func (td *TrackerDependencias) Cargar(nombreTabla string, fKeys []ForeignKey, datos ...any) error {
+func (td *TrackerDependencias) Cargar(nombreTabla string, relaciones []RelacionTabla, datos ...any) error {
 	if _, ok := td.RegistrarTablas[nombreTabla]; !ok {
 		return fmt.Errorf("de alguna forma estas cargando en una tabla no registrada")
 	}
@@ -173,6 +173,14 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, fKeys []ForeignKey, da
 		return err
 	}
 
+	var fKeys []ForeignKey = []ForeignKey{}
+	if (EsTipoDependiente(tabla.TipoTabla) || EsTipoDependible(tabla.TipoTabla)) && len(relaciones) > 0 {
+		fKeys, err = tabla.CrearForeignKey(td.Hash, relaciones)
+		if err != nil {
+			return err
+		}
+	}
+
 	if EsTipoDependiente(tabla.TipoTabla) {
 		if err := td.procesoDependiente(tabla, id, fKeys); err != nil {
 			return fmt.Errorf("error al verificar o actualizar el elemnto en la tabla tabla %s, con id: %d, con error: %v", tabla.NombreTabla, id, err)
@@ -188,12 +196,6 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, fKeys []ForeignKey, da
 	}
 
 	return nil
-}
-
-func (td *TrackerDependencias) CrearReferencia(nombreTabla string, clave string, fKeys []ForeignKey, datos ...any) ForeignKey {
-	tabla := td.RegistrarTablas[nombreTabla]
-	fKey, _ := tabla.CrearForeignKey(td.Hash, clave, fKeys, datos...)
-	return fKey
 }
 
 func (td *TrackerDependencias) procesoDependiente(tabla DescripcionTabla, idInsertado int64, fKeys []ForeignKey) error {
@@ -280,7 +282,7 @@ func (td *TrackerDependencias) procesoUltimasActualizaciones() error {
 		var idDependiente, idInsertado int64
 
 		for filas.Next() {
-			if err = filas.Scan(&tablaDependiente, &idDependiente, &key); err != nil {
+			if err = filas.Scan(&tablaDependiente, &idDependiente, &key, &tablaDestino, &idInsertado); err != nil {
 				return fmt.Errorf("error al obtener datos de una query de incompletos, con error: %v", err)
 			}
 

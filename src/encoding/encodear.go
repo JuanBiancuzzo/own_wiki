@@ -40,9 +40,10 @@ type InfoValorGuardar struct {
 }
 
 type InfoReferenciaTabla struct {
-	Tabla          string `json:"tabla"`
-	Clave          string `json:"clave"`
-	Representativo bool   `json:"representativo"`
+	Tabla          string   `json:"tabla"`
+	Tablas         []string `json:"tablas"`
+	Clave          string   `json:"clave"`
+	Representativo bool     `json:"representativo"`
 }
 
 func CrearTablas() ([]d.DescripcionTabla, error) {
@@ -68,6 +69,9 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 		listaInfo = append(listaInfo, info)
 		for _, referencia := range info.ReferenciasTabla {
 			mapaReferenciados[referencia.Tabla] = 0
+			for _, tabla := range referencia.Tablas {
+				mapaReferenciados[tabla] = 0
+			}
 		}
 	}
 
@@ -76,7 +80,7 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 		return tablas, err
 	}
 
-	mapaTablas := make(map[string]d.DescripcionTabla)
+	mapaTablas := make(map[string]*d.DescripcionTabla)
 	for _, info := range listaInfo {
 		independiente := len(info.ReferenciasTabla) == 0
 		_, dependible := mapaReferenciados[info.Nombre]
@@ -121,20 +125,31 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 
 		referenciasTablas := []d.ReferenciaTabla{}
 		for _, rt := range info.ReferenciasTabla {
-			if tabla, ok := mapaTablas[rt.Tabla]; !ok {
-				nombreTablas := []string{}
-				for nombreTabla := range mapaTablas {
-					nombreTablas = append(nombreTablas, nombreTabla)
-				}
-				return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", rt.Tabla, strings.Join(nombreTablas, ", "))
+			var nombreTablas []string
+			if rt.Tabla != "" {
+				nombreTablas = []string{rt.Tabla}
 			} else {
-				nuevaReferencia := d.NewReferenciaTabla(rt.Clave, tabla, rt.Representativo)
-				referenciasTablas = append(referenciasTablas, nuevaReferencia)
+				nombreTablas = rt.Tablas
 			}
+
+			tablasRelacionadas := make([]*d.DescripcionTabla, len(nombreTablas))
+			for i, nombreTabla := range nombreTablas {
+				if tabla, ok := mapaTablas[nombreTabla]; !ok {
+					nombreTablas := []string{}
+					for nombreTabla := range mapaTablas {
+						nombreTablas = append(nombreTablas, nombreTabla)
+					}
+					return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", rt.Tabla, strings.Join(nombreTablas, ", "))
+				} else {
+					tablasRelacionadas[i] = tabla
+				}
+			}
+			nuevaReferencia := d.NewReferenciaTabla(rt.Clave, tablasRelacionadas, rt.Representativo)
+			referenciasTablas = append(referenciasTablas, nuevaReferencia)
 		}
 
 		nuevaTabla := d.ConstruirTabla(info.Nombre, tipoTabla, info.ElementosRepetidos, paresClaveTipo, referenciasTablas)
-		mapaTablas[info.Nombre] = nuevaTabla
+		mapaTablas[info.Nombre] = &nuevaTabla
 
 		tablas = append(tablas, nuevaTabla)
 	}

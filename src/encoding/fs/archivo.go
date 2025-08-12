@@ -28,6 +28,7 @@ const (
 	TABLA_MATERIAS     = "Materias"
 	TABLA_MATERIAS_EQ  = "MateriasEquivalentes"
 	TABLA_TEMA_MATERIA = "TemasMateria"
+	TABLA_CORRELATIVAS = "MateriasCorrelativas"
 
 	TABLA_COLECCIONES               = "Colecciones"
 	TABLA_LIBROS                    = "Libros"
@@ -108,7 +109,7 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 	// El resto del contenido del archivo
 	// a.Contenido = contenido[3+strings.Index(contenido[3:], "---")+len("---"):]
 
-	err := tracker.Cargar(TABLA_ARCHIVOS, []d.ForeignKey{}, path)
+	err := tracker.Cargar(TABLA_ARCHIVOS, []d.RelacionTabla{}, path)
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar archivo con error: %v", err)
 	}
@@ -154,7 +155,7 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 }
 
 func ProcesarCursoOnline(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
-	err := tracker.Cargar(TABLA_PAGINAS_CURSOS, []d.ForeignKey{}, meta.NombrePagina)
+	err := tracker.Cargar(TABLA_PAGINAS_CURSOS, []d.RelacionTabla{}, meta.NombrePagina)
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar paginas cursos con error: %v", err)
 	}
@@ -165,9 +166,9 @@ func ProcesarCursoOnline(path string, meta *Frontmatter, tracker *d.TrackerDepen
 	}
 
 	err = tracker.Cargar(TABLA_CURSOS_ONLINE,
-		[]d.ForeignKey{
-			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
-			tracker.CrearReferencia(TABLA_PAGINAS_CURSOS, "refPagina", []d.ForeignKey{}, meta.NombrePagina),
+		[]d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
+			d.NewRelacionSimple(TABLA_PAGINAS_CURSOS, "refPagina", meta.NombrePagina),
 		},
 		meta.NombreCurso,
 		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
@@ -187,8 +188,8 @@ func ProcesarCursoPresencial(path string, meta *Frontmatter, tracker *d.TrackerD
 	}
 
 	err = tracker.Cargar(TABLA_CURSOS_PRESENECIAL,
-		[]d.ForeignKey{
-			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
+		[]d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
 		},
 		meta.NombreCurso,
 		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
@@ -203,8 +204,8 @@ func ProcesarCursoPresencial(path string, meta *Frontmatter, tracker *d.TrackerD
 func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	nombreCarrera := Nombre(path)
 	err := tracker.Cargar(TABLA_CARRERAS,
-		[]d.ForeignKey{
-			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
+		[]d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
 		},
 		nombreCarrera,
 		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
@@ -218,7 +219,7 @@ func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 }
 
 func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
-	err := tracker.Cargar(TABLA_PLANES, []d.ForeignKey{}, meta.Plan)
+	err := tracker.Cargar(TABLA_PLANES, []d.RelacionTabla{}, meta.Plan)
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar plan con error: %v", err)
 	}
@@ -228,17 +229,17 @@ func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 		return fmt.Errorf("obtener cuatrimestre con error: %v", err)
 	}
 
-	err = tracker.Cargar(TABLA_CUATRI, []d.ForeignKey{}, anio, cuatrimestre)
+	err = tracker.Cargar(TABLA_CUATRI, []d.RelacionTabla{}, anio, cuatrimestre)
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar cuatri con error: %v", err)
 	}
 
 	err = tracker.Cargar(TABLA_MATERIAS,
-		[]d.ForeignKey{
-			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
-			tracker.CrearReferencia(TABLA_CARRERAS, "refCarrera", []d.ForeignKey{}, meta.NombreCarrera),
-			tracker.CrearReferencia(TABLA_PLANES, "refPlan", []d.ForeignKey{}, meta.Plan),
-			tracker.CrearReferencia(TABLA_CUATRI, "refCuatrimestre", []d.ForeignKey{}, anio, cuatrimestre),
+		[]d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
+			d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", meta.NombreCarrera),
+			d.NewRelacionSimple(TABLA_PLANES, "refPlan", meta.Plan),
+			d.NewRelacionSimple(TABLA_CUATRI, "refCuatrimestre", anio, cuatrimestre),
 		},
 		meta.NombreMateria,
 		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
@@ -247,17 +248,43 @@ func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar materia con error: %v", err)
 	}
+
+	for _, infoCorrelativa := range meta.Correlativas {
+		tablaCorrelativa := TABLA_MATERIAS
+		if infoCorrelativa.Tipo == MATERIA_EQUIVALENTE {
+			tablaCorrelativa = TABLA_MATERIAS_EQ
+		}
+
+		err = tracker.Cargar(TABLA_CORRELATIVAS,
+			[]d.RelacionTabla{
+				d.NewRelacionCompleja(TABLA_MATERIAS, "refMateria", []d.RelacionTabla{
+					d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", meta.NombreCarrera),
+				}, meta.NombreMateria),
+				d.NewRelacionCompleja(tablaCorrelativa, "refCorrelativa", []d.RelacionTabla{
+					d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", meta.NombreCarrera),
+				}, infoCorrelativa.Materia),
+			},
+			MATERIA_REAL,
+			infoCorrelativa.Tipo,
+		)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar materias correlativas de una materia normal con error: %v", err)
+		}
+	}
+
 	return nil
 }
 
 func ProcesarMateriaEquivalente(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	infoMateria := meta.MateriaEquivalente
+	relacionCarrera := d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", meta.NombreCarrera)
+
 	err := tracker.Cargar(TABLA_MATERIAS_EQ,
-		[]d.ForeignKey{
-			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
-			tracker.CrearReferencia(TABLA_CARRERAS, "refCarrera", []d.ForeignKey{}, meta.NombreCarrera),
-			tracker.CrearReferencia(TABLA_MATERIAS, "refMateria", []d.ForeignKey{
-				tracker.CrearReferencia(TABLA_CARRERAS, "refCarrera", []d.ForeignKey{}, infoMateria.Carrera),
+		[]d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
+			relacionCarrera,
+			d.NewRelacionCompleja(TABLA_MATERIAS, "refMateria", []d.RelacionTabla{
+				d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", infoMateria.Carrera),
 			}, infoMateria.NombreMateria),
 		},
 		meta.NombreMateria,
@@ -266,16 +293,36 @@ func ProcesarMateriaEquivalente(path string, meta *Frontmatter, tracker *d.Track
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar materia equivalente con error: %v", err)
 	}
+
+	for _, infoCorrelativa := range meta.Correlativas {
+		tablaCorrelativa := TABLA_MATERIAS
+		if infoCorrelativa.Tipo == MATERIA_EQUIVALENTE {
+			tablaCorrelativa = TABLA_MATERIAS_EQ
+		}
+
+		err = tracker.Cargar(TABLA_CORRELATIVAS,
+			[]d.RelacionTabla{
+				d.NewRelacionCompleja(TABLA_MATERIAS_EQ, "refMateria", []d.RelacionTabla{relacionCarrera}, meta.NombreMateria),
+				d.NewRelacionCompleja(tablaCorrelativa, "refCorrelativa", []d.RelacionTabla{relacionCarrera}, infoCorrelativa.Materia),
+			},
+			MATERIA_EQUIVALENTE,
+			infoCorrelativa.Tipo,
+		)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar materias correlativas de una materia equivalente con error: %v", err)
+		}
+	}
+
 	return nil
 }
 
 func ProcesarTemaMateria(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	infoTema := meta.InfoTemaMateria
 	err := tracker.Cargar(TABLA_TEMA_MATERIA,
-		[]d.ForeignKey{
-			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
-			tracker.CrearReferencia(TABLA_MATERIAS, "refMateria", []d.ForeignKey{
-				tracker.CrearReferencia(TABLA_CARRERAS, "refCarrera", []d.ForeignKey{}, infoTema.Carrera),
+		[]d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
+			d.NewRelacionCompleja(TABLA_MATERIAS, "refMateria", []d.RelacionTabla{
+				d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", infoTema.Carrera),
 			}, infoTema.Materia),
 		},
 		meta.NombreResumen,
@@ -290,7 +337,7 @@ func ProcesarTemaMateria(path string, meta *Frontmatter, tracker *d.TrackerDepen
 
 func ProcesarColeccion(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	err := tracker.Cargar(TABLA_COLECCIONES,
-		[]d.ForeignKey{tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path)},
+		[]d.RelacionTabla{d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path)},
 		Nombre(path),
 	)
 	if HABILITAR_ERROR && err != nil {
@@ -306,9 +353,9 @@ func ProcesarDistribucion(path string, meta *Frontmatter, tracker *d.TrackerDepe
 	}
 
 	err = tracker.Cargar(TABLA_DISTRIBUCIONES,
-		[]d.ForeignKey{
-			tracker.CrearReferencia(TABLA_COLECCIONES, "refColeccion", []d.ForeignKey{}, "Distribuciones"),
-			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
+		[]d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_COLECCIONES, "refColeccion", "Distribuciones"),
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
 		},
 		meta.NombreDistribuucion,
 		tipoDistribucion,
@@ -320,7 +367,7 @@ func ProcesarDistribucion(path string, meta *Frontmatter, tracker *d.TrackerDepe
 }
 
 func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
-	err := tracker.Cargar(TABLA_EDITORIALES, []d.ForeignKey{}, meta.Editorial)
+	err := tracker.Cargar(TABLA_EDITORIALES, []d.RelacionTabla{}, meta.Editorial)
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar editoriales con error: %v", err)
 	}
@@ -330,10 +377,10 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 	volumen := NumeroODefault(meta.Volumen, 0)
 
 	err = tracker.Cargar(
-		TABLA_LIBROS, []d.ForeignKey{
-			tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
-			tracker.CrearReferencia(TABLA_EDITORIALES, "refEditorial", []d.ForeignKey{}, meta.Editorial),
-			tracker.CrearReferencia(TABLA_COLECCIONES, "refColeccion", []d.ForeignKey{}, "Biblioteca"),
+		TABLA_LIBROS, []d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
+			d.NewRelacionSimple(TABLA_EDITORIALES, "refEditorial", meta.Editorial),
+			d.NewRelacionSimple(TABLA_COLECCIONES, "refColeccion", "Biblioteca"),
 		},
 		meta.TituloObra,
 		meta.SubtituloObra,
@@ -350,19 +397,19 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		nombre := strings.TrimSpace(autor.Nombre)
 		apellido := strings.TrimSpace(autor.Apellido)
 
-		err = tracker.Cargar(TABLA_PERSONAS, []d.ForeignKey{}, nombre, apellido)
+		err = tracker.Cargar(TABLA_PERSONAS, []d.RelacionTabla{}, nombre, apellido)
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar persona con error: %v", err)
 		}
 
-		err = tracker.Cargar(TABLA_AUTORES_LIBRO, []d.ForeignKey{
-			tracker.CrearReferencia(TABLA_LIBROS, "refLibro", []d.ForeignKey{},
+		err = tracker.Cargar(TABLA_AUTORES_LIBRO, []d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_LIBROS, "refLibro",
 				meta.TituloObra,
 				anio,
 				edicion,
 				volumen,
 			),
-			tracker.CrearReferencia(TABLA_PERSONAS, "refPersona", []d.ForeignKey{},
+			d.NewRelacionSimple(TABLA_PERSONAS, "refPersona",
 				nombre,
 				apellido,
 			),
@@ -378,9 +425,9 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		paginaFinal := NumeroODefault(capitulo.Paginas.Final, 1)
 
 		err = tracker.Cargar(TABLA_CAPITULOS,
-			[]d.ForeignKey{
-				tracker.CrearReferencia(TABLA_ARCHIVOS, "refArchivo", []d.ForeignKey{}, path),
-				tracker.CrearReferencia(TABLA_LIBROS, "refLibro", []d.ForeignKey{},
+			[]d.RelacionTabla{
+				d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
+				d.NewRelacionSimple(TABLA_LIBROS, "refLibro",
 					meta.TituloObra,
 					anio,
 					edicion,
@@ -400,19 +447,19 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 			nombre := strings.TrimSpace(editor.Nombre)
 			apellido := strings.TrimSpace(editor.Apellido)
 
-			err = tracker.Cargar(TABLA_PERSONAS, []d.ForeignKey{}, nombre, apellido)
+			err = tracker.Cargar(TABLA_PERSONAS, []d.RelacionTabla{}, nombre, apellido)
 			if HABILITAR_ERROR && err != nil {
 				return fmt.Errorf("cargar persona con error: %v", err)
 			}
 
-			err = tracker.Cargar(TABLA_EDITORES_CAPITULO, []d.ForeignKey{
-				tracker.CrearReferencia(TABLA_CAPITULOS, "refCapitulo", []d.ForeignKey{},
+			err = tracker.Cargar(TABLA_EDITORES_CAPITULO, []d.RelacionTabla{
+				d.NewRelacionSimple(TABLA_CAPITULOS, "refCapitulo",
 					numero,
 					capitulo.NombreCapitulo,
 					paginaInicio,
 					paginaFinal,
 				),
-				tracker.CrearReferencia(TABLA_PERSONAS, "refPersona", []d.ForeignKey{},
+				d.NewRelacionSimple(TABLA_PERSONAS, "refPersona",
 					nombre,
 					apellido,
 				),
@@ -528,6 +575,13 @@ type ParteCuatrimestre string
 const (
 	CUATRIMESTRE_PRIMERO = "Primero"
 	CUATRIMESTRE_SEGUNDO = "Segundo"
+)
+
+type TipoMateria string
+
+const (
+	MATERIA_REAL        = "Materia"
+	MATERIA_EQUIVALENTE = "Equivalente"
 )
 
 func NumeroODefault(representacion string, valorDefault int) int {
