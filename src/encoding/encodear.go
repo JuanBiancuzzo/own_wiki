@@ -1,147 +1,124 @@
 package encoding
 
 import (
-	"database/sql"
 	"fmt"
+	"os"
+	"slices"
+	"sync"
 
-	fs "own_wiki/encoding/fs"
+	c "own_wiki/encoding/configuracion"
+	"own_wiki/encoding/procesar"
 	b "own_wiki/system_protocol/bass_de_datos"
-	e "own_wiki/system_protocol/datos"
-	l "own_wiki/system_protocol/utilidades"
+	d "own_wiki/system_protocol/dependencias"
+	u "own_wiki/system_protocol/utilidades"
+
+	_ "embed"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 // mdp "github.com/gomarkdown/markdown/parser"
 // tp "github.com/BurntSushi/toml"
-// "github.com/go-sql-driver/mysql"
 
-func ProcesarArchivos(canalInfo chan b.InfoArchivos, canalDirectorio chan fs.Root, dirOrigen string, canalMensajes chan string) {
-	var infoArchivos b.InfoArchivos
+//go:embed tablas.json
+var infoTablas string
 
-	canalMensajes <- "Creando estructura\n"
-	directorioRoot := fs.EstablecerDirectorio(dirOrigen, &infoArchivos, canalMensajes)
+const CANTIDAD_WORKERS = 15
 
-	// Ajustar valores de info de los archivos
-	infoArchivos.Incrementar()
-	canalInfo <- infoArchivos
-	close(canalInfo)
+var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
-	canalMensajes <- "Se termino de procesar los archivos\n"
-	canalDirectorio <- *directorioRoot
-	close(canalDirectorio)
-}
+func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalMensajes chan string) error {
+	var waitArchivos sync.WaitGroup
 
-func ConstruirBaseRelacional(canalBDD chan *sql.DB, canalInfo chan b.InfoArchivos, canalMensajes chan string) {
-	bdd, err := b.EstablecerConexionRelacional(canalMensajes)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
-		canalBDD <- nil
-		return
-	}
-	infoArchivos := <-canalInfo
+	canalInput := make(chan string, CANTIDAD_WORKERS)
+	waitArchivos.Add(1)
 
-	err = b.CrearTablas(bdd, &infoArchivos)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo crear las tablas para la base de datos, con error: %v\n", err)
-		canalBDD <- nil
-		return
+	terminar := func(motivo string) {
+		canalMensajes <- "Esperando a que termine por: " + motivo
+		close(canalInput)
+		waitArchivos.Wait()
 	}
 
-	canalBDD <- bdd
-	close(canalBDD)
-}
-
-func ConstruirBaseNoSQL(canalBDD chan *mongo.Database, canalMensajes chan string) {
-	bdd, err := b.EstablecerConexionNoSQL(canalMensajes)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
-		canalBDD <- nil
-		return
+	procesarArchivo := func(path string) {
+		if err := procesar.CargarArchivo(dirOrigen, path, tracker, canalMensajes); err != nil {
+			canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo en el path: '%s', con error: %v", path, err)
+		}
 	}
+	go u.DividirTrabajo(canalInput, CANTIDAD_WORKERS, procesarArchivo, &waitArchivos)
 
-	err = b.CrearColecciones(bdd)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo crear las colecciones para la base de datos, con error: %v\n", err)
-		canalBDD <- nil
-		return
-	}
+	colaDirectorios := u.NewCola[string]()
+	colaDirectorios.Encolar("")
+	canalMensajes <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", dirOrigen)
 
-	canalBDD <- bdd
-	close(canalBDD)
-}
-
-func EvaluarCargable(bdd *b.Bdd, canalMensajes chan string, cargable e.Cargable, cola *l.Cola[e.Cargable]) {
-	if id, err := cargable.CargarDatos(bdd, canalMensajes); err == nil {
-		for _, cargable := range cargable.ResolverDependencias(id) {
-			cola.Encolar(cargable)
+	for directorioPath := range colaDirectorios.DesencolarIterativamente {
+		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", dirOrigen, directorioPath))
+		if err != nil {
+			terminar("huvo un error")
+			return fmt.Errorf("se tuvo un error al leer el directorio '%s' dando el error: %v", fmt.Sprintf("%s/%s", dirOrigen, directorioPath), err)
 		}
 
-	} else {
-		canalMensajes <- fmt.Sprintf("Error al cargar: %v", err)
-	}
-}
+		for _, archivo := range archivos {
+			nombreArchivo := archivo.Name()
+			archivoPath := nombreArchivo
+			if directorioPath != "" {
+				archivoPath = fmt.Sprintf("%s/%s", directorioPath, archivoPath)
+			}
 
-func CargarDatos(bdd *b.Bdd, canalIndependiente chan e.Cargable, canalMensajes chan string) {
-	canalMensajes <- "Cargando los archivos sin dependencias"
+			if archivo.IsDir() && !slices.Contains(DIRECTORIOS_IGNORAR, nombreArchivo) {
+				colaDirectorios.Encolar(archivoPath)
 
-	cargablesListos := l.NewCola[e.Cargable]()
-	for cargable := range canalIndependiente {
-		EvaluarCargable(bdd, canalMensajes, cargable, cargablesListos)
-	}
-
-	canalMensajes <- "Cargados todos los archivos sin dependencias, ahora procesando los que tengan dependencias"
-
-	for cargable := range cargablesListos.DesencolarIterativamente {
-		EvaluarCargable(bdd, canalMensajes, cargable, cargablesListos)
+			} else if !archivo.IsDir() {
+				canalInput <- archivoPath
+			}
+		}
 	}
 
-	if cargablesListos.Lista.Largo > 0 {
-		canalMensajes <- fmt.Sprint("Hubo un error, no se procesaron: ", cargablesListos.Lista.Largo, " cargables")
-	}
+	terminar("termino como lo esperado")
+	return nil
 }
 
 func Encodear(dirInput string, canalMensajes chan string) {
-	canalInfo := make(chan b.InfoArchivos)
-	canalDirectorio := make(chan fs.Root)
-	go ProcesarArchivos(canalInfo, canalDirectorio, dirInput, canalMensajes)
-
 	_ = godotenv.Load()
 
-	canalBddRelacional := make(chan *sql.DB)
-	go ConstruirBaseRelacional(canalBddRelacional, canalInfo, canalMensajes)
-
-	canalBddNoSQL := make(chan *mongo.Database)
-	go ConstruirBaseNoSQL(canalBddNoSQL, canalMensajes)
-
-	canalDatos := make(chan e.Cargable, 100)
-
-	go func(canalDatos chan e.Cargable, canalMensajes chan string) {
-		root := <-canalDirectorio
-		for _, archivo := range root.Archivos {
-			archivo.EstablecerDependencias(canalDatos, canalMensajes)
-		}
-
-		canalMensajes <- "Dejar de mandar archivos para procesar"
-		close(canalDatos)
-	}(canalDatos, canalMensajes)
-
-	bddRelacional := <-canalBddRelacional
-	defer b.CerrarBddRelacional(bddRelacional)
-
-	bddNoSQL := <-canalBddNoSQL
-	defer b.CerrarBddNoSQL(bddNoSQL)
-
-	if bddRelacional == nil || bddNoSQL == nil {
-		canalMensajes <- "No se pudo hacer una conexion con las bases de datos"
+	bddRelacional, err := b.EstablecerConexionRelacional(canalMensajes)
+	if err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
 	}
-	canalMensajes <- "Insertando datos en la base de datos"
+	defer b.CerrarBddRelacional(bddRelacional)
 
-	bdd := b.NewBdd(bddRelacional, bddNoSQL)
-	CargarDatos(bdd, canalDatos, canalMensajes)
+	bddNoSQL, err := b.EstablecerConexionNoSQL(canalMensajes)
+	if err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
+		return
+	}
+	defer b.CerrarBddNoSQL(bddNoSQL)
+	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
-	canalMensajes <- "Se termino de cargar a la base de datos"
+	tablas, err := c.CrearTablas(infoTablas)
+	if err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo crear las tablas, se tuvo el error: %v", err)
+		return
+	}
+	canalMensajes <- "Se leyeron correctamente las tablas"
+
+	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional, bddNoSQL), tablas, canalMensajes)
+	if err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo crear el tracker, se tuvo el error: %v", err)
+		return
+	}
+
+	if err = RecorrerDirectorio(dirInput, tracker, canalMensajes); err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo recorrer todos los archivos, se tuvo el error: %v", err)
+		return
+	}
+	canalMensajes <- "Se termino el proceso de insertar datos"
+
+	if err = tracker.TerminarProcesoInsertarDatos(); err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo terminar el proceso de insertar datos, se tuvo el error: %v", err)
+	} else {
+		canalMensajes <- "Se termino de cargar a la base de datos"
+	}
+	canalMensajes <- "Se hizo la limpieza de los datos auxiliares"
 }

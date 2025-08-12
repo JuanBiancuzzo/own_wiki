@@ -18,22 +18,32 @@ func NewPilaConCapacidad[T any](capacidad uint32) *Pila[T] {
 	}
 }
 
-func (l *Pila[T]) Apilar(elemento T) {
-	l.Lista.Push(elemento)
+func (p *Pila[T]) Apilar(elemento T) {
+	p.Lista.Push(elemento)
 }
 
-func (l *Pila[T]) Pick() (T, error) {
-	if l.Lista.Largo == 0 {
+func (p *Pila[T]) Pick() (T, error) {
+	if p.Lista.Largo == 0 {
 		return valor_default[T](), fmt.Errorf("no hay elemento para ver")
 	}
 
-	return l.Lista.ObtenerEn(l.Lista.Largo - 1)
+	return p.Lista.ObtenerEn(p.Lista.Largo - 1)
 }
 
-func (l *Pila[T]) Desapilar() (T, error) {
-	return l.Lista.Pop()
+func (p *Pila[T]) Desapilar() (T, error) {
+	return p.Lista.Pop()
 }
 
-func (l *Pila[T]) Vacia() bool {
-	return l.Lista.Largo == 0
+func (p *Pila[T]) Vacia() bool {
+	return p.Lista.Largo == 0
+}
+
+func (p *Pila[T]) DesapilarIterativamente(yield func(T) bool) {
+	for !p.Vacia() {
+		if elemento, err := p.Desapilar(); err != nil {
+			return
+		} else if !yield(elemento) {
+			return
+		}
+	}
 }

@@ -1,0 +1,482 @@
+[
+    {
+        "nombre": "Archivos",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "path", "tipo": "string", "largo": 400,
+                "representativo": true, "necesario": true
+            }
+        ]
+    },
+    {
+        "nombre": "Personas",
+        "elementosRepetidos": true,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "apellido", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            }
+        ]
+    },
+    {
+        "nombre": "Editoriales",
+        "elementosRepetidos": true,
+        "valoresGuardar": [
+            { 
+                "clave": "editorial", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            }
+        ]
+    }, 
+    {
+        "nombre": "PlanesCarrera",
+        "elementosRepetidos": true,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            }
+        ]
+    },
+    {
+        "nombre": "CuatrimestresCarrera",
+        "elementosRepetidos": true,
+        "valoresGuardar": [
+            { 
+                "clave": "anio", "tipo": "int",
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "cuatrimestre", "tipo": "enum", "valores": ["Primero", "Segundo"],
+                "representativo": true, "necesario": true
+            }
+        ]
+    },
+    {
+        "nombre": "Carreras",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "etapa", "tipo": "enum", "valores": ["SinEmpezar", "Empezado", "Ampliar", "Terminado"], 
+                "representativo": false, "necesario": true
+            },
+            { 
+                "clave": "tieneCodigoMateria", "tipo": "bool", 
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" }
+        ]
+    },
+    {
+        "nombre": "Materias",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "etapa", "tipo": "enum", "valores": ["SinEmpezar", "Empezado", "Ampliar", "Terminado"], 
+                "representativo": false, "necesario": true
+            },
+            { 
+                "clave": "codigo", "tipo": "string", "largo": 255, 
+                "necesario": false
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "Carreras", "clave": "refCarrera", "representativo": true },
+            { "tabla": "PlanesCarrera", "clave": "refPlan" },
+            { "tabla": "CuatrimestresCarrera", "clave": "refCuatrimestre" }
+        ]
+    },
+    {
+        "nombre": "MateriasEquivalentes",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "codigo", "tipo": "string", "largo": 255, 
+                "necesario": false
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "Carreras", "clave": "refCarrera", "representativo": true },
+            { "tabla": "Materias", "clave": "refMateria" }
+        ]
+    },
+    {
+        "nombre": "MateriasCorrelativas",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "tipoMateria", "tipo": "enum", "valores": ["Materia", "Equivalente"],
+                "representativo": false, "necesario": true
+            },
+            { 
+                "clave": "tipoCorrelativa", "tipo": "enum", "valores": ["Materia", "Equivalente"],
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tablas": ["Materias", "MateriasEquivalentes"], "clave": "refMateria" },
+            { "tablas": ["Materias", "MateriasEquivalentes"], "clave": "refCorrelativa" }
+        ]
+    },
+    {
+        "nombre": "TemasMateria",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "capitulo", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "parte", "tipo": "int", 
+                "necesario": false
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "Materias", "clave": "refMateria", "representativo": true }
+        ]
+    },
+    {
+        "nombre": "PaginasCursos",
+        "elementosRepetidos": true,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 400,
+                "representativo": true, "necesario": true
+            }
+        ]
+    },
+    {
+        "nombre": "CursosOnline",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "etapa", "tipo": "enum", "valores": ["SinEmpezar", "Empezado", "Ampliar", "Terminado"], 
+                "representativo": false, "necesario": true
+            },
+            { 
+                "clave": "anio", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "url", "tipo": "string", "largo": 255,
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "PaginasCursos", "clave": "refPagina" }
+        ]
+    },
+    {
+        "nombre": "CursosPresencial",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "etapa", "tipo": "enum", "valores": ["SinEmpezar", "Empezado", "Ampliar", "Terminado"], 
+                "representativo": false, "necesario": true
+            },
+            { 
+                "clave": "anio", "tipo": "int", 
+                "representativo": true, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" }
+        ]
+    },
+    {
+        "nombre": "TemasCurso",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "tipoCurso", "tipo": "enum", "valores": ["Online", "Presencial"], 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "capitulo", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "parte", "tipo": "int", 
+                "necesario": false
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tablas": ["CursosOnline", "CursosPresencial"], "clave": "refCurso", "representativo": true }
+        ]
+    },
+    {
+        "nombre": "ProfesoresCurso",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "tipoCurso", "tipo": "enum", "valores": ["Online", "Presencial"], 
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Personas", "clave": "refPersona"  },
+            { "tablas": ["CursosOnline", "CursosPresencial"], "clave": "refCurso" }
+        ]
+    },
+    {
+        "nombre": "Colecciones",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            {
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" }
+        ]
+    },
+    {
+        "nombre": "Distribuciones",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            {
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            {
+                "clave": "tipo", "tipo": "enum", "valores": ["Discreta", "Continua", "Multivariada"],
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Colecciones", "clave": "refColeccion" },
+            { "tabla": "Archivos", "clave": "refArchivo" }
+        ]
+    },
+    {
+        "nombre": "RelacionesDistribuciones",
+        "elementosRepetidos": false,
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "Distribuciones", "clave": "refDistribucionA" },
+            { "tabla": "Distribuciones", "clave": "refDistribucionB" }
+        ]
+    },
+    {
+        "nombre": "Libros",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "titulo", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "subtitulo", "tipo": "string", "largo": 255,
+                "necesario": false
+            },
+            { 
+                "clave": "anio", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "edicion", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "volumen", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "url", "tipo": "string", "largo": 255,
+                "necesario": false
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "Editoriales", "clave": "refEditorial" },
+            { "tabla": "Colecciones", "clave": "refColeccion" }
+        ]
+    },
+    {
+        "nombre": "AutoresLibro",
+        "elementosRepetidos": false,
+        "referenciasTabla": [
+            { "tabla": "Libros", "clave": "refLibro" },
+            { "tabla": "Personas", "clave": "refPersona" }
+        ]
+    },
+    {
+        "nombre": "Capitulos",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "numero", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "paginaInicio", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "paginaFinal", "tipo": "int", 
+                "representativo": true, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "Libros", "clave": "refLibro" }
+        ]
+    },
+    {
+        "nombre": "EditoresCapitulo",
+        "elementosRepetidos": false,
+        "referenciasTabla": [
+            { "tabla": "Capitulos", "clave": "refCapitulo" },
+            { "tabla": "Personas", "clave": "refPersona" }
+        ]
+    },
+    {
+        "nombre": "RevistasDePaper",
+        "elementosRepetidos": true,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            }
+        ]
+    },
+    {
+        "nombre": "Papers",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "titulo", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "subtitulo", "tipo": "string", "largo": 255,
+                "necesario": false
+            },
+            { 
+                "clave": "anio", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "volumen", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "numero", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "paginaInicio", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "paginaFinal", "tipo": "int", 
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "doi", "tipo": "string", "largo": 255,
+                "necesario": false
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" },
+            { "tabla": "Colecciones", "clave": "refColeccion" },
+            { "tabla": "RevistasDePaper", "clave": "refRevista" }
+        ]
+    },
+    {
+        "nombre": "EscritoresPaper",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "tipoEscritor", "tipo": "enum", "valores": ["Editor", "Autor"], 
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Papers", "clave": "refPaper" },
+            { "tabla": "Personas", "clave": "refPersona" }
+        ]
+    },
+    {
+        "nombre": "Notas",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "nombre", "tipo": "string", "largo": 255,
+                "representativo": true, "necesario": true
+            },
+            { 
+                "clave": "etapa", "tipo": "enum", "valores": ["SinEmpezar", "Empezado", "Ampliar", "Terminado"], 
+                "representativo": false, "necesario": true
+            },
+            { 
+                "clave": "dia", "tipo": "date", "necesario": false
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Archivos", "clave": "refArchivo" }
+        ]
+    },
+    {
+        "nombre": "NotasVinculo",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "vinculo", "tipo": "enum", "valores": ["Facultad", "Curso"], 
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Notas", "clave": "refNota" },
+            { 
+                "tablas": [ "TemasMateria", "TemasCurso" ], 
+                "clave": "refVinculo" 
+            }
+        ]
+    }
+]
