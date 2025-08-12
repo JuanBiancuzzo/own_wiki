@@ -2,14 +2,17 @@ package encoding
 
 import (
 	"fmt"
-	"strings"
+	"os"
+	"slices"
+	"sync"
 
-	fs "own_wiki/encoding/fs"
+	c "own_wiki/encoding/configuracion"
+	"own_wiki/encoding/procesar"
 	b "own_wiki/system_protocol/bass_de_datos"
 	d "own_wiki/system_protocol/dependencias"
+	u "own_wiki/system_protocol/utilidades"
 
 	_ "embed"
-	"encoding/json"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -21,143 +24,58 @@ import (
 //go:embed tablas.json
 var infoTablas string
 
-type InfoTabla struct {
-	Nombre             string                `json:"nombre"`
-	Independiente      bool                  `json:"independiente"`
-	Dependible         bool                  `json:"dependible"`
-	ElementosRepetidos bool                  `json:"elementosRepetidos"`
-	ValoresGuardar     []InfoValorGuardar    `json:"valoresGuardar"`
-	ReferenciasTabla   []InfoReferenciaTabla `json:"referenciasTabla"`
-}
+const CANTIDAD_WORKERS = 15
 
-type InfoValorGuardar struct {
-	Clave          string   `json:"clave"`
-	Tipo           string   `json:"tipo"`
-	Largo          int      `json:"largo"`
-	Valores        []string `json:"valores"`
-	Representativo bool     `json:"representativo"`
-	Necesario      bool     `json:"necesario"`
-}
+var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
-type InfoReferenciaTabla struct {
-	Tabla          string   `json:"tabla"`
-	Tablas         []string `json:"tablas"`
-	Clave          string   `json:"clave"`
-	Representativo bool     `json:"representativo"`
-}
+func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalMensajes chan string) error {
+	var waitArchivos sync.WaitGroup
 
-func CrearTablas() ([]d.DescripcionTabla, error) {
-	tablas := []d.DescripcionTabla{}
+	canalInput := make(chan string, CANTIDAD_WORKERS)
+	waitArchivos.Add(1)
 
-	decodificador := json.NewDecoder(strings.NewReader(infoTablas))
-
-	// read open bracket
-	if _, err := decodificador.Token(); err != nil {
-		return tablas, err
+	terminar := func(motivo string) {
+		canalMensajes <- "Esperando a que termine por: " + motivo
+		close(canalInput)
+		waitArchivos.Wait()
 	}
 
-	listaInfo := []InfoTabla{}
-	mapaReferenciados := make(map[string]uint8)
+	procesarArchivo := func(path string) {
+		if err := procesar.CargarArchivo(dirOrigen, path, tracker, canalMensajes); err != nil {
+			canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo en el path: '%s', con error: %v", path, err)
+		}
+	}
+	go u.DividirTrabajo(canalInput, CANTIDAD_WORKERS, procesarArchivo, &waitArchivos)
 
-	for decodificador.More() {
-		var info InfoTabla
-		err := decodificador.Decode(&info)
+	colaDirectorios := u.NewCola[string]()
+	colaDirectorios.Encolar("")
+	canalMensajes <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", dirOrigen)
+
+	for directorioPath := range colaDirectorios.DesencolarIterativamente {
+		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", dirOrigen, directorioPath))
 		if err != nil {
-			return tablas, fmt.Errorf("error al codificar tablas")
+			terminar("huvo un error")
+			return fmt.Errorf("se tuvo un error al leer el directorio '%s' dando el error: %v", fmt.Sprintf("%s/%s", dirOrigen, directorioPath), err)
 		}
 
-		listaInfo = append(listaInfo, info)
-		for _, referencia := range info.ReferenciasTabla {
-			mapaReferenciados[referencia.Tabla] = 0
-			for _, tabla := range referencia.Tablas {
-				mapaReferenciados[tabla] = 0
+		for _, archivo := range archivos {
+			nombreArchivo := archivo.Name()
+			archivoPath := nombreArchivo
+			if directorioPath != "" {
+				archivoPath = fmt.Sprintf("%s/%s", directorioPath, archivoPath)
+			}
+
+			if archivo.IsDir() && !slices.Contains(DIRECTORIOS_IGNORAR, nombreArchivo) {
+				colaDirectorios.Encolar(archivoPath)
+
+			} else if !archivo.IsDir() {
+				canalInput <- archivoPath
 			}
 		}
 	}
 
-	// read closing bracket
-	if _, err := decodificador.Token(); err != nil {
-		return tablas, err
-	}
-
-	mapaTablas := make(map[string]*d.DescripcionTabla)
-	for _, info := range listaInfo {
-		independiente := len(info.ReferenciasTabla) == 0
-		_, dependible := mapaReferenciados[info.Nombre]
-
-		var tipoTabla d.TipoTabla
-		if independiente && dependible {
-			tipoTabla = d.INDEPENDIENTE_DEPENDIBLE
-		} else if independiente && !dependible {
-			tipoTabla = d.INDEPENDIENTE_NO_DEPENDIBLE
-		} else if !independiente && dependible {
-			tipoTabla = d.DEPENDIENTE_DEPENDIBLE
-		} else {
-			tipoTabla = d.DEPENDIENTE_NO_DEPENDIBLE
-		}
-
-		paresClaveTipo := []d.ParClaveTipo{}
-		for _, vg := range info.ValoresGuardar {
-			var nuevoClaveTipo d.ParClaveTipo
-
-			necesario := vg.Necesario
-			representativo := vg.Representativo && necesario
-
-			switch vg.Tipo {
-			case "string":
-				nuevoClaveTipo = d.NewClaveString(representativo, vg.Clave, uint(vg.Largo), necesario)
-
-			case "int":
-				nuevoClaveTipo = d.NewClaveInt(representativo, vg.Clave, necesario)
-
-			case "enum":
-				nuevoClaveTipo = d.NewClaveEnum(representativo, vg.Clave, vg.Valores, necesario)
-
-			case "bool":
-				nuevoClaveTipo = d.NewClaveBool(representativo, vg.Clave, necesario)
-
-			case "date":
-				nuevoClaveTipo = d.NewClaveDate(representativo, vg.Clave, necesario)
-
-			default:
-				return tablas, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)
-			}
-
-			paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
-		}
-
-		referenciasTablas := []d.ReferenciaTabla{}
-		for _, rt := range info.ReferenciasTabla {
-			var nombreTablas []string
-			if rt.Tabla != "" {
-				nombreTablas = []string{rt.Tabla}
-			} else {
-				nombreTablas = rt.Tablas
-			}
-
-			tablasRelacionadas := make([]*d.DescripcionTabla, len(nombreTablas))
-			for i, nombreTabla := range nombreTablas {
-				if tabla, ok := mapaTablas[nombreTabla]; !ok {
-					nombreTablas := []string{}
-					for nombreTabla := range mapaTablas {
-						nombreTablas = append(nombreTablas, nombreTabla)
-					}
-					return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", rt.Tabla, strings.Join(nombreTablas, ", "))
-				} else {
-					tablasRelacionadas[i] = tabla
-				}
-			}
-			nuevaReferencia := d.NewReferenciaTabla(rt.Clave, tablasRelacionadas, rt.Representativo)
-			referenciasTablas = append(referenciasTablas, nuevaReferencia)
-		}
-
-		nuevaTabla := d.ConstruirTabla(info.Nombre, tipoTabla, info.ElementosRepetidos, paresClaveTipo, referenciasTablas)
-		mapaTablas[info.Nombre] = &nuevaTabla
-
-		tablas = append(tablas, nuevaTabla)
-	}
-
-	return tablas, nil
+	terminar("termino como lo esperado")
+	return nil
 }
 
 func Encodear(dirInput string, canalMensajes chan string) {
@@ -178,7 +96,7 @@ func Encodear(dirInput string, canalMensajes chan string) {
 	defer b.CerrarBddNoSQL(bddNoSQL)
 	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
-	tablas, err := CrearTablas()
+	tablas, err := c.CrearTablas(infoTablas)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo crear las tablas, se tuvo el error: %v", err)
 		return
@@ -191,7 +109,7 @@ func Encodear(dirInput string, canalMensajes chan string) {
 		return
 	}
 
-	if err = fs.RecorrerDirectorio(dirInput, tracker, canalMensajes); err != nil {
+	if err = RecorrerDirectorio(dirInput, tracker, canalMensajes); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo recorrer todos los archivos, se tuvo el error: %v", err)
 		return
 	}

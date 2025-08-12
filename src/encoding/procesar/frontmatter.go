@@ -1,4 +1,4 @@
-package fs
+package procesar
 
 type Frontmatter struct {
 	Tags                 []string          `yaml:"tags,omitempty"`
