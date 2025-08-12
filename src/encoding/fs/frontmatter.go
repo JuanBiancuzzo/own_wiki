@@ -1,9 +1,5 @@
 package fs
 
-import (
-	e "own_wiki/system_protocol/datos"
-)
-
 type Frontmatter struct {
 	Tags                 []string        `yaml:"tags,omitempty"`
 	Dia                  string          `yaml:"dia,omitempty"`
@@ -46,7 +42,7 @@ type Frontmatter struct {
 	InfoCurso            InfoTemaCurso   `yaml:"infoCurso,omitempty"`
 	NombreCurso          string          `yaml:"nombreCurso,omitempty"`
 	FechaCurso           string          `yaml:"fechaCurso,omitempty"`
-	TipoCurso            e.TipoCurso     `yaml:"tipoCurso,omitempty"`
+	TipoCurso            TipoCurso       `yaml:"tipoCurso,omitempty"`
 	Profesores           []int           `yaml:"profesores,omitempty"`
 	Autores              []Persona       `yaml:"autores,omitempty"`
 	Editores             []Persona       `yaml:"editores,omitempty"`

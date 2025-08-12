@@ -1,11 +1,3 @@
-CREATE TABLE IF NOT EXISTS profesoresCurso (
-  idCurso INT NOT NULL,
-  tipoCurso ENUM ("Online", "Presencial"),
-  idPersona INT NOT NULL,
-
-  FOREIGN KEY (idPersona) REFERENCES personas(id)
-);
-
 CREATE TABLE IF NOT EXISTS temasInvestigacion (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,

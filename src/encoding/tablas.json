@@ -245,6 +245,20 @@
         ]
     },
     {
+        "nombre": "ProfesoresCurso",
+        "elementosRepetidos": false,
+        "valoresGuardar": [
+            { 
+                "clave": "tipoCurso", "tipo": "enum", "valores": ["Online", "Presencial"], 
+                "representativo": false, "necesario": true
+            }
+        ],
+        "referenciasTabla": [
+            { "tabla": "Personas", "clave": "refPersona"  },
+            { "tablas": ["CursosOnline", "CursosPresencial"], "clave": "refCurso" }
+        ]
+    },
+    {
         "nombre": "Colecciones",
         "elementosRepetidos": false,
         "valoresGuardar": [

@@ -22,6 +22,7 @@ const (
 	TABLA_CURSOS_ONLINE      = "CursosOnline"
 	TABLA_CURSOS_PRESENECIAL = "CursosPresencial"
 	TABLA_TEMA_CURSO         = "TemasCurso"
+	TABLA_PROFESORES_CURSO   = "ProfesoresCurso"
 
 	TABLA_PLANES       = "PlanesCarrera"
 	TABLA_CUATRI       = "CuatrimestresCarrera"
@@ -179,6 +180,34 @@ func ProcesarCursoOnline(path string, meta *Frontmatter, tracker *d.TrackerDepen
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar curso online con error: %v", err)
 	}
+
+	for _, profesor := range meta.NombreAutores {
+		nombre := strings.TrimSpace(profesor.Nombre)
+		apellido := strings.TrimSpace(profesor.Apellido)
+
+		err = tracker.Cargar(TABLA_PERSONAS, []d.RelacionTabla{}, nombre, apellido)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar persona en curso online con error: %v", err)
+		}
+
+		err = tracker.Cargar(TABLA_PROFESORES_CURSO,
+			[]d.RelacionTabla{
+				d.NewRelacionSimple(TABLA_CURSOS_ONLINE, "refCurso",
+					meta.NombreCurso,
+					anio,
+				),
+				d.NewRelacionSimple(TABLA_PERSONAS, "refPersona",
+					nombre,
+					apellido,
+				),
+			},
+			CURSO_ONLINE,
+		)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar profesor en el curso online con error: %v", err)
+		}
+	}
+
 	return nil
 }
 
@@ -199,6 +228,34 @@ func ProcesarCursoPresencial(path string, meta *Frontmatter, tracker *d.TrackerD
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar curso presencial con error: %v", err)
 	}
+
+	for _, profesor := range meta.NombreAutores {
+		nombre := strings.TrimSpace(profesor.Nombre)
+		apellido := strings.TrimSpace(profesor.Apellido)
+
+		err = tracker.Cargar(TABLA_PERSONAS, []d.RelacionTabla{}, nombre, apellido)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar persona en curso presencial con error: %v", err)
+		}
+
+		err = tracker.Cargar(TABLA_PROFESORES_CURSO,
+			[]d.RelacionTabla{
+				d.NewRelacionSimple(TABLA_CURSOS_PRESENECIAL, "refCurso",
+					meta.NombreCurso,
+					anio,
+				),
+				d.NewRelacionSimple(TABLA_PERSONAS, "refPersona",
+					nombre,
+					apellido,
+				),
+			},
+			CURSO_PRESENCIAL,
+		)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar profesor en el curso presencial con error: %v", err)
+		}
+	}
+
 	return nil
 }
 
