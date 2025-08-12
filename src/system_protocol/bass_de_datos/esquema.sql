@@ -1,15 +1,3 @@
-CREATE TABLE IF NOT EXISTS temasCurso (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  capitulo INT,
-  parte INT,
-  tipoCurso ENUM ("Online", "Presencial"),
-  idCurso INT NOT NULL,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
 CREATE TABLE IF NOT EXISTS profesoresCurso (
   idCurso INT NOT NULL,
   tipoCurso ENUM ("Online", "Presencial"),

@@ -105,9 +105,6 @@ func (dt DescripcionTabla) RestringirTabla(bdd *b.Bdd) error {
 func (dt DescripcionTabla) CrearForeignKey(hash *Hash, relaciones []RelacionTabla) ([]ForeignKey, error) {
 	fKeys := make([]ForeignKey, len(relaciones))
 
-	// d.NewRelacionCompleja(TABLA_MATERIAS_EQ, "refMateria", []d.RelacionTabla{relacionCarrera}, meta.NombreMateria),
-	// d.NewRelacionCompleja(tablaCorrelativa, "refCorrelativa", []d.RelacionTabla{relacionCarrera}, infoCorrelativa.Materia),
-
 	for i, relacion := range relaciones {
 		datos := relacion.Datos
 		tabla, ok := dt.tablasReferencias[relacion.Tabla+relacion.Clave]

@@ -21,6 +21,7 @@ const (
 	TABLA_PAGINAS_CURSOS     = "PaginasCursos"
 	TABLA_CURSOS_ONLINE      = "CursosOnline"
 	TABLA_CURSOS_PRESENECIAL = "CursosPresencial"
+	TABLA_TEMA_CURSO         = "TemasCurso"
 
 	TABLA_PLANES       = "PlanesCarrera"
 	TABLA_CUATRI       = "CuatrimestresCarrera"
@@ -125,7 +126,7 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 	// Cursos:
 	funcionesProcesar[TAG_CURSO] = ProcesarCursoOnline
 	funcionesProcesar[TAG_CURSO_PRESENCIA] = ProcesarCursoPresencial
-	// funcionesProcesar[TAG_RESUMEN_CURSO] =
+	funcionesProcesar[TAG_RESUMEN_CURSO] = ProcesarTemaCurso
 
 	// Colecciones:
 	funcionesProcesar[TAG_REPRESENTANTE] = ProcesarColeccion
@@ -197,6 +198,34 @@ func ProcesarCursoPresencial(path string, meta *Frontmatter, tracker *d.TrackerD
 	)
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar curso presencial con error: %v", err)
+	}
+	return nil
+}
+
+func ProcesarTemaCurso(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	infoTema := meta.InfoCurso
+	tablaCurso := TABLA_CURSOS_ONLINE
+	if infoTema.Tipo == CURSO_PRESENCIAL {
+		tablaCurso = TABLA_CURSOS_PRESENECIAL
+	}
+
+	anio, err := strconv.Atoi(infoTema.Anio)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("obtener anio del tema del curso con error: %v", err)
+	}
+
+	err = tracker.Cargar(TABLA_TEMA_CURSO,
+		[]d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
+			d.NewRelacionSimple(tablaCurso, "refCurso", infoTema.Curso, anio),
+		},
+		meta.NombreResumen,
+		infoTema.Tipo,
+		NumeroODefault(meta.Capitulo, 1),
+		NumeroODefault(meta.Parte, 0),
+	)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar tema curso con error: %v", err)
 	}
 	return nil
 }
@@ -474,40 +503,7 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 }
 
 /*
-	func (a *Archivo) ProcesarMateriaEquivalente(path string, meta *Frontmatter, canalMensajes chan string) {
-		constructor := e.NewMateriaEquivalente(meta.NombreMateria, meta.Codigo)
-		a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-		a.CargarDependencia(ObtenerWikiLink(meta.Equivalencia)[0], e.DEP_MATERIA, constructor.CrearDependenciaMateria)
-		a.CargarDependencia(ObtenerWikiLink(meta.PathCarrera)[0], e.DEP_CARRERA, constructor.CrearDependenciaCarrera)
-
-		a.CargarDependible(e.DEP_MATERIA_EQUIVALENTE, constructor)
-
-		for _, correlativa := range meta.Correlativas {
-			constructor := e.NewMateriasCorrelativas(e.MATERIA_EQUIVALENTE, correlativa.Tipo)
-
-			a.CargarDependencia(path, e.DEP_MATERIA_EQUIVALENTE, constructor.CrearDependenciaMateria)
-			switch correlativa.Tipo {
-			case e.MATERIA_REAL:
-				a.CargarDependencia(correlativa.Path, e.DEP_MATERIA, constructor.CrearDependenciaCorrelativa)
-			case e.MATERIA_EQUIVALENTE:
-				a.CargarDependencia(correlativa.Path, e.DEP_MATERIA_EQUIVALENTE, constructor.CrearDependenciaCorrelativa)
-			}
-		}
-	}
-
 	func (a *Archivo) ProcesarTemaCurso(path string, meta *Frontmatter, canalMensajes chan string) {
-		constructor := e.NewTemaCurso(meta.NombreResumen, meta.Capitulo, meta.Parte, meta.TipoCurso)
-		a.CargarDependencia(path, e.DEP_ARCHIVO, constructor.CrearDependenciaArchivo)
-
-		pathCurso := ObtenerWikiLink(meta.Curso)[0]
-		switch meta.TipoCurso {
-		case e.CURSO_ONLINE:
-			a.CargarDependencia(pathCurso, e.DEP_CURSO, constructor.CrearDependenciaCurso)
-		case e.CURSO_PRESENCIAL:
-			a.CargarDependencia(pathCurso, e.DEP_CURSO_PRESENCIAL, constructor.CrearDependenciaCurso)
-		}
-
-		a.CargarDependible(e.DEP_TEMA_CURSO, constructor)
 	}
 
 	func (a *Archivo) ProcesarNota(path string, meta *Frontmatter, canalMensajes chan string) {
@@ -582,6 +578,13 @@ type TipoMateria string
 const (
 	MATERIA_REAL        = "Materia"
 	MATERIA_EQUIVALENTE = "Equivalente"
+)
+
+type TipoCurso string
+
+const (
+	CURSO_ONLINE     = "Online"
+	CURSO_PRESENCIAL = "Presencial"
 )
 
 func NumeroODefault(representacion string, valorDefault int) int {

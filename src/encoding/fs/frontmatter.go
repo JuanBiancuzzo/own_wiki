@@ -43,6 +43,7 @@ type Frontmatter struct {
 	NombreTema           string          `yaml:"nombreTema,omitempty"`
 	Parte                string          `yaml:"parte,omitempty"`
 	Curso                string          `yaml:"curso,omitempty"`
+	InfoCurso            InfoTemaCurso   `yaml:"infoCurso,omitempty"`
 	NombreCurso          string          `yaml:"nombreCurso,omitempty"`
 	FechaCurso           string          `yaml:"fechaCurso,omitempty"`
 	TipoCurso            e.TipoCurso     `yaml:"tipoCurso,omitempty"`
@@ -107,6 +108,12 @@ type InfoMateria struct {
 type InfoTemaMateria struct {
 	Materia string `yaml:"materia"`
 	Carrera string `yaml:"carrera"`
+}
+
+type InfoTemaCurso struct {
+	Curso string    `yaml:"curso"`
+	Tipo  TipoCurso `yaml:"tipo"`
+	Anio  string    `yaml:"anio"`
 }
 
 type Articulo struct {
