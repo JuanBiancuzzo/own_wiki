@@ -18,6 +18,9 @@ const (
 	TABLA_PERSONAS    = "Personas"
 	TABLA_EDITORIALES = "Editoriales"
 
+	TABLA_NOTAS         = "Notas"
+	TABLA_NOTAS_VINCULO = "NotasVinculo"
+
 	TABLA_PAGINAS_CURSOS     = "PaginasCursos"
 	TABLA_CURSOS_ONLINE      = "CursosOnline"
 	TABLA_CURSOS_PRESENECIAL = "CursosPresencial"
@@ -139,8 +142,8 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 	funcionesProcesar[TAG_PAPER] = ProcesarPaper
 
 	// Notas:
-	// funcionesProcesar[TAG_NOTA_FACULTAD] =
-	// funcionesProcesar[TAG_NOTA_CURSO] =
+	funcionesProcesar[TAG_NOTA_FACULTAD] = ProcesarNota
+	funcionesProcesar[TAG_NOTA_CURSO] = ProcesarNota
 	// funcionesProcesar[TAG_NOTA_INVESTIGACION] =
 	// funcionesProcesar[TAG_NOTA_COLECCION] =
 	// funcionesProcesar[TAG_NOTA_PROYECTO] =
@@ -153,6 +156,80 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 
 		if err = funcionProcesar(path, &meta, tracker); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func ProcesarNota(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+	fecha, err := d.NewDate(meta.Dia)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("obtener fecha de la nota con error: %v", err)
+	}
+
+	nombreNota := Nombre(path)
+
+	err = tracker.Cargar(TABLA_NOTAS,
+		[]d.RelacionTabla{
+			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
+		},
+		nombreNota,
+		EtapaODefault(meta.Etapa, e.ETAPA_SIN_EMPEZAR),
+		fecha.Representacion(),
+	)
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar nota con error: %v", err)
+	}
+
+	for _, vFacultad := range meta.VinculoFacultad {
+		err = tracker.Cargar(TABLA_NOTAS_VINCULO,
+			[]d.RelacionTabla{
+				d.NewRelacionSimple(TABLA_NOTAS, "refNota", nombreNota),
+				d.NewRelacionCompleja(TABLA_TEMA_MATERIA, "refVinculo",
+					[]d.RelacionTabla{
+						d.NewRelacionCompleja(TABLA_MATERIAS, "refMateria", []d.RelacionTabla{
+							d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", vFacultad.NombreCarrera),
+						}, vFacultad.NombreMateria),
+					},
+					vFacultad.NombreTema,
+					NumeroODefault(vFacultad.CapituloTema, 1),
+				),
+			},
+			TN_FACULTAD,
+		)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar vinculo con nota de faultad con error: %v", err)
+		}
+	}
+
+	for _, vCurso := range meta.VinculoCurso {
+		tablaCurso := TABLA_CURSOS_ONLINE
+		if vCurso.TipoCurso == CURSO_PRESENCIAL {
+			tablaCurso = TABLA_CURSOS_PRESENECIAL
+		}
+
+		anio, err := strconv.Atoi(vCurso.Anio)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("obtener anio del curso %s con error: %v", vCurso.TipoCurso, err)
+		}
+
+		err = tracker.Cargar(TABLA_NOTAS_VINCULO,
+			[]d.RelacionTabla{
+				d.NewRelacionSimple(TABLA_NOTAS, "refNota", nombreNota),
+				d.NewRelacionCompleja(TABLA_TEMA_CURSO, "refVinculo",
+					[]d.RelacionTabla{
+						d.NewRelacionSimple(tablaCurso, "refCurso", vCurso.NombreCurso, anio),
+					},
+					vCurso.NombreTema,
+					vCurso.TipoCurso,
+					NumeroODefault(vCurso.CapituloTema, 1),
+				),
+			},
+			TN_CURSO,
+		)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar vinculo con nota de curso con error: %v", err)
 		}
 	}
 
@@ -667,6 +744,16 @@ func ObtenerWikiLink(link string) []string {
 	link = strings.TrimSuffix(link, "]]")
 	return strings.Split(link, "|")
 }
+
+type TipoNota string
+
+const (
+	TN_FACULTAD      = "Facultad"
+	TN_COLECCION     = "Coleccion"
+	TN_CURSO         = "Curso"
+	TN_INVESTIGACION = "Investigacion"
+	TN_PROYECTO      = "Proyecto"
+)
 
 type Etapa string
 

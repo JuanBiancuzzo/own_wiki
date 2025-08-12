@@ -116,6 +116,9 @@ func CrearTablas() ([]d.DescripcionTabla, error) {
 			case "bool":
 				nuevoClaveTipo = d.NewClaveBool(representativo, vg.Clave, necesario)
 
+			case "date":
+				nuevoClaveTipo = d.NewClaveDate(representativo, vg.Clave, necesario)
+
 			default:
 				return tablas, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)
 			}

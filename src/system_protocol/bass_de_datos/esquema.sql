@@ -91,24 +91,6 @@ CREATE TABLE IF NOT EXISTS gruposDocumento (
   FOREIGN KEY (idGrupo) REFERENCES gruposLegales(id)
 );
 
-CREATE TABLE IF NOT EXISTS notas (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  etapa ENUM ("SinEmpezar", "Empezado", "Ampliar", "Terminado"),
-  dia DATE,
-  idArchivo INT NOT NULL,
-
-  FOREIGN KEY (idArchivo) REFERENCES archivos(id)
-);
-
-CREATE TABLE IF NOT EXISTS notasVinculo (
-  idNota INT NOT NULL,
-  idVinculo INT NOT NULL,
-  tipoVinculo ENUM ("Facultad", "Coleccion", "Curso", "Investigacion", "Proyecto"),
-
-  FOREIGN KEY (idNota) REFERENCES notas(id)
-);
-
 CREATE TABLE IF NOT EXISTS canalesYoutube (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(?) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci

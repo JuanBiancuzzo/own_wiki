@@ -53,3 +53,12 @@ func NewClaveEnum(representativo bool, clave string, valores []string, necesario
 		Necesario:      necesario,
 	}
 }
+
+func NewClaveDate(representativo bool, clave string, necesario bool) ParClaveTipo {
+	return ParClaveTipo{
+		Representativa: representativo,
+		Clave:          clave,
+		Tipo:           "DATE",
+		Necesario:      necesario,
+	}
+}
