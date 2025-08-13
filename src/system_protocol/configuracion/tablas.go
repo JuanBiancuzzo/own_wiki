@@ -3,8 +3,9 @@ package configuracion
 import (
 	"encoding/json"
 	"fmt"
-	d "own_wiki/system_protocol/dependencias"
 	"strings"
+
+	d "own_wiki/system_protocol/dependencias"
 )
 
 type InfoTabla struct {

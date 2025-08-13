@@ -1,14 +1,16 @@
-package encoding
+package main
 
 import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 	"sync"
+	"time"
 
-	c "own_wiki/encoding/configuracion"
 	"own_wiki/encoding/procesar"
 	b "own_wiki/system_protocol/bass_de_datos"
+	c "own_wiki/system_protocol/configuracion"
 	d "own_wiki/system_protocol/dependencias"
 	u "own_wiki/system_protocol/utilidades"
 
@@ -20,9 +22,6 @@ import (
 
 // mdp "github.com/gomarkdown/markdown/parser"
 // tp "github.com/BurntSushi/toml"
-
-//go:embed tablas.json
-var infoTablas string
 
 const CANTIDAD_WORKERS = 15
 
@@ -78,7 +77,16 @@ func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalM
 	return nil
 }
 
-func Encodear(dirInput string, canalMensajes chan string) {
+func ObtenerTablas(dirConfiguracion string) ([]d.DescripcionTabla, error) {
+	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "tablas.json")); err != nil {
+		return []d.DescripcionTabla{}, fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
+
+	} else {
+		return c.CrearTablas(string(bytes))
+	}
+}
+
+func Encodear(dirInput, dirConfiguracion string, canalMensajes chan string) {
 	_ = godotenv.Load()
 
 	bddRelacional, err := b.EstablecerConexionRelacional(canalMensajes)
@@ -96,7 +104,7 @@ func Encodear(dirInput string, canalMensajes chan string) {
 	defer b.CerrarBddNoSQL(bddNoSQL)
 	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
-	tablas, err := c.CrearTablas(infoTablas)
+	tablas, err := ObtenerTablas(dirConfiguracion)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo crear las tablas, se tuvo el error: %v", err)
 		return
@@ -121,4 +129,54 @@ func Encodear(dirInput string, canalMensajes chan string) {
 		canalMensajes <- "Se termino de cargar a la base de datos"
 	}
 	canalMensajes <- "Se hizo la limpieza de los datos auxiliares"
+}
+
+func main() {
+	tiempoInicial := time.Now()
+	var waitMensajes sync.WaitGroup
+	canalMensajes := make(chan string, 100)
+
+	waitMensajes.Add(1)
+	go func(canal chan string, wg *sync.WaitGroup) {
+		for mensaje := range canal {
+			fmt.Println(strings.TrimSpace(mensaje))
+		}
+		wg.Done()
+	}(canalMensajes, &waitMensajes)
+
+	var carpetaDatos string
+	var carpetaConfiguracion string
+
+	argumentoProcesar := 1
+	for argumentoProcesar+1 < len(os.Args) {
+		switch os.Args[argumentoProcesar] {
+		case "-d":
+			argumentoProcesar++
+			carpetaDatos = os.Args[argumentoProcesar]
+		case "-c":
+			argumentoProcesar++
+			carpetaConfiguracion = os.Args[argumentoProcesar]
+		default:
+			canalMensajes <- fmt.Sprintf("el argumento %s no pudo ser identificado", os.Args[argumentoProcesar])
+		}
+		argumentoProcesar++
+	}
+
+	if carpetaDatos != "" && carpetaConfiguracion != "" {
+		Encodear(carpetaDatos, carpetaConfiguracion, canalMensajes)
+
+	} else if carpetaDatos == "" && carpetaConfiguracion == "" {
+		canalMensajes <- "Necesitas pasar el directorio de datos (con la flag -d) y directorio de configuracion (con la flag -c)"
+
+	} else if carpetaDatos == "" {
+		canalMensajes <- "Necesitas pasar el directorio de datos (con la flag -d)"
+
+	} else {
+		canalMensajes <- "Necesitas pasar el directorio de configuracion (con la flag -c)"
+	}
+
+	close(canalMensajes)
+	waitMensajes.Wait()
+
+	fmt.Printf("Se termino el programa en: %s \n", time.Since(tiempoInicial))
 }

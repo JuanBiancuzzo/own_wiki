@@ -14,7 +14,7 @@ COPY .env .env
 COPY src/. .
 
 # Build the Go app
-RUN go build -o own_wiki main.go
+RUN go build -o own_wiki encoding/main.go
 
 # Run the app
 CMD ["./own_wiki"]

@@ -1,10 +1,12 @@
-package ejecucion
+package main
 
 import (
 	"fmt"
 	"own_wiki/ejecucion/fs"
 	t "own_wiki/ejecucion/web_view"
 	b "own_wiki/system_protocol/bass_de_datos"
+	"strings"
+	"sync"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -16,8 +18,18 @@ import (
 // tp "github.com/BurntSushi/toml"
 // "github.com/go-sql-driver/mysql"
 
-func Ejecutar(canalMensajes chan string) {
+func main() {
 	_ = godotenv.Load()
+	var waitMensajes sync.WaitGroup
+	canalMensajes := make(chan string, 100)
+
+	waitMensajes.Add(1)
+	go func(canal chan string, wg *sync.WaitGroup) {
+		for mensaje := range canal {
+			fmt.Println(strings.TrimSpace(mensaje))
+		}
+		wg.Done()
+	}(canalMensajes, &waitMensajes)
 
 	e := echo.New()
 	e.Use(middleware.Logger())
@@ -41,4 +53,7 @@ func Ejecutar(canalMensajes chan string) {
 	e.GET("/Cursos", fs.NewCursos(bdd).DeterminarRuta)
 
 	e.Logger.Fatal(e.Start(":42069"))
+
+	close(canalMensajes)
+	waitMensajes.Wait()
 }

@@ -52,6 +52,7 @@ services:
         condition: service_healthy
       # db_nosql:
         # condition: service_healthy
+    tty: true
     environment:
       # Necesario para mysql
       MYSQL_DB_NAME: ${MYSQL_DB_NAME}
@@ -66,18 +67,19 @@ services:
       MONGO_DB_NAME: ${MONGO_DB_NAME}
       MONGO_HOST: ${MONGO_HOST}
     volumes:
-      - ../../Ashurbanipal:/var/lib/datos
+      - ../../Ashurbanipal:/var/datos
+      - ./configuracion:/var/configuracion
       # - ./volumenes/treesitter_bindings:/var/lib/treesitter_bindings
     networks:
       - appnet
-    command: ["./own_wiki", "-e", "/var/lib/datos"] 
+    command: ["./own_wiki", "-d", "/var/datos", "-c", "/var/configuracion"] 
 
   app_process:
     image: cosmtrek/air
     profiles:
       - frontend
     container_name: manejar_archivos
-    working_dir: /app/codigo
+    working_dir: /app/codigo/ejecucion
     depends_on:
       app_encoder:
         condition: service_completed_successfully
