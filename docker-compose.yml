@@ -45,7 +45,9 @@ services:
       - appnet
 
   app_encoder:
-    build: .
+    build: 
+      context: .
+      dockerfile: src/encoding/Dockerfile
     container_name: encodear_archivos
     depends_on:
       db_relacional:
@@ -75,15 +77,15 @@ services:
     command: ["./own_wiki", "-d", "/var/datos", "-c", "/var/configuracion"] 
 
   app_process:
-    image: cosmtrek/air
+    build: 
+      context: .
+      dockerfile: src/ejecucion/Dockerfile
     profiles:
       - frontend
     container_name: manejar_archivos
-    working_dir: /app/codigo/ejecucion
     depends_on:
       app_encoder:
         condition: service_completed_successfully
-    stdin_open: true 
     tty: true
     environment:
       # Necesario para mysql
@@ -101,9 +103,10 @@ services:
     ports:
       - "42069:42069"
     volumes:
-      - ./src:/app/codigo
+      - ./src:/app
     networks:
       - appnet
+    command: ["air", "-c", "ejecucion/.air.toml"] 
 
 volumes:
   my-db-mysql: 

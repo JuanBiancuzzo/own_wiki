@@ -11,7 +11,8 @@ RUN go mod download
 COPY .env .env
 
 # Copy source code
-COPY src/. .
+COPY src/encoding encoding/.
+COPY src/system_protocol system_protocol/.
 
 # Build the Go app
 RUN go build -o own_wiki encoding/main.go
