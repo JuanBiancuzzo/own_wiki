@@ -1,6 +1,6 @@
 package contenido
 
-type MkTipo string
+type MkTipo byte
 
 func (tipo MkTipo) String() string {
 	switch tipo {
@@ -65,47 +65,6 @@ func (tipo MkTipo) String() string {
 
 const (
 	// Contenedor y leaf
-	MK_Header1         = "Header 1"
-	MK_Header2         = "Header 2"
-	MK_Header3         = "Header 3"
-	MK_Header4         = "Header 4"
-	MK_Header5         = "Header 5"
-	MK_Header6         = "Header 6"
-	MK_CodeBlock       = "CodeBlock"
-	MK_Image           = "Image"
-	MK_Link            = "Link"
-	MK_ListDesordenada = "ListDesordenada"
-	MK_ListOrdenada    = "ListOrdenada"
-	MK_Table           = "Table"
-
-	MK_Callout  = "Callout"
-	MK_WikiLink = "Wiki link"
-
-	// Leaf
-	MK_Code           = "Code"             // solo texto
-	MK_HtmlBlock      = "Html block"       // Solo texto
-	MK_HtmlSpan       = "Html span"        // Solo texto
-	MK_Math           = "Math"             // Solo texto
-	MK_Subscript      = "Subscript"        // Solo texto
-	MK_Superscript    = "Superscript"      // Solo texto
-	MK_Text           = "Texto"            // solo texto
-	MK_Hardbreak      = "Hardbrak"         // nada
-	MK_HorizontalRule = "Linea horizontal" // Nada
-
-	// Contenedores:
-	MK_Aside      = "Aside"
-	MK_BlockQuote = "BlockQuote"
-	MK_MathBlock  = "Mathblock"
-	MK_Parrafo    = "Parrafo"
-	MK_Bold       = "Bold"
-	MK_Italic     = "Italics"
-)
-
-/*
-type MkTipo byte
-
-const (
-	// Contenedor y leaf
 	MK_Header1 = iota
 	MK_Header2
 	MK_Header3
@@ -141,7 +100,6 @@ const (
 	MK_Bold
 	MK_Italic
 )
-*/
 
 type NodoHeader struct {
 	Tipo MkTipo `bson:"tipo"`

@@ -24,11 +24,3 @@ func NewBlockQuote(elementos Hijos) Contenedor { return newContenedor(MK_BlockQu
 func NewParrafo(elementos Hijos) Contenedor    { return newContenedor(MK_Parrafo, elementos) }
 func NewBold(elementos Hijos) Contenedor       { return newContenedor(MK_Bold, elementos) }
 func NewItalic(elementos Hijos) Contenedor     { return newContenedor(MK_Italic, elementos) }
-
-func (c Contenedor) Reducir() any {
-	if len(c.Elementos) > 1 {
-		return c
-	} else {
-		return c.Elementos[0]
-	}
-}

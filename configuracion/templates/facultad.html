@@ -1,0 +1,24 @@
+{{ block "facultad" . }}
+    <h1 style="display: flex;"> Facultad </h1>
+    <hr>
+    {{ range .Carrera }}
+        <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
+            {{ .nombre }}
+        </h3>
+    {{ end }}
+{{ end }}
+
+{{ block "carrera" . }}
+    <h1 style="display: flex;"> {{ .Carrera.nombre }} </h1>
+    <hr>
+    {{ range .Materias }}
+        <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
+            {{ .nombre }}
+        </h3>
+    {{ end }}
+    {{ range .MateriasEquivalente }}
+        <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
+            {{ .nombre }}
+        </h3>
+    {{ end }}
+{{ end }}

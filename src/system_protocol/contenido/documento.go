@@ -113,21 +113,13 @@ func RecorrerArbol(nodo ast.Node) (any, error) {
 
 	// Contenedor
 	case *ast.Aside:
-		if contenedor, err := GenerarContenedor(NewAside, valor.Children); err != nil {
-			return nil, err
-		} else {
-			return contenedor.Reducir(), nil
-		}
+		return GenerarContenedor(NewAside, valor.Children)
 	case *ast.BlockQuote:
 		return GenerarContenedor(NewBlockQuote, valor.Children)
 	case *ast.Emph:
 		return GenerarContenedor(NewItalic, valor.Children)
 	case *ast.Paragraph:
-		if contenedor, err := GenerarContenedor(NewParrafo, valor.Children); err != nil {
-			return nil, err
-		} else {
-			return contenedor.Reducir(), nil
-		}
+		return GenerarContenedor(NewParrafo, valor.Children)
 	case *ast.Strong:
 		return GenerarContenedor(NewBold, valor.Children)
 

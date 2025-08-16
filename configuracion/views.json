@@ -1,0 +1,105 @@
+{
+    "inicio": "Root",
+    "templates": "./templates",
+    "views": [
+        {
+            "nombre": "Root",
+            "informacion": {
+                "Elecciones": [
+                    { "tipo": "pathView", "view": "Facultad", "texto": "Facultad" },
+                    { "tipo": "pathView", "view": "Cursos", "texto": "Cursos" },
+                    { "tipo": "pathView", "view": "Colecciones", "texto": "Colecciones" }
+                ]
+            },
+            "template": { 
+                "archivo": "index.html",
+                "bloque": "index"
+            }
+        },
+        {
+            "nombre": "Facultad",
+            "informacion": {
+                "Carreras": { 
+                    "tipo": "elementosTabla",
+                    "tabla": "Carreras",
+                    "referencias": [
+                        {
+                            "nombre": "url",
+                            "view": "Materias",
+                            "parametros": { "refCarrera": "id" }
+                        }
+                    ]
+                }
+            },
+            "template": { 
+                "archivo": "facultad.html",
+                "bloque": "facultad"
+            }
+        }, 
+        {
+            "nombre": "Carrera",
+            "requisitos": [ "refCarrera" ],
+            "informacion": {
+                "Carrera": {
+                    "tipo": "elementoUnicoTabla", "tabla": "Carreras", "where": [
+                        { "clave": "id", "equal": "refCarrera" }
+                    ] 
+                },
+                "Materias": { 
+                    "tipo": "elementosTabla", "tabla": "Materias", "where": [
+                        { "clave": "refCarrera", "equal": "refCarrera" }
+                    ],
+                    "referencias": [
+                        {
+                            "nombre": "url",
+                            "view": "Materia",
+                            "parametros": { 
+                                "refCarrera": "refCarrera", 
+                                "refMateria": "id" 
+                            }
+                        }
+                    ]
+                },
+                "MateriasEquivalente": { 
+                    "tipo": "elementosTabla", "tabla": "MateriasEquivalentes", "where": [
+                        { "clave": "refCarrera", "equal": "refCarrera" }
+                    ],
+                    "referencias": [
+                        {
+                            "nombre": "url",
+                            "view": "Materia",
+                            "parametros": { 
+                                "refCarrera": "refCarrera", 
+                                "refMateria": "refMateria" 
+                            }
+                        }
+                    ]
+                }
+            },
+            "template": { 
+                "archivo": "facultad.html",
+                "bloque": "carrera"
+            }
+        }, 
+        {
+            "nombre": "Materia",
+            "requisitos": [ "refCarrera", "refMateria" ],
+            "informacion": {
+                "Carrera": {
+                    "tipo": "elementoUnicoTabla", "tabla": "Carreras", "where": [
+                        { "clave": "id", "equal": "refCarrera" }
+                    ] 
+                },
+                "Materia": {
+                    "tipo": "elementoUnicoTabla", "tabla": "Materias", "where": [
+                        { "clave": "id", "equal": "refMateria" }
+                    ] 
+                }
+            },
+            "template": { 
+                "archivo": "facultad.html",
+                "bloque": "materia"
+            }
+        }
+    ]
+}

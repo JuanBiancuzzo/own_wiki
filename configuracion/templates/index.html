@@ -14,34 +14,22 @@
             <h3>Own wiki</h3>
         </header>
         <main id="main">
-            <div class="sidebar contenido" id="left-sidebar">
-
-            </div>
+            <div class="sidebar contenido" id="left-sidebar"></div>
             <div class="contenido" id="centro" hx-swap="innerHTML">
-                {{ template "root" . }}
+                <h1 style="display: flex;"> 
+                    <p> Elecciones </p>
+                </h1>
+                <hr>
+                {{ .Range .Elecciones }}
+                    <h3 hx-target="#centro" hx-get="{{ PathViewURL . }}">
+                        {{ .Texto }}
+                    </h3>
+                {{ end }}
             </div>
-            <div class="sidebar contenido" id="right-sidebar">
-
-            </div>
+            <div class="sidebar contenido" id="right-sidebar"></div>
         </main>
     </body>
     </html>
-{{ end }}
-
-{{ block "root" . }}
-    <h1 style="display: flex;"> 
-        <p> Elecciones </p>
-    </h1>
-    <hr>
-    {{ range .Opciones }}
-        {{ template "opcion" . }}
-    {{ end }}
-{{ end }}
-
-{{ block "opcion" . }}
-    <h3 hx-target="#centro" hx-get="{{ .Path }}">
-        {{ .Nombre }}
-    </h3>
 {{ end }}
 
 {{ block "titulo" . }}
