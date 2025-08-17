@@ -1,14 +1,15 @@
 {
     "inicio": "Root",
     "templates": "./templates",
+    "css": "./css",
     "views": [
         {
             "nombre": "Root",
             "informacion": {
                 "Elecciones": [
-                    { "tipo": "pathView", "view": "Facultad", "texto": "Facultad" },
-                    { "tipo": "pathView", "view": "Cursos", "texto": "Cursos" },
-                    { "tipo": "pathView", "view": "Colecciones", "texto": "Colecciones" }
+                    { "tipo": "pathView", "view": "Facultad" },
+                    { "tipo": "pathView", "view": "Cursos" },
+                    { "tipo": "pathView", "view": "Colecciones" }
                 ]
             },
             "template": { 
@@ -41,12 +42,16 @@
             "requisitos": [ "refCarrera" ],
             "informacion": {
                 "Carrera": {
-                    "tipo": "elementoUnicoTabla", "tabla": "Carreras", "where": [
+                    "tipo": "elementoUnicoTabla", 
+                    "tabla": "Carreras", 
+                    "where": [
                         { "clave": "id", "equal": "refCarrera" }
                     ] 
                 },
                 "Materias": { 
-                    "tipo": "elementosTabla", "tabla": "Materias", "where": [
+                    "tipo": "elementosTabla", 
+                    "tabla": "Materias", 
+                    "where": [
                         { "clave": "refCarrera", "equal": "refCarrera" }
                     ],
                     "referencias": [
@@ -61,7 +66,9 @@
                     ]
                 },
                 "MateriasEquivalente": { 
-                    "tipo": "elementosTabla", "tabla": "MateriasEquivalentes", "where": [
+                    "tipo": "elementosTabla", 
+                    "tabla": "MateriasEquivalentes", 
+                    "where": [
                         { "clave": "refCarrera", "equal": "refCarrera" }
                     ],
                     "referencias": [
@@ -86,12 +93,16 @@
             "requisitos": [ "refCarrera", "refMateria" ],
             "informacion": {
                 "Carrera": {
-                    "tipo": "elementoUnicoTabla", "tabla": "Carreras", "where": [
+                    "tipo": "elementoUnicoTabla", 
+                    "tabla": "Carreras", 
+                    "where": [
                         { "clave": "id", "equal": "refCarrera" }
                     ] 
                 },
                 "Materia": {
-                    "tipo": "elementoUnicoTabla", "tabla": "Materias", "where": [
+                    "tipo": "elementoUnicoTabla", 
+                    "tabla": "Materias", 
+                    "where": [
                         { "clave": "id", "equal": "refMateria" }
                     ] 
                 }

@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"own_wiki/ejecucion/fs"
 	t "own_wiki/ejecucion/web_view"
 	b "own_wiki/system_protocol/bass_de_datos"
+	c "own_wiki/system_protocol/configuracion"
+	d "own_wiki/system_protocol/dependencias"
+	v "own_wiki/system_protocol/views"
 	"strings"
 	"sync"
 
@@ -19,33 +21,67 @@ import (
 // tp "github.com/BurntSushi/toml"
 // "github.com/go-sql-driver/mysql"
 
+func ObtenerTablas(dirConfiguracion string) ([]d.DescripcionTabla, error) {
+	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "tablas.json")); err != nil {
+		return []d.DescripcionTabla{}, fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
+
+	} else {
+		return c.CrearTablas(string(bytes))
+	}
+}
+
+func ObtenerViews(dirConfiguracion string, bdd *b.Bdd, tablas []d.DescripcionTabla) (*v.InfoViews, error) {
+	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "views.json")); err != nil {
+		return nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
+
+	} else {
+		return c.CrearInfoViews(string(bytes))
+	}
+}
+
 func Visualizar(carpetaConfiguracion string, canalMensajes chan string) {
 	e := echo.New()
 	e.Use(middleware.Logger())
 
-	bdd, err := b.EstablecerConexionRelacional(canalMensajes)
+	bddRelacional, err := b.EstablecerConexionRelacional(canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
 
 	}
-	defer bdd.Close()
+	defer bddRelacional.Close()
 
-	if e.Renderer, err = t.NewTemplate(carpetaConfiguracion); err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo crear el renderer, con error: %v", err)
+	bddNoSQL, err := b.EstablecerConexionNoSQL(canalMensajes)
+	if err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
 	}
+	defer b.CerrarBddNoSQL(bddNoSQL)
 
-	e.Static("/imagenes", "ejecucion/imagenes")
-	e.Static("/css", "ejecucion/css")
+	bdd := b.NewBdd(bddRelacional, bddNoSQL)
+	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
-	fs.GenerarRutasRoot(e)
+	if tablas, err := ObtenerTablas(carpetaConfiguracion); err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo cargar las tablas, con error: %v", err)
 
-	e.GET("/Facultad", fs.NewFacultad(bdd).DeterminarRuta)
-	e.GET("/Colecciones", fs.NewColeccion(bdd).DeterminarRuta)
-	e.GET("/Cursos", fs.NewCursos(bdd).DeterminarRuta)
+	} else if infoViews, err := ObtenerViews(carpetaConfiguracion, bdd, tablas); err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo cargar las views, con error: %v", err)
 
-	e.Logger.Fatal(e.Start(":42069"))
+	} else {
+		carpetaTemplates := fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathTemplates)
+
+		if e.Renderer, err = t.NewTemplate(carpetaTemplates); err != nil {
+			canalMensajes <- fmt.Sprintf("No se pudo crear el renderer, con error: %v", err)
+			return
+		}
+
+		// Ver que hacer con esto
+		e.Static("/imagenes", "ejecucion/imagenes")
+		e.Static("/css", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathCss))
+
+		infoViews.GenerarEndpoints(e)
+		e.Logger.Fatal(e.Start(":42069"))
+	}
 }
 
 func main() {
