@@ -7,15 +7,15 @@
             "nombre": "Root",
             "informacion": {
                 "Elecciones": [
-                    { "tipo": "pathView", "view": "Facultad" },
+                    { 
+                        "tipo": "pathView", 
+                        "view": "Facultad" 
+                    },
                     { "tipo": "pathView", "view": "Cursos" },
                     { "tipo": "pathView", "view": "Colecciones" }
                 ]
             },
-            "template": { 
-                "archivo": "index.html",
-                "bloque": "index"
-            }
+            "bloqueTemplate": "index"
         },
         {
             "nombre": "Facultad",
@@ -32,10 +32,7 @@
                     ]
                 }
             },
-            "template": { 
-                "archivo": "facultad.html",
-                "bloque": "facultad"
-            }
+            "bloqueTemplate": "facultad"
         }, 
         {
             "nombre": "Carrera",
@@ -83,10 +80,7 @@
                     ]
                 }
             },
-            "template": { 
-                "archivo": "facultad.html",
-                "bloque": "carrera"
-            }
+            "bloqueTemplate": "carrera"
         }, 
         {
             "nombre": "Materia",
@@ -107,10 +101,7 @@
                     ] 
                 }
             },
-            "template": { 
-                "archivo": "facultad.html",
-                "bloque": "materia"
-            }
+            "bloqueTemplate": "materia"
         }
     ]
 }

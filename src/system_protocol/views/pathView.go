@@ -1,4 +1,4 @@
-package webview
+package views
 
 import (
 	"fmt"
@@ -7,19 +7,17 @@ import (
 
 type PathView struct {
 	View       string
-	Texto      string
-	Parametros map[string]string // Clave-valor
+	Parametros DataView // Clave-valor
 }
 
-func NewPathView(view, texto string) *PathView {
+func NewPathView(view string) *PathView {
 	return &PathView{
 		View:       view,
-		Texto:      texto,
-		Parametros: make(map[string]string),
+		Parametros: make(DataView),
 	}
 }
 
-func (pv *PathView) AgregarParametro(clave, valor string) error {
+func (pv *PathView) AgregarParametro(clave string, valor any) error {
 	if _, ok := pv.Parametros[clave]; ok {
 		return fmt.Errorf("ya se cargo ese parametro")
 	}

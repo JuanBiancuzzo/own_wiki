@@ -6,6 +6,8 @@ import (
 	"io"
 	"path/filepath"
 
+	v "own_wiki/system_protocol/views"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -17,7 +19,7 @@ type Templates struct {
 
 func NewTemplate(pathTemplate string) (*Templates, error) {
 	funcMaps := template.FuncMap{
-		"PathViewURL": CreateURL,
+		"PathViewURL": v.CreateURL,
 	}
 
 	if templUsuario, err := filepath.Glob(fmt.Sprintf("%s/*.html", pathTemplate)); err != nil {

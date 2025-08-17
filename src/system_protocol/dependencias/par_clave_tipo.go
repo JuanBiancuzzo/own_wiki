@@ -2,22 +2,88 @@ package dependencias
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+)
+
+type TipoVariable byte
+
+func (tv TipoVariable) ValorDeString(valor string) (any, error) {
+	switch tv {
+	case TV_INT:
+	case TV_REFERENCIA:
+		return strconv.Atoi(valor)
+
+	case TV_BOOL:
+		switch strings.ToLower(valor) {
+		case "true":
+			return true, nil
+		case "false":
+			return false, nil
+		default:
+			return nil, fmt.Errorf("no es un valor bool, ya que es %s", valor)
+		}
+
+	case TV_STRING:
+		fallthrough
+	case TV_ENUM:
+		fallthrough
+	case TV_DATE:
+		return valor, nil
+	}
+
+	return nil, fmt.Errorf("no tiene el tipo correcto")
+}
+
+func (tv TipoVariable) ReferenciaValor() (any, error) {
+	switch tv {
+	case TV_INT:
+	case TV_REFERENCIA:
+		var numero int
+		return &numero, nil
+
+	case TV_BOOL:
+		var booleano bool
+		return &booleano, nil
+
+	case TV_STRING:
+		fallthrough
+	case TV_ENUM:
+		fallthrough
+	case TV_DATE:
+		var texto string
+		return &texto, nil
+
+	}
+
+	return nil, fmt.Errorf("no tiene el tipo correcto")
+}
+
+const (
+	TV_INT = iota
+	TV_BOOL
+	TV_STRING
+	TV_ENUM
+	TV_DATE
+	TV_REFERENCIA
 )
 
 type ParClaveTipo struct {
 	Representativa bool
 	Clave          string
-	Tipo           string
+	TipoSQL        string
 	Necesario      bool
+
+	tipo TipoVariable
 }
 
 func NewClaveInt(representativo bool, clave string, necesario bool) ParClaveTipo {
 	return ParClaveTipo{
 		Representativa: representativo,
 		Clave:          clave,
-		Tipo:           "INT",
+		TipoSQL:        "INT",
 		Necesario:      necesario,
+		tipo:           TV_INT,
 	}
 }
 
@@ -25,8 +91,9 @@ func NewClaveBool(representativo bool, clave string, necesario bool) ParClaveTip
 	return ParClaveTipo{
 		Representativa: representativo,
 		Clave:          clave,
-		Tipo:           "BOOLEAN",
+		TipoSQL:        "BOOLEAN",
 		Necesario:      necesario,
+		tipo:           TV_BOOL,
 	}
 }
 
@@ -35,8 +102,9 @@ func NewClaveString(representativo bool, clave string, largo uint, necesario boo
 	return ParClaveTipo{
 		Representativa: representativo,
 		Clave:          clave,
-		Tipo:           tipo,
+		TipoSQL:        tipo,
 		Necesario:      necesario,
+		tipo:           TV_STRING,
 	}
 }
 
@@ -49,8 +117,9 @@ func NewClaveEnum(representativo bool, clave string, valores []string, necesario
 	return ParClaveTipo{
 		Representativa: representativo,
 		Clave:          clave,
-		Tipo:           fmt.Sprintf("ENUM(%s)", strings.Join(valoresRep, ", ")),
+		TipoSQL:        fmt.Sprintf("ENUM(%s)", strings.Join(valoresRep, ", ")),
 		Necesario:      necesario,
+		tipo:           TV_ENUM,
 	}
 }
 
@@ -58,7 +127,8 @@ func NewClaveDate(representativo bool, clave string, necesario bool) ParClaveTip
 	return ParClaveTipo{
 		Representativa: representativo,
 		Clave:          clave,
-		Tipo:           "DATE",
+		TipoSQL:        "DATE",
 		Necesario:      necesario,
+		tipo:           TV_DATE,
 	}
 }

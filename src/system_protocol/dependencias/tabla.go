@@ -26,12 +26,14 @@ type DescripcionTabla struct {
 	clavesGenerales           []string
 	referenciaMultiplesTablas map[string]bool
 	tablasReferencias         map[string]map[string]*DescripcionTabla
+	tipoDadoClave             map[string]TipoVariable
 }
 
 func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) DescripcionTabla {
 	clavesGenerales := []string{}
 	clavesRepresentativas := []string{}
 	referenciaMultiplesTablas := make(map[string]bool)
+	tipoDadoClave := make(map[string]TipoVariable)
 
 	tablasReferencias := make(map[string]map[string]*DescripcionTabla)
 	for _, claveTipo := range clavesTipo {
@@ -39,6 +41,7 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 		if claveTipo.Representativa {
 			clavesRepresentativas = append(clavesRepresentativas, claveTipo.Clave)
 		}
+		tipoDadoClave[claveTipo.Clave] = claveTipo.tipo
 	}
 	for _, referencia := range referencias {
 		clavesGenerales = append(clavesGenerales, referencia.Clave)
@@ -54,6 +57,8 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 			mapaTablas[tabla.NombreTabla] = tabla
 		}
 		tablasReferencias[referencia.Clave] = mapaTablas
+		tipoDadoClave[referencia.Clave] = TV_REFERENCIA
+		tipoDadoClave[fmt.Sprintf("tipo%s", referencia.Clave)] = TV_ENUM
 	}
 
 	return DescripcionTabla{
@@ -74,7 +79,7 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 func (dt DescripcionTabla) CrearTablaRelajada(bdd *b.Bdd) error {
 	parametros := []string{}
 	for _, parClaveTipo := range dt.ClavesTipo {
-		parametros = append(parametros, fmt.Sprintf("%s %s", parClaveTipo.Clave, parClaveTipo.Tipo))
+		parametros = append(parametros, fmt.Sprintf("%s %s", parClaveTipo.Clave, parClaveTipo.TipoSQL))
 	}
 
 	for _, referencia := range dt.Referencias {
@@ -84,7 +89,7 @@ func (dt DescripcionTabla) CrearTablaRelajada(bdd *b.Bdd) error {
 				tablasReferenciadas[i] = tablaReferenciada.NombreTabla
 			}
 			parClaveTipo := NewClaveEnum(false, fmt.Sprintf("tipo%s", referencia.Clave), tablasReferenciadas, false)
-			parametros = append(parametros, fmt.Sprintf("%s %s", parClaveTipo.Clave, parClaveTipo.Tipo))
+			parametros = append(parametros, fmt.Sprintf("%s %s", parClaveTipo.Clave, parClaveTipo.TipoSQL))
 		}
 
 		parametros = append(parametros, fmt.Sprintf("%s INT", referencia.Clave))
@@ -163,6 +168,104 @@ func (dt DescripcionTabla) Insertar(bdd *b.Bdd, datosIngresados ConjuntoDato) (i
 		strings.Join(strings.Split(strings.Repeat("?", len(insertarParam)), ""), ", "),
 	)
 	return bdd.Insertar(insertar, datos...)
+}
+
+/*
+func (c *Cola[T]) DesencolarIterativamente(yield func(T) bool) {
+	for !c.Vacia() {
+		if elemento, err := c.Desencolar(); err != nil {
+			return
+		} else if !yield(elemento) {
+			return
+		}
+	}
+}
+*/
+
+func (dt DescripcionTabla) QueryAll(bdd *b.Bdd, condicion Condicion, datosCondicion map[string]string) func(yield func(ConjuntoDato) bool) {
+	funcionNula := func(yield func(ConjuntoDato) bool) {}
+
+	expresionCondicion, datos, err := condicion.Expresion(datosCondicion, dt.tipoDadoClave)
+	if err != nil {
+		return funcionNula
+	}
+	query := fmt.Sprintf(
+		"SELECT * FROM %s %s",
+		dt.NombreTabla,
+		expresionCondicion,
+	)
+
+	if rows, err := bdd.MySQL.Query(query, datos...); err != nil {
+		return funcionNula
+
+	} else {
+		return func(yield func(ConjuntoDato) bool) {
+			defer rows.Close()
+			for rows.Next() {
+				datosTabla := []any{}
+				for clave := range dt.tipoDadoClave {
+					if referencia, err := dt.tipoDadoClave[clave].ReferenciaValor(); err != nil {
+						return
+
+					} else {
+						datosTabla = append(datosTabla, referencia)
+					}
+				}
+
+				if err := rows.Scan(datosTabla...); err != nil {
+					return
+				}
+
+				conjuntoDato := make(ConjuntoDato)
+				contador := 0
+				for clave := range dt.tipoDadoClave {
+					conjuntoDato[clave] = datosTabla[contador]
+					contador++
+				}
+
+				if !yield(conjuntoDato) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func (dt DescripcionTabla) QueryElemento(bdd *b.Bdd, condicion Condicion, datosCondicion map[string]string) (ConjuntoDato, error) {
+	expresionCondicion, datos, err := condicion.Expresion(datosCondicion, dt.tipoDadoClave)
+	if err != nil {
+		return nil, err
+	}
+	query := fmt.Sprintf(
+		"SELECT * FROM %s %s",
+		dt.NombreTabla,
+		expresionCondicion,
+	)
+
+	row := bdd.MySQL.QueryRow(query, datos...)
+
+	datosTabla := []any{}
+	for clave := range dt.tipoDadoClave {
+		if referencia, err := dt.tipoDadoClave[clave].ReferenciaValor(); err != nil {
+			return nil, fmt.Errorf("no hay una referencia para el tipo de valor con clave: %s, con error: %v", clave, err)
+
+		} else {
+			datosTabla = append(datosTabla, referencia)
+		}
+	}
+
+	if err := row.Scan(datosTabla...); err != nil {
+		return nil, fmt.Errorf("al scannear datos se obtuvo error: %v", err)
+	}
+
+	conjuntoDato := make(ConjuntoDato)
+	contador := 0
+	for clave := range dt.tipoDadoClave {
+		conjuntoDato[clave] = datosTabla[contador]
+		contador++
+	}
+
+	return conjuntoDato, nil
 }
 
 // TODO
