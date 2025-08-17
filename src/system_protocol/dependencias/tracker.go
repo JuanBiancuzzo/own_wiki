@@ -40,6 +40,8 @@ const (
 	ELIMINAR_TODO_INCOMPLETOS = "DELETE FROM aux_incompletos"
 )
 
+type ConjuntoDato map[string]any
+
 type TrackerDependencias struct {
 	BasesDeDatos    *b.Bdd
 	RegistrarTablas map[string]DescripcionTabla
@@ -149,46 +151,41 @@ func (td *TrackerDependencias) TerminarProcesoInsertarDatos() error {
 	return nil
 }
 
-func (td *TrackerDependencias) Cargar(nombreTabla string, relaciones []RelacionTabla, datos ...any) error {
+func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados ConjuntoDato) error {
 	if _, ok := td.RegistrarTablas[nombreTabla]; !ok {
 		return fmt.Errorf("de alguna forma estas cargando en una tabla no registrada")
 	}
 	tabla := td.RegistrarTablas[nombreTabla]
 
-	var id int64
-	var err error
-
 	td.lockTablas[nombreTabla].Lock()
-	if tabla.necesarioQuery {
-		_, err = td.BasesDeDatos.Obtener(tabla.query, datos...)
-		if err == nil { // Significa que existe
-			td.lockTablas[nombreTabla].Unlock()
-			return nil
-		}
+	if existe, err := tabla.Existe(td.BasesDeDatos, datosIngresados); err != nil {
+		td.lockTablas[nombreTabla].Unlock()
+		return err
+
+	} else if existe {
+		td.lockTablas[nombreTabla].Unlock()
+		return nil
 	}
-	id, err = td.BasesDeDatos.Insertar(tabla.insertar, datos...)
+	id, err := tabla.Insertar(td.BasesDeDatos, datosIngresados)
 	td.lockTablas[nombreTabla].Unlock()
 
 	if err != nil {
 		return err
 	}
 
-	var fKeys []ForeignKey = []ForeignKey{}
-	if (EsTipoDependiente(tabla.TipoTabla) || EsTipoDependible(tabla.TipoTabla)) && len(relaciones) > 0 {
-		fKeys, err = tabla.CrearForeignKey(td.Hash, relaciones)
+	if EsTipoDependiente(tabla.TipoTabla) {
+		fKeys, err := tabla.CrearForeignKey(td.Hash, datosIngresados)
 		if err != nil {
 			return err
 		}
-	}
 
-	if EsTipoDependiente(tabla.TipoTabla) {
 		if err := td.procesoDependiente(tabla, id, fKeys); err != nil {
 			return fmt.Errorf("error al verificar o actualizar el elemnto en la tabla tabla %s, con id: %d, con error: %v", tabla.NombreTabla, id, err)
 		}
 	}
 
 	if EsTipoDependible(tabla.TipoTabla) {
-		if hashDatos, err := tabla.Hash(td.Hash, fKeys, datos...); err != nil {
+		if hashDatos, err := tabla.Hash(td.Hash, datosIngresados); err != nil {
 			return err
 		} else {
 			return td.procesoDependible(tabla, id, hashDatos)

@@ -8,14 +8,12 @@ import (
 
 func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	nombreCarrera := Nombre(path)
-	err := tracker.Cargar(TABLA_CARRERAS,
-		[]d.RelacionTabla{
-			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
-		},
-		nombreCarrera,
-		EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
-		strings.ToLower(strings.TrimSpace(meta.TieneCodigo)) == "true",
-	)
+	err := tracker.Cargar(TABLA_CARRERAS, d.ConjuntoDato{
+		"nombre":             nombreCarrera,
+		"etapa":              EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
+		"tieneCodigoMateria": strings.ToLower(strings.TrimSpace(meta.TieneCodigo)) == "true",
+		"refArchivo":         d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+	})
 
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar carrera con error: %v", err)
@@ -24,7 +22,7 @@ func ProcesarCarrera(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 }
 
 func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
-	err := tracker.Cargar(TABLA_PLANES, []d.RelacionTabla{}, meta.Plan)
+	err := tracker.Cargar(TABLA_PLANES, d.ConjuntoDato{"nombre": meta.Plan})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar plan con error: %v", err)
 	}
@@ -34,22 +32,26 @@ func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 		return fmt.Errorf("obtener cuatrimestre con error: %v", err)
 	}
 
-	err = tracker.Cargar(TABLA_CUATRI, []d.RelacionTabla{}, anio, cuatrimestre)
+	err = tracker.Cargar(TABLA_CUATRI, d.ConjuntoDato{
+		"anio":         anio,
+		"cuatrimestre": cuatrimestre,
+	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar cuatri con error: %v", err)
 	}
 
-	err = tracker.Cargar(TABLA_MATERIAS,
-		[]d.RelacionTabla{
-			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
-			d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", meta.NombreCarrera),
-			d.NewRelacionSimple(TABLA_PLANES, "refPlan", meta.Plan),
-			d.NewRelacionSimple(TABLA_CUATRI, "refCuatrimestre", anio, cuatrimestre),
-		},
-		meta.NombreMateria,
-		EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
-		meta.Codigo,
-	)
+	err = tracker.Cargar(TABLA_MATERIAS, d.ConjuntoDato{
+		"nombre":     meta.NombreMateria,
+		"etapa":      EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
+		"codigo":     meta.Codigo,
+		"refArchivo": d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+		"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": meta.NombreCarrera}),
+		"refPlan":    d.NewRelacion(TABLA_PLANES, d.ConjuntoDato{"nombre": meta.Plan}),
+		"refCuatrimestre": d.NewRelacion(TABLA_CUATRI, d.ConjuntoDato{
+			"anio":         anio,
+			"cuatrimestre": cuatrimestre,
+		}),
+	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar materia con error: %v", err)
 	}
@@ -60,18 +62,16 @@ func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 			tablaCorrelativa = TABLA_MATERIAS_EQ
 		}
 
-		err = tracker.Cargar(TABLA_CORRELATIVAS,
-			[]d.RelacionTabla{
-				d.NewRelacionCompleja(TABLA_MATERIAS, "refMateria", []d.RelacionTabla{
-					d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", meta.NombreCarrera),
-				}, meta.NombreMateria),
-				d.NewRelacionCompleja(tablaCorrelativa, "refCorrelativa", []d.RelacionTabla{
-					d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", meta.NombreCarrera),
-				}, infoCorrelativa.Materia),
-			},
-			MATERIA_REAL,
-			infoCorrelativa.Tipo,
-		)
+		err = tracker.Cargar(TABLA_CORRELATIVAS, d.ConjuntoDato{
+			"refMateria": d.NewRelacion(TABLA_MATERIAS, d.ConjuntoDato{
+				"nombre":     meta.NombreMateria,
+				"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": meta.NombreCarrera}),
+			}),
+			"refCorrelativa": d.NewRelacion(tablaCorrelativa, d.ConjuntoDato{
+				"nombre":     infoCorrelativa.Materia,
+				"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": meta.NombreCarrera}),
+			}),
+		})
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar materias correlativas de una materia normal con error: %v", err)
 		}
@@ -82,19 +82,17 @@ func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 
 func ProcesarMateriaEquivalente(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	infoMateria := meta.MateriaEquivalente
-	relacionCarrera := d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", meta.NombreCarrera)
 
-	err := tracker.Cargar(TABLA_MATERIAS_EQ,
-		[]d.RelacionTabla{
-			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
-			relacionCarrera,
-			d.NewRelacionCompleja(TABLA_MATERIAS, "refMateria", []d.RelacionTabla{
-				d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", infoMateria.Carrera),
-			}, infoMateria.NombreMateria),
-		},
-		meta.NombreMateria,
-		meta.Codigo,
-	)
+	err := tracker.Cargar(TABLA_MATERIAS_EQ, d.ConjuntoDato{
+		"nombre":     meta.NombreMateria,
+		"codigo":     meta.Codigo,
+		"refArchivo": d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+		"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": meta.NombreCarrera}),
+		"refMateria": d.NewRelacion(TABLA_MATERIAS, d.ConjuntoDato{
+			"nombre":     infoMateria.NombreMateria,
+			"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": infoMateria.Carrera}),
+		}),
+	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar materia equivalente con error: %v", err)
 	}
@@ -105,14 +103,16 @@ func ProcesarMateriaEquivalente(path string, meta *Frontmatter, tracker *d.Track
 			tablaCorrelativa = TABLA_MATERIAS_EQ
 		}
 
-		err = tracker.Cargar(TABLA_CORRELATIVAS,
-			[]d.RelacionTabla{
-				d.NewRelacionCompleja(TABLA_MATERIAS_EQ, "refMateria", []d.RelacionTabla{relacionCarrera}, meta.NombreMateria),
-				d.NewRelacionCompleja(tablaCorrelativa, "refCorrelativa", []d.RelacionTabla{relacionCarrera}, infoCorrelativa.Materia),
-			},
-			MATERIA_EQUIVALENTE,
-			infoCorrelativa.Tipo,
-		)
+		err = tracker.Cargar(TABLA_CORRELATIVAS, d.ConjuntoDato{
+			"refMateria": d.NewRelacion(TABLA_MATERIAS_EQ, d.ConjuntoDato{
+				"nombre":     meta.NombreMateria,
+				"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": meta.NombreCarrera}),
+			}),
+			"refCorrelativa": d.NewRelacion(tablaCorrelativa, d.ConjuntoDato{
+				"nombre":     infoCorrelativa.Materia,
+				"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": meta.NombreCarrera}),
+			}),
+		})
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar materias correlativas de una materia equivalente con error: %v", err)
 		}
@@ -123,17 +123,16 @@ func ProcesarMateriaEquivalente(path string, meta *Frontmatter, tracker *d.Track
 
 func ProcesarTemaMateria(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	infoTema := meta.InfoTemaMateria
-	err := tracker.Cargar(TABLA_TEMA_MATERIA,
-		[]d.RelacionTabla{
-			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
-			d.NewRelacionCompleja(TABLA_MATERIAS, "refMateria", []d.RelacionTabla{
-				d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", infoTema.Carrera),
-			}, infoTema.Materia),
-		},
-		meta.NombreResumen,
-		NumeroODefault(meta.Capitulo, 1),
-		NumeroODefault(meta.Parte, 0),
-	)
+	err := tracker.Cargar(TABLA_TEMA_MATERIA, d.ConjuntoDato{
+		"nombre":     meta.NombreResumen,
+		"capitulo":   NumeroODefault(meta.Capitulo, 1),
+		"parte":      NumeroODefault(meta.Parte, 0),
+		"refArchivo": d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+		"refMateria": d.NewRelacion(TABLA_MATERIAS, d.ConjuntoDato{
+			"nombre":     infoTema.Materia,
+			"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": infoTema.Carrera}),
+		}),
+	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar tema materia con error: %v", err)
 	}

@@ -2,25 +2,14 @@ package dependencias
 
 type RelacionTabla struct {
 	Tabla           string
-	Clave           string
 	InfoRelacionada []RelacionTabla
-	Datos           []any
+	Datos           ConjuntoDato
 }
 
-func NewRelacionSimple(tabla, clave string, datos ...any) RelacionTabla {
+func NewRelacion(tabla string, datos ConjuntoDato) RelacionTabla {
 	return RelacionTabla{
 		Tabla:           tabla,
-		Clave:           clave,
 		InfoRelacionada: []RelacionTabla{},
-		Datos:           datos,
-	}
-}
-
-func NewRelacionCompleja(tabla, clave string, infoRelaciones []RelacionTabla, datos ...any) RelacionTabla {
-	return RelacionTabla{
-		Tabla:           tabla,
-		Clave:           clave,
-		InfoRelacionada: infoRelaciones,
 		Datos:           datos,
 	}
 }

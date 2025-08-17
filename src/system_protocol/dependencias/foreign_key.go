@@ -13,11 +13,11 @@ type ForeignKey struct {
 	HashDatosDestino IntFK
 }
 
-func NewForeignKey(hash *Hash, tabla, clave string, datos ...any) ForeignKey {
+func NewForeignKey(tabla, clave string, hash IntFK) ForeignKey {
 	return ForeignKey{
 		Clave:            clave,
 		TablaDestino:     tabla,
-		HashDatosDestino: hash.HasearDatos(datos...),
+		HashDatosDestino: hash,
 	}
 }
 

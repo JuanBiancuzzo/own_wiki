@@ -41,7 +41,7 @@ func CargarArchivo(dirInicio string, path string, tracker *d.TrackerDependencias
 	// El resto del contenido del archivo
 	// a.Contenido = contenido[3+strings.Index(contenido[3:], "---")+len("---"):]
 
-	err := tracker.Cargar(TABLA_ARCHIVOS, []d.RelacionTabla{}, path)
+	err := tracker.Cargar(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar archivo con error: %v", err)
 	}
@@ -94,33 +94,28 @@ func ProcesarNota(path string, meta *Frontmatter, tracker *d.TrackerDependencias
 
 	nombreNota := Nombre(path)
 
-	err = tracker.Cargar(TABLA_NOTAS,
-		[]d.RelacionTabla{
-			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
-		},
-		nombreNota,
-		EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
-		fecha.Representacion(),
-	)
+	err = tracker.Cargar(TABLA_NOTAS, d.ConjuntoDato{
+		"nombre":     nombreNota,
+		"etapa":      EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
+		"dia":        fecha.Representacion(),
+		"refArchivo": d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar nota con error: %v", err)
 	}
 
 	for _, vFacultad := range meta.VinculoFacultad {
-		err = tracker.Cargar(TABLA_NOTAS_VINCULO,
-			[]d.RelacionTabla{
-				d.NewRelacionSimple(TABLA_NOTAS, "refNota", nombreNota),
-				d.NewRelacionCompleja(TABLA_TEMA_MATERIA, "refVinculo",
-					[]d.RelacionTabla{
-						d.NewRelacionCompleja(TABLA_MATERIAS, "refMateria", []d.RelacionTabla{
-							d.NewRelacionSimple(TABLA_CARRERAS, "refCarrera", vFacultad.NombreCarrera),
-						}, vFacultad.NombreMateria),
-					},
-					vFacultad.NombreTema,
-					NumeroODefault(vFacultad.CapituloTema, 1),
-				),
-			},
-			TN_FACULTAD,
+		err = tracker.Cargar(TABLA_NOTAS_VINCULO, d.ConjuntoDato{
+			"refNota": d.NewRelacion(TABLA_NOTAS, d.ConjuntoDato{"nombre": nombreNota}),
+			"refVinculo": d.NewRelacion(TABLA_TEMA_MATERIA, d.ConjuntoDato{
+				"nombre":   vFacultad.NombreTema,
+				"capitulo": NumeroODefault(vFacultad.CapituloTema, 1),
+				"refMateria": d.NewRelacion(TABLA_MATERIAS, d.ConjuntoDato{
+					"nombre":     vFacultad.NombreMateria,
+					"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": vFacultad.NombreCarrera}),
+				}),
+			}),
+		},
 		)
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar vinculo con nota de faultad con error: %v", err)
@@ -139,18 +134,17 @@ func ProcesarNota(path string, meta *Frontmatter, tracker *d.TrackerDependencias
 		}
 
 		err = tracker.Cargar(TABLA_NOTAS_VINCULO,
-			[]d.RelacionTabla{
-				d.NewRelacionSimple(TABLA_NOTAS, "refNota", nombreNota),
-				d.NewRelacionCompleja(TABLA_TEMA_CURSO, "refVinculo",
-					[]d.RelacionTabla{
-						d.NewRelacionSimple(tablaCurso, "refCurso", vCurso.NombreCurso, anio),
-					},
-					vCurso.NombreTema,
-					vCurso.TipoCurso,
-					NumeroODefault(vCurso.CapituloTema, 1),
-				),
+			d.ConjuntoDato{
+				"refNota": d.NewRelacion(TABLA_NOTAS, d.ConjuntoDato{"nombre": nombreNota}),
+				"refVinculo": d.NewRelacion(TABLA_TEMA_CURSO, d.ConjuntoDato{
+					"nombre":   vCurso.NombreTema,
+					"capitulo": NumeroODefault(vCurso.CapituloTema, 1),
+					"refCurso": d.NewRelacion(tablaCurso, d.ConjuntoDato{
+						"nombre": vCurso.NombreCurso,
+						"anio":   anio,
+					}),
+				}),
 			},
-			TN_CURSO,
 		)
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar vinculo con nota de curso con error: %v", err)

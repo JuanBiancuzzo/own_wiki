@@ -8,10 +8,10 @@ import (
 )
 
 func ProcesarColeccion(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
-	err := tracker.Cargar(TABLA_COLECCIONES,
-		[]d.RelacionTabla{d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path)},
-		Nombre(path),
-	)
+	err := tracker.Cargar(TABLA_COLECCIONES, d.ConjuntoDato{
+		"nombre":     Nombre(path),
+		"refArchivo": d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar colecciones con error: %v", err)
 	}
@@ -24,14 +24,12 @@ func ProcesarDistribucion(path string, meta *Frontmatter, tracker *d.TrackerDepe
 		return fmt.Errorf("obtener tipo distribucion con error: %v", err)
 	}
 
-	err = tracker.Cargar(TABLA_DISTRIBUCIONES,
-		[]d.RelacionTabla{
-			d.NewRelacionSimple(TABLA_COLECCIONES, "refColeccion", "Distribuciones"),
-			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
-		},
-		meta.NombreDistribuucion,
-		tipoDistribucion,
-	)
+	err = tracker.Cargar(TABLA_DISTRIBUCIONES, d.ConjuntoDato{
+		"nombre":       meta.NombreDistribuucion,
+		"tipo":         tipoDistribucion,
+		"refArchivo":   d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+		"refColeccion": d.NewRelacion(TABLA_COLECCIONES, d.ConjuntoDato{"nombre": "Distribuciones"}),
+	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar distribuciones con error: %v", err)
 	}
@@ -39,7 +37,7 @@ func ProcesarDistribucion(path string, meta *Frontmatter, tracker *d.TrackerDepe
 }
 
 func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
-	err := tracker.Cargar(TABLA_EDITORIALES, []d.RelacionTabla{}, meta.Editorial)
+	err := tracker.Cargar(TABLA_EDITORIALES, d.ConjuntoDato{"editorial": meta.Editorial})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar editoriales con error: %v", err)
 	}
@@ -52,19 +50,17 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 	edicion := NumeroODefault(meta.Edicion, 1)
 	volumen := NumeroODefault(meta.Volumen, 0)
 
-	err = tracker.Cargar(
-		TABLA_LIBROS, []d.RelacionTabla{
-			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
-			d.NewRelacionSimple(TABLA_EDITORIALES, "refEditorial", meta.Editorial),
-			d.NewRelacionSimple(TABLA_COLECCIONES, "refColeccion", "Biblioteca"),
-		},
-		meta.TituloObra,
-		meta.SubtituloObra,
-		anio,
-		edicion,
-		volumen,
-		meta.Url,
-	)
+	err = tracker.Cargar(TABLA_LIBROS, d.ConjuntoDato{
+		"titulo":       meta.TituloObra,
+		"subtitulo":    meta.SubtituloObra,
+		"anio":         anio,
+		"edicion":      edicion,
+		"volumen":      volumen,
+		"url":          meta.Url,
+		"refArchivo":   d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+		"refEditorial": d.NewRelacion(TABLA_EDITORIALES, d.ConjuntoDato{"editorial": meta.Editorial}),
+		"refColeccion": d.NewRelacion(TABLA_COLECCIONES, d.ConjuntoDato{"nombre": "Biblioteca"}),
+	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar libro con error: %v", err)
 	}
@@ -73,22 +69,25 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		nombre := strings.TrimSpace(autor.Nombre)
 		apellido := strings.TrimSpace(autor.Apellido)
 
-		err = tracker.Cargar(TABLA_PERSONAS, []d.RelacionTabla{}, nombre, apellido)
+		err = tracker.Cargar(TABLA_PERSONAS, d.ConjuntoDato{
+			"nombre":   nombre,
+			"apellido": apellido,
+		})
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar persona con error: %v", err)
 		}
 
-		err = tracker.Cargar(TABLA_AUTORES_LIBRO, []d.RelacionTabla{
-			d.NewRelacionSimple(TABLA_LIBROS, "refLibro",
-				meta.TituloObra,
-				anio,
-				edicion,
-				volumen,
-			),
-			d.NewRelacionSimple(TABLA_PERSONAS, "refPersona",
-				nombre,
-				apellido,
-			),
+		err = tracker.Cargar(TABLA_AUTORES_LIBRO, d.ConjuntoDato{
+			"refLibro": d.NewRelacion(TABLA_LIBROS, d.ConjuntoDato{
+				"titulo":  meta.TituloObra,
+				"anio":    anio,
+				"edicion": edicion,
+				"volumen": volumen,
+			}),
+			"refPersona": d.NewRelacion(TABLA_PERSONAS, d.ConjuntoDato{
+				"nombre":   nombre,
+				"apellido": apellido,
+			}),
 		})
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar autor libro con error: %v", err)
@@ -100,21 +99,19 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		paginaInicio := NumeroODefault(capitulo.Paginas.Inicio, 0)
 		paginaFinal := NumeroODefault(capitulo.Paginas.Final, 1)
 
-		err = tracker.Cargar(TABLA_CAPITULOS,
-			[]d.RelacionTabla{
-				d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
-				d.NewRelacionSimple(TABLA_LIBROS, "refLibro",
-					meta.TituloObra,
-					anio,
-					edicion,
-					volumen,
-				),
-			},
-			numero,
-			capitulo.NombreCapitulo,
-			paginaInicio,
-			paginaFinal,
-		)
+		err = tracker.Cargar(TABLA_CAPITULOS, d.ConjuntoDato{
+			"numero":       numero,
+			"nombre":       capitulo.NombreCapitulo,
+			"paginaInicio": paginaInicio,
+			"paginaFinal":  paginaFinal,
+			"refArchivo":   d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+			"refLibro": d.NewRelacion(TABLA_LIBROS, d.ConjuntoDato{
+				"titulo":  meta.TituloObra,
+				"anio":    anio,
+				"edicion": edicion,
+				"volumen": volumen,
+			}),
+		})
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar capitulo con error: %v", err)
 		}
@@ -123,22 +120,25 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 			nombre := strings.TrimSpace(editor.Nombre)
 			apellido := strings.TrimSpace(editor.Apellido)
 
-			err = tracker.Cargar(TABLA_PERSONAS, []d.RelacionTabla{}, nombre, apellido)
+			err = tracker.Cargar(TABLA_PERSONAS, d.ConjuntoDato{
+				"nombre":   nombre,
+				"apellido": apellido,
+			})
 			if HABILITAR_ERROR && err != nil {
 				return fmt.Errorf("cargar persona con error: %v", err)
 			}
 
-			err = tracker.Cargar(TABLA_EDITORES_CAPITULO, []d.RelacionTabla{
-				d.NewRelacionSimple(TABLA_CAPITULOS, "refCapitulo",
-					numero,
-					capitulo.NombreCapitulo,
-					paginaInicio,
-					paginaFinal,
-				),
-				d.NewRelacionSimple(TABLA_PERSONAS, "refPersona",
-					nombre,
-					apellido,
-				),
+			err = tracker.Cargar(TABLA_EDITORES_CAPITULO, d.ConjuntoDato{
+				"refCapitulo": d.NewRelacion(TABLA_CAPITULOS, d.ConjuntoDato{
+					"numero":       numero,
+					"nombre":       capitulo.NombreCapitulo,
+					"paginaInicio": paginaInicio,
+					"paginaFinal":  paginaFinal,
+				}),
+				"refPersona": d.NewRelacion(TABLA_PERSONAS, d.ConjuntoDato{
+					"nombre":   nombre,
+					"apellido": apellido,
+				}),
 			})
 			if HABILITAR_ERROR && err != nil {
 				return fmt.Errorf("cargar editor capitulo con error: %v", err)
@@ -154,7 +154,7 @@ func ProcesarPaper(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 	if nombreRevista == "" {
 		nombreRevista = "No fue ingresado - TODO"
 	}
-	err := tracker.Cargar(TABLA_REVISTAS_PAPER, []d.RelacionTabla{}, nombreRevista)
+	err := tracker.Cargar(TABLA_REVISTAS_PAPER, d.ConjuntoDato{"nombre": nombreRevista})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar revista con error: %v", err)
 	}
@@ -169,46 +169,50 @@ func ProcesarPaper(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 	paginaInicio := NumeroODefault(meta.Paginas.Inicio, 0)
 	paginaFinal := NumeroODefault(meta.Paginas.Final, 1)
 
-	err = tracker.Cargar(TABLA_PAPERS,
-		[]d.RelacionTabla{
-			d.NewRelacionSimple(TABLA_ARCHIVOS, "refArchivo", path),
-			d.NewRelacionSimple(TABLA_REVISTAS_PAPER, "refRevista", nombreRevista),
-			d.NewRelacionSimple(TABLA_COLECCIONES, "refColeccion", "Papers"),
-		},
-		meta.TituloInforme,
-		meta.SubtituloInforme,
-		anio,
-		volumen,
-		numero,
-		paginaInicio,
-		paginaFinal,
-		meta.Url,
-	)
+	err = tracker.Cargar(TABLA_PAPERS, d.ConjuntoDato{
+		"titulo":       meta.TituloInforme,
+		"subtitulo":    meta.SubtituloInforme,
+		"anio":         anio,
+		"volumen":      volumen,
+		"numero":       numero,
+		"paginaInicio": paginaInicio,
+		"paginaFinal":  paginaFinal,
+		"doi":          meta.Url,
+		"refArchivo":   d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+		"refRevista":   d.NewRelacion(TABLA_REVISTAS_PAPER, d.ConjuntoDato{"nombre": nombreRevista}),
+		"refColeccion": d.NewRelacion(TABLA_COLECCIONES, d.ConjuntoDato{"nombre": "Papers"}),
+	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar paper con error: %v", err)
 	}
-
-	datosCaracteristicosPaper := []any{meta.TituloInforme, anio, volumen, numero, paginaInicio, paginaFinal}
 
 	for _, autor := range meta.Autores {
 		nombre := strings.TrimSpace(autor.Nombre)
 		apellido := strings.TrimSpace(autor.Apellido)
 
-		err = tracker.Cargar(TABLA_PERSONAS, []d.RelacionTabla{}, nombre, apellido)
+		err = tracker.Cargar(TABLA_PERSONAS, d.ConjuntoDato{
+			"nombre":   nombre,
+			"apellido": apellido,
+		})
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar persona con error: %v", err)
 		}
 
-		err = tracker.Cargar(TABLA_ESCRITORES_PAPER,
-			[]d.RelacionTabla{
-				d.NewRelacionSimple(TABLA_PAPERS, "refPaper", datosCaracteristicosPaper...),
-				d.NewRelacionSimple(TABLA_PERSONAS, "refPersona",
-					nombre,
-					apellido,
-				),
-			},
-			PAPER_AUTOR,
-		)
+		err = tracker.Cargar(TABLA_ESCRITORES_PAPER, d.ConjuntoDato{
+			"tipoEscritor": PAPER_AUTOR,
+			"refPaper": d.NewRelacion(TABLA_PAPERS, d.ConjuntoDato{
+				"titulo":       meta.TituloInforme,
+				"anio":         anio,
+				"volumen":      volumen,
+				"numero":       numero,
+				"paginaInicio": paginaInicio,
+				"paginaFinal":  paginaFinal,
+			}),
+			"refPersona": d.NewRelacion(TABLA_PERSONAS, d.ConjuntoDato{
+				"nombre":   nombre,
+				"apellido": apellido,
+			}),
+		})
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar autor del paper con error: %v", err)
 		}
@@ -218,21 +222,29 @@ func ProcesarPaper(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		nombre := strings.TrimSpace(editor.Nombre)
 		apellido := strings.TrimSpace(editor.Apellido)
 
-		err = tracker.Cargar(TABLA_PERSONAS, []d.RelacionTabla{}, nombre, apellido)
+		err = tracker.Cargar(TABLA_PERSONAS, d.ConjuntoDato{
+			"nombre":   nombre,
+			"apellido": apellido,
+		})
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar persona con error: %v", err)
 		}
 
-		err = tracker.Cargar(TABLA_ESCRITORES_PAPER,
-			[]d.RelacionTabla{
-				d.NewRelacionSimple(TABLA_PAPERS, "refPaper", datosCaracteristicosPaper...),
-				d.NewRelacionSimple(TABLA_PERSONAS, "refPersona",
-					nombre,
-					apellido,
-				),
-			},
-			PAPER_EDITOR,
-		)
+		err = tracker.Cargar(TABLA_ESCRITORES_PAPER, d.ConjuntoDato{
+			"tipoEscritor": PAPER_EDITOR,
+			"refPaper": d.NewRelacion(TABLA_PAPERS, d.ConjuntoDato{
+				"titulo":       meta.TituloInforme,
+				"anio":         anio,
+				"volumen":      volumen,
+				"numero":       numero,
+				"paginaInicio": paginaInicio,
+				"paginaFinal":  paginaFinal,
+			}),
+			"refPersona": d.NewRelacion(TABLA_PERSONAS, d.ConjuntoDato{
+				"nombre":   nombre,
+				"apellido": apellido,
+			}),
+		})
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar editor del paper con error: %v", err)
 		}

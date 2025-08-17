@@ -21,28 +21,39 @@ type DescripcionTabla struct {
 	ClavesTipo  []ParClaveTipo
 	Referencias []ReferenciaTabla
 
-	necesarioQuery    bool
-	query             string
-	insertar          string
-	tablasReferencias map[string]*DescripcionTabla
+	necesarioQuery            bool
+	clavesRepresentativas     []string
+	clavesGenerales           []string
+	referenciaMultiplesTablas map[string]bool
+	tablasReferencias         map[string]map[string]*DescripcionTabla
 }
 
 func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) DescripcionTabla {
-	insertarParam := []string{}
-	insertarValues := []string{}
-	queryParam := []string{}
-	tablasReferencias := make(map[string]*DescripcionTabla)
+	clavesGenerales := []string{}
+	clavesRepresentativas := []string{}
+	referenciaMultiplesTablas := make(map[string]bool)
+
+	tablasReferencias := make(map[string]map[string]*DescripcionTabla)
 	for _, claveTipo := range clavesTipo {
-		insertarParam = append(insertarParam, claveTipo.Clave)
-		insertarValues = append(insertarValues, "?")
-		queryParam = append(queryParam, fmt.Sprintf("%s = ?", claveTipo.Clave))
+		clavesGenerales = append(clavesGenerales, claveTipo.Clave)
+		if claveTipo.Representativa {
+			clavesRepresentativas = append(clavesRepresentativas, claveTipo.Clave)
+		}
 	}
 	for _, referencia := range referencias {
-		insertarParam = append(insertarParam, referencia.Clave)
-		insertarValues = append(insertarValues, "0")
-		for _, tabla := range referencia.Tablas {
-			tablasReferencias[tabla.NombreTabla+referencia.Clave] = tabla
+		clavesGenerales = append(clavesGenerales, referencia.Clave)
+		referenciaMultiplesTablas[referencia.Clave] = len(referencia.Tablas) > 1
+
+		if referencia.Representativo {
+			clavesRepresentativas = append(clavesRepresentativas, referencia.Clave)
 		}
+
+		mapaTablas := make(map[string]*DescripcionTabla)
+		for _, tabla := range referencia.Tablas {
+			fmt.Printf("La tabla %s tiene relacion con %s por la clave %s\n", nombreTabla, tabla.NombreTabla, referencia.Clave)
+			mapaTablas[tabla.NombreTabla] = tabla
+		}
+		tablasReferencias[referencia.Clave] = mapaTablas
 	}
 
 	return DescripcionTabla{
@@ -51,44 +62,38 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 		ClavesTipo:  clavesTipo,
 		Referencias: referencias,
 
-		necesarioQuery: elementosRepetidos,
-		insertar: fmt.Sprintf(
-			"INSERT INTO %s (%s) VALUES (%s)",
-			nombreTabla,
-			strings.Join(insertarParam, ", "),
-			strings.Join(insertarValues, ", "),
-		),
-		query: fmt.Sprintf(
-			"SELECT id FROM %s WHERE %s",
-			nombreTabla,
-			strings.Join(queryParam, " AND "),
-		),
+		necesarioQuery:            elementosRepetidos,
+		clavesGenerales:           clavesGenerales,
+		clavesRepresentativas:     clavesRepresentativas,
+		referenciaMultiplesTablas: referenciaMultiplesTablas,
+
 		tablasReferencias: tablasReferencias,
 	}
 }
 
 func (dt DescripcionTabla) CrearTablaRelajada(bdd *b.Bdd) error {
 	parametros := []string{}
-	for i, parClaveTipo := range dt.ClavesTipo {
-		extra := ","
-		if i+1 == len(dt.ClavesTipo) && len(dt.Referencias) == 0 {
-			extra = ""
-		}
-		parametros = append(parametros, fmt.Sprintf("%s %s%s", parClaveTipo.Clave, parClaveTipo.Tipo, extra))
+	for _, parClaveTipo := range dt.ClavesTipo {
+		parametros = append(parametros, fmt.Sprintf("%s %s", parClaveTipo.Clave, parClaveTipo.Tipo))
 	}
 
-	for i, referencia := range dt.Referencias {
-		extra := ","
-		if i+1 == len(dt.Referencias) {
-			extra = ""
+	for _, referencia := range dt.Referencias {
+		if len(referencia.Tablas) > 1 {
+			tablasReferenciadas := make([]string, len(referencia.Tablas))
+			for i, tablaReferenciada := range referencia.Tablas {
+				tablasReferenciadas[i] = tablaReferenciada.NombreTabla
+			}
+			parClaveTipo := NewClaveEnum(false, fmt.Sprintf("tipo%s", referencia.Clave), tablasReferenciadas, false)
+			parametros = append(parametros, fmt.Sprintf("%s %s", parClaveTipo.Clave, parClaveTipo.Tipo))
 		}
-		parametros = append(parametros, fmt.Sprintf("%s INT%s", referencia.Clave, extra))
+
+		parametros = append(parametros, fmt.Sprintf("%s INT", referencia.Clave))
 	}
 
 	tabla := fmt.Sprintf(
-		"CREATE TABLE %s (\nid INT AUTO_INCREMENT PRIMARY KEY,\n\t%s\n);",
+		"CREATE TABLE %s (\n\tid INT AUTO_INCREMENT PRIMARY KEY,\n\t%s\n);",
 		dt.NombreTabla,
-		strings.Join(parametros, "\n\t"),
+		strings.Join(parametros, ",\n\t"),
 	)
 
 	if err := bdd.CrearTabla(tabla); err != nil {
@@ -97,80 +102,125 @@ func (dt DescripcionTabla) CrearTablaRelajada(bdd *b.Bdd) error {
 	return nil
 }
 
+func (dt DescripcionTabla) Existe(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error) {
+	if !dt.necesarioQuery {
+		return false, nil
+	}
+
+	datos := []any{}
+	queryParam := make([]string, len(dt.clavesRepresentativas))
+	for i, clave := range dt.clavesRepresentativas {
+		if dato, ok := datosIngresados[clave]; !ok {
+			return false, fmt.Errorf("el usuario no ingreso el dato para %s", clave)
+
+		} else if relacion, ok := dato.(RelacionTabla); ok {
+			if dt.referenciaMultiplesTablas[clave] {
+				datos = append(datos, relacion.Tabla)
+			}
+
+		} else {
+			datos = append(datos, dato)
+		}
+
+		queryParam[i] = fmt.Sprintf("%s = ?", clave)
+	}
+
+	query := fmt.Sprintf(
+		"SELECT id FROM %s WHERE %s",
+		dt.NombreTabla,
+		strings.Join(queryParam, " AND "),
+	)
+
+	_, err := bdd.Obtener(query, datos...)
+	return err == nil, nil
+}
+
+func (dt DescripcionTabla) Insertar(bdd *b.Bdd, datosIngresados ConjuntoDato) (int64, error) {
+	datos := []any{}
+
+	insertarParam := []string{}
+	for _, clave := range dt.clavesGenerales {
+		if dato, ok := datosIngresados[clave]; !ok {
+			return 0, fmt.Errorf("el usuario no ingreso el dato para %s", clave)
+
+		} else if relacion, ok := dato.(RelacionTabla); ok {
+			if dt.referenciaMultiplesTablas[clave] {
+				insertarParam = append(insertarParam, fmt.Sprintf("tipo%s", clave))
+				datos = append(datos, relacion.Tabla)
+			}
+			insertarParam = append(insertarParam, clave)
+			datos = append(datos, 0)
+		} else {
+			insertarParam = append(insertarParam, clave)
+			datos = append(datos, dato)
+		}
+	}
+
+	insertar := fmt.Sprintf(
+		"INSERT INTO %s (%s) VALUES (%s)",
+		dt.NombreTabla,
+		strings.Join(insertarParam, ", "),
+		strings.Join(strings.Split(strings.Repeat("?", len(insertarParam)), ""), ", "),
+	)
+	return bdd.Insertar(insertar, datos...)
+}
+
 // TODO
 func (dt DescripcionTabla) RestringirTabla(bdd *b.Bdd) error {
 	return nil
 }
 
-func (dt DescripcionTabla) CrearForeignKey(hash *Hash, relaciones []RelacionTabla) ([]ForeignKey, error) {
-	fKeys := make([]ForeignKey, len(relaciones))
+func (dt DescripcionTabla) CrearForeignKey(hash *Hash, datosIngresados ConjuntoDato) ([]ForeignKey, error) {
+	fKeys := []ForeignKey{}
 
-	for i, relacion := range relaciones {
-		datos := relacion.Datos
-		tabla, ok := dt.tablasReferencias[relacion.Tabla+relacion.Clave]
-		if !ok {
-			return fKeys, fmt.Errorf("no hay tabla para esa relacion")
+	for clave := range datosIngresados {
+		if relacion, ok := datosIngresados[clave].(RelacionTabla); !ok {
+			continue
+
+		} else if mapaTablas, ok := dt.tablasReferencias[clave]; !ok {
+			return fKeys, fmt.Errorf("no hay tablas con la clave %s", clave)
+
+		} else if tabla, ok := mapaTablas[relacion.Tabla]; !ok {
+			return fKeys, fmt.Errorf("no hay tabla (%s) para esa relacion", relacion.Tabla)
+
+		} else if hash, err := tabla.Hash(hash, relacion.Datos); err != nil {
+			return fKeys, fmt.Errorf("no se pudo general el hash de los datos, con err: %v", err)
+
+		} else {
+			fKeys = append(fKeys, NewForeignKey(relacion.Tabla, clave, hash))
 		}
-
-		if len(relacion.InfoRelacionada) > 0 {
-			if fKeysRelacionados, err := tabla.CrearForeignKey(hash, relacion.InfoRelacionada); err != nil {
-				return fKeys, fmt.Errorf("error info relacionada con error: %v", err)
-			} else {
-				for _, fKey := range fKeysRelacionados {
-					datos = append(datos, fKey.HashDatosDestino)
-				}
-			}
-		}
-
-		fKeys[i] = NewForeignKey(hash, relacion.Tabla, relacion.Clave, datos...)
 	}
 
 	return fKeys, nil
 }
 
-func (dt DescripcionTabla) Hash(hash *Hash, fKeys []ForeignKey, datos ...any) (IntFK, error) {
-	if len(datos) != len(dt.ClavesTipo) {
-		return 0, fmt.Errorf("en la tabla %s, al hashear %T, no tenia la misma estructura que la esperada", dt.NombreTabla, datos)
-	}
-
+func (dt DescripcionTabla) Hash(hash *Hash, datosIngresados ConjuntoDato) (IntFK, error) {
 	datosRepresentativos := []any{}
-	for i, claveTipo := range dt.ClavesTipo {
-		if claveTipo.Representativa {
-			datosRepresentativos = append(datosRepresentativos, datos[i])
-		}
-	}
 
-	for _, referencia := range dt.Referencias {
-		if !referencia.Representativo {
-			continue
-		}
+	for _, clave := range dt.clavesRepresentativas {
+		if dato, ok := datosIngresados[clave]; !ok {
+			return 0, fmt.Errorf("no se ingreso el valor para la clave %s", clave)
 
-		encontrado := false
-		for _, fKey := range fKeys {
-			for _, tabla := range referencia.Tablas {
-				if referencia.Clave == fKey.Clave && tabla.NombreTabla == fKey.TablaDestino {
-					encontrado = true
-					datosRepresentativos = append(datosRepresentativos, fKey.HashDatosDestino)
-					break
-				}
+		} else if relacion, ok := dato.(RelacionTabla); ok {
+			if mapaTablas, ok := dt.tablasReferencias[clave]; !ok {
+				return 0, fmt.Errorf("no hay tablas con la clave %s", clave)
+
+			} else if tabla, ok := mapaTablas[relacion.Tabla]; !ok {
+				return 0, fmt.Errorf("no existe relación de %s a %s con la clave %s", dt.NombreTabla, relacion.Tabla, clave)
+
+			} else if hash, err := tabla.Hash(hash, relacion.Datos); err != nil {
+				return 0, err
+
+			} else {
+				datosRepresentativos = append(datosRepresentativos, hash)
 			}
-		}
 
-		if !encontrado {
-			return 0, fmt.Errorf("no tiene la foreign key necesaria para hacer su hash")
+		} else {
+			datosRepresentativos = append(datosRepresentativos, dato)
 		}
 	}
 
 	return hash.HasearDatos(datosRepresentativos...), nil
-}
-
-func (dt DescripcionTabla) Existe(bdd *b.Bdd, datos ...any) (bool, error) {
-	if !dt.necesarioQuery {
-		return false, nil
-	}
-
-	_, err := bdd.Obtener(dt.query, datos...)
-	return err == nil, nil
 }
 
 func (dt DescripcionTabla) ObtenerDependencias() []DescripcionTabla {

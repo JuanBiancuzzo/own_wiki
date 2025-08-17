@@ -8,29 +8,40 @@ import (
 	d "own_wiki/system_protocol/dependencias"
 )
 
+type TipoVariable string
+
+const (
+	TV_INT        = "int"
+	TV_ENUM       = "enum"
+	TV_STRING     = "string"
+	TV_BOOL       = "bool"
+	TV_DATE       = "date"
+	TV_REFERENCIA = "ref"
+)
+
 type InfoTabla struct {
-	Nombre             string                `json:"nombre"`
-	Independiente      bool                  `json:"independiente"`
-	Dependible         bool                  `json:"dependible"`
-	ElementosRepetidos bool                  `json:"elementosRepetidos"`
-	ValoresGuardar     []InfoValorGuardar    `json:"valoresGuardar"`
-	ReferenciasTabla   []InfoReferenciaTabla `json:"referenciasTabla"`
+	Nombre             string             `json:"nombre"`
+	Independiente      bool               `json:"independiente"`
+	Dependible         bool               `json:"dependible"`
+	ElementosRepetidos bool               `json:"elementosRepetidos"`
+	ValoresGuardar     []InfoValorGuardar `json:"valoresGuardar"`
 }
 
 type InfoValorGuardar struct {
-	Clave          string   `json:"clave"`
-	Tipo           string   `json:"tipo"`
-	Largo          int      `json:"largo"`
-	Valores        []string `json:"valores"`
-	Representativo bool     `json:"representativo"`
-	Necesario      bool     `json:"necesario"`
-}
+	Clave          string       `json:"clave"`
+	Tipo           TipoVariable `json:"tipo"`
+	Representativo bool         `json:"representativo"`
+	Necesario      bool         `json:"necesario"`
 
-type InfoReferenciaTabla struct {
-	Tabla          string   `json:"tabla"`
-	Tablas         []string `json:"tablas"`
-	Clave          string   `json:"clave"`
-	Representativo bool     `json:"representativo"`
+	// Enm
+	Valores []string `json:"valores"`
+
+	// String
+	Largo int `json:"largo"`
+
+	// Referencia
+	Tabla  string   `json:"tabla"`
+	Tablas []string `json:"tablas"`
 }
 
 func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
@@ -48,15 +59,20 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 
 	for decodificador.More() {
 		var info InfoTabla
-		err := decodificador.Decode(&info)
-		if err != nil {
-			return tablas, fmt.Errorf("error al codificar tablas")
+		if err := decodificador.Decode(&info); err != nil {
+			return tablas, fmt.Errorf("error al codificar tablas, con err: %v", err)
 		}
 
 		listaInfo = append(listaInfo, info)
-		for _, referencia := range info.ReferenciasTabla {
-			mapaReferenciados[referencia.Tabla] = 0
-			for _, tabla := range referencia.Tablas {
+		for _, valorGuardado := range info.ValoresGuardar {
+			if valorGuardado.Tipo != TV_REFERENCIA {
+				continue
+			}
+
+			if valorGuardado.Tabla != "" {
+				mapaReferenciados[valorGuardado.Tabla] = 0
+			}
+			for _, tabla := range valorGuardado.Tablas {
 				mapaReferenciados[tabla] = 0
 			}
 		}
@@ -69,8 +85,67 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 
 	mapaTablas := make(map[string]*d.DescripcionTabla)
 	for _, info := range listaInfo {
-		independiente := len(info.ReferenciasTabla) == 0
+		independiente := true
 		_, dependible := mapaReferenciados[info.Nombre]
+
+		paresClaveTipo := []d.ParClaveTipo{}
+		referenciasTablas := []d.ReferenciaTabla{}
+		for _, vg := range info.ValoresGuardar {
+			var nuevoClaveTipo d.ParClaveTipo
+
+			necesario := vg.Necesario
+			representativo := vg.Representativo && necesario
+
+			switch vg.Tipo {
+			case TV_STRING:
+				nuevoClaveTipo = d.NewClaveString(representativo, vg.Clave, uint(vg.Largo), necesario)
+				paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
+
+			case TV_INT:
+				nuevoClaveTipo = d.NewClaveInt(representativo, vg.Clave, necesario)
+				paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
+
+			case TV_ENUM:
+				nuevoClaveTipo = d.NewClaveEnum(representativo, vg.Clave, vg.Valores, necesario)
+				paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
+
+			case TV_BOOL:
+				nuevoClaveTipo = d.NewClaveBool(representativo, vg.Clave, necesario)
+				paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
+
+			case TV_DATE:
+				nuevoClaveTipo = d.NewClaveDate(representativo, vg.Clave, necesario)
+				paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
+
+			case TV_REFERENCIA:
+				independiente = false
+				var nombreTablas []string
+				if vg.Tabla != "" {
+					nombreTablas = []string{vg.Tabla}
+				} else {
+					nombreTablas = vg.Tablas
+				}
+
+				tablasRelacionadas := make([]*d.DescripcionTabla, len(nombreTablas))
+				for i, nombreTabla := range nombreTablas {
+					if tabla, ok := mapaTablas[nombreTabla]; !ok {
+						nombreTablas := []string{}
+						for nombreTabla := range mapaTablas {
+							nombreTablas = append(nombreTablas, nombreTabla)
+						}
+						return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", nombreTabla, strings.Join(nombreTablas, ", "))
+					} else {
+						tablasRelacionadas[i] = tabla
+					}
+				}
+				nuevaReferencia := d.NewReferenciaTabla(vg.Clave, tablasRelacionadas, vg.Representativo)
+				referenciasTablas = append(referenciasTablas, nuevaReferencia)
+
+			default:
+				return tablas, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)
+			}
+
+		}
 
 		var tipoTabla d.TipoTabla
 		if independiente && dependible {
@@ -81,61 +156,6 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 			tipoTabla = d.DEPENDIENTE_DEPENDIBLE
 		} else {
 			tipoTabla = d.DEPENDIENTE_NO_DEPENDIBLE
-		}
-
-		paresClaveTipo := []d.ParClaveTipo{}
-		for _, vg := range info.ValoresGuardar {
-			var nuevoClaveTipo d.ParClaveTipo
-
-			necesario := vg.Necesario
-			representativo := vg.Representativo && necesario
-
-			switch vg.Tipo {
-			case "string":
-				nuevoClaveTipo = d.NewClaveString(representativo, vg.Clave, uint(vg.Largo), necesario)
-
-			case "int":
-				nuevoClaveTipo = d.NewClaveInt(representativo, vg.Clave, necesario)
-
-			case "enum":
-				nuevoClaveTipo = d.NewClaveEnum(representativo, vg.Clave, vg.Valores, necesario)
-
-			case "bool":
-				nuevoClaveTipo = d.NewClaveBool(representativo, vg.Clave, necesario)
-
-			case "date":
-				nuevoClaveTipo = d.NewClaveDate(representativo, vg.Clave, necesario)
-
-			default:
-				return tablas, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)
-			}
-
-			paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
-		}
-
-		referenciasTablas := []d.ReferenciaTabla{}
-		for _, rt := range info.ReferenciasTabla {
-			var nombreTablas []string
-			if rt.Tabla != "" {
-				nombreTablas = []string{rt.Tabla}
-			} else {
-				nombreTablas = rt.Tablas
-			}
-
-			tablasRelacionadas := make([]*d.DescripcionTabla, len(nombreTablas))
-			for i, nombreTabla := range nombreTablas {
-				if tabla, ok := mapaTablas[nombreTabla]; !ok {
-					nombreTablas := []string{}
-					for nombreTabla := range mapaTablas {
-						nombreTablas = append(nombreTablas, nombreTabla)
-					}
-					return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", rt.Tabla, strings.Join(nombreTablas, ", "))
-				} else {
-					tablasRelacionadas[i] = tabla
-				}
-			}
-			nuevaReferencia := d.NewReferenciaTabla(rt.Clave, tablasRelacionadas, rt.Representativo)
-			referenciasTablas = append(referenciasTablas, nuevaReferencia)
 		}
 
 		nuevaTabla := d.ConstruirTabla(info.Nombre, tipoTabla, info.ElementosRepetidos, paresClaveTipo, referenciasTablas)
