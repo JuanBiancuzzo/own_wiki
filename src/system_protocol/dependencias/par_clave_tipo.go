@@ -11,6 +11,7 @@ type TipoVariable byte
 func (tv TipoVariable) ValorDeString(valor string) (any, error) {
 	switch tv {
 	case TV_INT:
+		fallthrough
 	case TV_REFERENCIA:
 		return strconv.Atoi(valor)
 
@@ -38,6 +39,7 @@ func (tv TipoVariable) ValorDeString(valor string) (any, error) {
 func (tv TipoVariable) ReferenciaValor() (any, error) {
 	switch tv {
 	case TV_INT:
+		fallthrough
 	case TV_REFERENCIA:
 		var numero int
 		return &numero, nil
@@ -56,7 +58,7 @@ func (tv TipoVariable) ReferenciaValor() (any, error) {
 
 	}
 
-	return nil, fmt.Errorf("no tiene el tipo correcto")
+	return nil, fmt.Errorf("no tiene el tipo correcto, tiene: %v", tv)
 }
 
 const (

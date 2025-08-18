@@ -18,19 +18,17 @@ type Templates struct {
 }
 
 func NewTemplate(pathTemplate string) (*Templates, error) {
-	funcMaps := template.FuncMap{
+	templ := template.New("").Funcs(template.FuncMap{
 		"PathViewURL": v.CreateURL,
-	}
+	})
 
 	if templUsuario, err := filepath.Glob(fmt.Sprintf("%s/*.html", pathTemplate)); err != nil {
 		return nil, fmt.Errorf("error al obtener templates del usuario, con error: %v", err)
 
-	} else if template, err := template.ParseFiles(templUsuario...); err != nil {
+	} else if templ, err := templ.ParseFiles(templUsuario...); err != nil {
 		return nil, fmt.Errorf("error al parsear archivos, con error: %v", err)
 	} else {
-		return &Templates{
-			templates: template.Funcs(funcMaps),
-		}, nil
+		return &Templates{templates: templ}, nil
 	}
 }
 

@@ -1,6 +1,7 @@
 package views
 
 import (
+	"fmt"
 	b "own_wiki/system_protocol/bass_de_datos"
 
 	"github.com/labstack/echo/v4"
@@ -17,9 +18,14 @@ type View struct {
 
 type DataView map[string]any
 
-func NewView(nombre string) View {
+func NewView(bdd *b.Bdd, nombre, bloque string, requisitos []string, informaciones map[string]Informacion) View {
+	fmt.Printf("Registrando %s\n", nombre)
 	return View{
-		Nombre: nombre,
+		Nombre:           nombre,
+		Bloque:           bloque,
+		Bdd:              bdd,
+		clavesNecesarias: requisitos,
+		informaciones:    informaciones,
 	}
 }
 
@@ -33,6 +39,7 @@ func (v View) GenerarEndpoint(ec echo.Context) error {
 	for nombreValor := range v.informaciones {
 		informacion := v.informaciones[nombreValor]
 		if valor, err := informacion.ObtenerInformacion(v.Bdd, valoresNecesarios); err != nil {
+			fmt.Printf("Error al utilizar endpoint /%s con error: %v\n", v.Nombre, err)
 			return err
 
 		} else {

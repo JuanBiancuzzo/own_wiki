@@ -104,6 +104,7 @@ services:
       - "42069:42069"
     volumes:
       - ./src:/app
+      - ./configuracion:/var/configuracion
     networks:
       - appnet
     command: ["air", "-c", "ejecucion/.air.toml"] 

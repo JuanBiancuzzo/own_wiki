@@ -35,7 +35,7 @@ func ObtenerViews(dirConfiguracion string, bdd *b.Bdd, tablas []d.DescripcionTab
 		return nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
 
 	} else {
-		return c.CrearInfoViews(string(bytes))
+		return c.CrearInfoViews(string(bytes), bdd, tablas)
 	}
 }
 

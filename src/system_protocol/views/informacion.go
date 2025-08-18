@@ -17,14 +17,36 @@ type InformacionTabla struct {
 	Referencias map[string]InformacionReferencia
 }
 
+func NewInformacionTabla(tabla *d.DescripcionTabla, condicion d.Condicion, referencias map[string]InformacionReferencia) InformacionTabla {
+	return InformacionTabla{
+		Tabla:       tabla,
+		Condicion:   condicion,
+		Referencias: referencias,
+	}
+}
+
 type InformacionFila struct {
 	Tabla     *d.DescripcionTabla
 	Condicion d.Condicion
 }
 
+func NewInformacionFila(tabla *d.DescripcionTabla, condicion d.Condicion) InformacionFila {
+	return InformacionFila{
+		Tabla:     tabla,
+		Condicion: condicion,
+	}
+}
+
 type InformacionReferencia struct {
 	View       string
 	Parametros map[string]string
+}
+
+func NewInformacionReferencia(view string, parametros map[string]string) InformacionReferencia {
+	return InformacionReferencia{
+		View:       view,
+		Parametros: parametros,
+	}
 }
 
 type InformacionArray struct {
@@ -34,7 +56,12 @@ type InformacionArray struct {
 func (i InformacionTabla) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error) {
 	datos := []d.ConjuntoDato{}
 
-	for conjuntoDato := range i.Tabla.QueryAll(bdd, i.Condicion, requisitos) {
+	iterador, err := i.Tabla.QueryAll(bdd, i.Condicion, requisitos)
+	if err != nil {
+		return nil, fmt.Errorf("se tuvo un error al intentar iterar sobre la tabla: %s, con error: %v", i.Tabla.NombreTabla, err)
+	}
+
+	for conjuntoDato := range iterador {
 		for nombre := range i.Referencias {
 			referencia := i.Referencias[nombre]
 			pathView := NewPathView(referencia.View)
@@ -43,10 +70,10 @@ func (i InformacionTabla) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]s
 				claveValor := referencia.Parametros[parametro]
 
 				if valor, ok := conjuntoDato[claveValor]; ok {
-					pathView.AgregarParametro(claveValor, valor)
+					pathView.AgregarParametro(parametro, valor)
 
 				} else if valor, ok := requisitos[claveValor]; ok {
-					pathView.AgregarParametro(claveValor, valor)
+					pathView.AgregarParametro(parametro, valor)
 
 				} else {
 					return nil, fmt.Errorf("se necesita valor en %s de la tabla %s, y no se consiguio", claveValor, i.Tabla.NombreTabla)
@@ -55,6 +82,8 @@ func (i InformacionTabla) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]s
 
 			conjuntoDato[nombre] = pathView
 		}
+
+		datos = append(datos, conjuntoDato)
 	}
 
 	return datos, nil

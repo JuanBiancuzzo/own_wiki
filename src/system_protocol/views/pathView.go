@@ -30,8 +30,13 @@ func CreateURL(pathView *PathView) string {
 	claveValor := []string{}
 	for clave := range pathView.Parametros {
 		valor := pathView.Parametros[clave]
-		claveValor = append(claveValor, fmt.Sprintf("%s=%s", clave, valor))
+		claveValor = append(claveValor, fmt.Sprintf("%s=%v", clave, valor))
 	}
 
-	return fmt.Sprintf("/%s?%s", pathView.View, strings.Join(claveValor, "&"))
+	parametros := ""
+	if len(claveValor) > 0 {
+		parametros = fmt.Sprintf("?%s", strings.Join(claveValor, "&"))
+	}
+
+	return fmt.Sprintf("/%s%s", pathView.View, parametros)
 }

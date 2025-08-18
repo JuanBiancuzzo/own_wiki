@@ -3,6 +3,7 @@ package dependencias
 import (
 	"fmt"
 	b "own_wiki/system_protocol/bass_de_datos"
+	"reflect"
 	"strings"
 )
 
@@ -24,6 +25,7 @@ type DescripcionTabla struct {
 	necesarioQuery            bool
 	clavesRepresentativas     []string
 	clavesGenerales           []string
+	clavesTotal               []string
 	referenciaMultiplesTablas map[string]bool
 	tablasReferencias         map[string]map[string]*DescripcionTabla
 	tipoDadoClave             map[string]TipoVariable
@@ -32,12 +34,16 @@ type DescripcionTabla struct {
 func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) DescripcionTabla {
 	clavesGenerales := []string{}
 	clavesRepresentativas := []string{}
+	clavesTotal := []string{"id"}
+
 	referenciaMultiplesTablas := make(map[string]bool)
 	tipoDadoClave := make(map[string]TipoVariable)
+	tipoDadoClave["id"] = TV_INT
 
 	tablasReferencias := make(map[string]map[string]*DescripcionTabla)
 	for _, claveTipo := range clavesTipo {
 		clavesGenerales = append(clavesGenerales, claveTipo.Clave)
+		clavesTotal = append(clavesTotal, claveTipo.Clave)
 		if claveTipo.Representativa {
 			clavesRepresentativas = append(clavesRepresentativas, claveTipo.Clave)
 		}
@@ -53,12 +59,15 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 
 		mapaTablas := make(map[string]*DescripcionTabla)
 		for _, tabla := range referencia.Tablas {
-			fmt.Printf("La tabla %s tiene relacion con %s por la clave %s\n", nombreTabla, tabla.NombreTabla, referencia.Clave)
 			mapaTablas[tabla.NombreTabla] = tabla
 		}
 		tablasReferencias[referencia.Clave] = mapaTablas
 		tipoDadoClave[referencia.Clave] = TV_REFERENCIA
-		tipoDadoClave[fmt.Sprintf("tipo%s", referencia.Clave)] = TV_ENUM
+		if len(referencia.Tablas) > 1 {
+			tipoDadoClave[fmt.Sprintf("tipo%s", referencia.Clave)] = TV_ENUM
+			clavesTotal = append(clavesTotal, fmt.Sprintf("tipo%s", referencia.Clave))
+		}
+		clavesTotal = append(clavesTotal, referencia.Clave)
 	}
 
 	return DescripcionTabla{
@@ -71,6 +80,8 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 		clavesGenerales:           clavesGenerales,
 		clavesRepresentativas:     clavesRepresentativas,
 		referenciaMultiplesTablas: referenciaMultiplesTablas,
+		tipoDadoClave:             tipoDadoClave,
+		clavesTotal:               clavesTotal,
 
 		tablasReferencias: tablasReferencias,
 	}
@@ -170,24 +181,12 @@ func (dt DescripcionTabla) Insertar(bdd *b.Bdd, datosIngresados ConjuntoDato) (i
 	return bdd.Insertar(insertar, datos...)
 }
 
-/*
-func (c *Cola[T]) DesencolarIterativamente(yield func(T) bool) {
-	for !c.Vacia() {
-		if elemento, err := c.Desencolar(); err != nil {
-			return
-		} else if !yield(elemento) {
-			return
-		}
-	}
-}
-*/
-
-func (dt DescripcionTabla) QueryAll(bdd *b.Bdd, condicion Condicion, datosCondicion map[string]string) func(yield func(ConjuntoDato) bool) {
+func (dt DescripcionTabla) QueryAll(bdd *b.Bdd, condicion Condicion, datosCondicion map[string]string) (func(yield func(ConjuntoDato) bool), error) {
 	funcionNula := func(yield func(ConjuntoDato) bool) {}
 
 	expresionCondicion, datos, err := condicion.Expresion(datosCondicion, dt.tipoDadoClave)
 	if err != nil {
-		return funcionNula
+		return funcionNula, fmt.Errorf("se tuvo un error: %v en la expresion", err)
 	}
 	query := fmt.Sprintf(
 		"SELECT * FROM %s %s",
@@ -196,38 +195,45 @@ func (dt DescripcionTabla) QueryAll(bdd *b.Bdd, condicion Condicion, datosCondic
 	)
 
 	if rows, err := bdd.MySQL.Query(query, datos...); err != nil {
-		return funcionNula
+		return funcionNula, fmt.Errorf("se tuvo un error: %v la hacer una query dada por %s y datos %+v", err, query, datos)
 
 	} else {
 		return func(yield func(ConjuntoDato) bool) {
 			defer rows.Close()
 			for rows.Next() {
-				datosTabla := []any{}
-				for clave := range dt.tipoDadoClave {
+				datosTabla := make([]any, len(dt.clavesTotal))
+				for i, clave := range dt.clavesTotal {
 					if referencia, err := dt.tipoDadoClave[clave].ReferenciaValor(); err != nil {
+						fmt.Printf("Dejando de iterar, hay un error en el valor de referencia: %v\n", err)
 						return
 
 					} else {
-						datosTabla = append(datosTabla, referencia)
+						datosTabla[i] = referencia
 					}
 				}
 
 				if err := rows.Scan(datosTabla...); err != nil {
+					fmt.Printf("Dejando de iterar, hay un error en el scan %v\n", err)
 					return
 				}
 
 				conjuntoDato := make(ConjuntoDato)
-				contador := 0
-				for clave := range dt.tipoDadoClave {
-					conjuntoDato[clave] = datosTabla[contador]
-					contador++
+				for i, clave := range dt.clavesTotal {
+					valor := reflect.ValueOf(datosTabla[i])
+					if valor.Kind() == reflect.Ptr {
+						conjuntoDato[clave] = valor.Elem()
+
+					} else {
+						fmt.Println("Por alguna razon no es un puntero")
+						return
+					}
 				}
 
 				if !yield(conjuntoDato) {
 					return
 				}
 			}
-		}
+		}, nil
 	}
 }
 
@@ -244,25 +250,29 @@ func (dt DescripcionTabla) QueryElemento(bdd *b.Bdd, condicion Condicion, datosC
 
 	row := bdd.MySQL.QueryRow(query, datos...)
 
-	datosTabla := []any{}
-	for clave := range dt.tipoDadoClave {
+	datosTabla := make([]any, len(dt.clavesTotal))
+	for i, clave := range dt.clavesTotal {
 		if referencia, err := dt.tipoDadoClave[clave].ReferenciaValor(); err != nil {
-			return nil, fmt.Errorf("no hay una referencia para el tipo de valor con clave: %s, con error: %v", clave, err)
+			return nil, fmt.Errorf("dejando de iterar, hay un error en el valor de referencia: %v", err)
 
 		} else {
-			datosTabla = append(datosTabla, referencia)
+			datosTabla[i] = referencia
 		}
 	}
 
 	if err := row.Scan(datosTabla...); err != nil {
-		return nil, fmt.Errorf("al scannear datos se obtuvo error: %v", err)
+		return nil, fmt.Errorf("dejando de iterar, hay un error en el scan %v", err)
 	}
 
 	conjuntoDato := make(ConjuntoDato)
-	contador := 0
-	for clave := range dt.tipoDadoClave {
-		conjuntoDato[clave] = datosTabla[contador]
-		contador++
+	for i, clave := range dt.clavesTotal {
+		valor := reflect.ValueOf(datosTabla[i])
+		if valor.Kind() == reflect.Ptr {
+			conjuntoDato[clave] = valor.Elem()
+
+		} else {
+			return nil, fmt.Errorf("por alguna razon no es un puntero")
+		}
 	}
 
 	return conjuntoDato, nil

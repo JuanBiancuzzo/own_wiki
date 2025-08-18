@@ -1,7 +1,7 @@
 {{ block "facultad" . }}
     <h1 style="display: flex;"> Facultad </h1>
     <hr>
-    {{ range .Carrera }}
+    {{ range .Carreras }}
         <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
             {{ .nombre }}
         </h3>
