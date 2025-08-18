@@ -161,7 +161,6 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 		}
 
 		views[i] = v.NewView(bdd, infoView.Nombre, infoView.Template, infoView.Requisitos, informaciones)
-		fmt.Printf("view: %+v\n", views[i])
 	}
 
 	return v.NewInfoViews(info.Inicio, views, info.PathTemplates, info.PathCss)

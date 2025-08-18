@@ -22,3 +22,13 @@
         </h3>
     {{ end }}
 {{ end }}
+
+{{ block "materia" . }}
+    <h1 style="display: flex;"> {{ .Materia.nombre }} </h1>
+    <hr>
+    {{ range .Temas }}
+        <h3>
+            {{ .nombre }}
+        </h3>
+    {{ end }}
+{{ end }}

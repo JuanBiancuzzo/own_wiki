@@ -105,6 +105,13 @@
                     "where": [
                         { "clave": "id", "equal": "idMateria" }
                     ] 
+                }, 
+                "Temas": {
+                    "tipo": "elementosTabla",
+                    "tabla": "TemasMateria",
+                    "where": [
+                        { "clave": "refMateria", "equal": "idMateria" }
+                    ] 
                 }
             },
             "bloqueTemplate": "materia"
