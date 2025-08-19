@@ -14,52 +14,7 @@ type ElementoInformacion struct {
 	Representacion string
 }
 
-/*
-todavia no use la informacion de representacion, necesito obtener una lista de representaciones, ordenada
-como el where y de esa forma poder obtenerlo cuando me pidan hacer la query
-*/
-func informacionWhere(parClaveRepresentacion map[string]ElementoInformacion) ([]string, []string, []TipoVariable) {
-	expresionesClaves := make([]string, len(parClaveRepresentacion))
-	representaciones := make([]string, len(parClaveRepresentacion))
-	tiposWhere := make([]TipoVariable, len(parClaveRepresentacion))
-	contador := 0
-	for clave := range parClaveRepresentacion {
-		elemento := parClaveRepresentacion[clave]
-
-		expresionesClaves[contador] = clave
-		representaciones[contador] = elemento.Representacion
-		tiposWhere[contador] = elemento.Tipo
-
-		contador++
-	}
-
-	return expresionesClaves, representaciones, tiposWhere
-}
-
-func informacionClaves(clavesRequeridas map[string]TipoVariable) ([]string, []any, []TipoVariable, error) {
-	clavesOrdenadas := make([]string, len(clavesRequeridas))
-	datosReferencias := make([]any, len(clavesRequeridas))
-	tiposDatos := make([]TipoVariable, len(clavesRequeridas))
-
-	contador := 0
-	for clave := range clavesRequeridas {
-		tipo := clavesRequeridas[clave]
-
-		clavesOrdenadas[contador] = clave
-		tiposDatos[contador] = tipo
-		if referencia, err := tipo.ReferenciaValor(); err != nil {
-			return clavesOrdenadas, datosReferencias, tiposDatos, fmt.Errorf("no se pudo hacer la referencia para la clave %s con: %v", clave, err)
-
-		} else {
-			datosReferencias[contador] = referencia
-		}
-
-		contador++
-	}
-
-	return clavesOrdenadas, datosReferencias, tiposDatos, nil
-}
-
+// Tengo que chequear bien esta funcion, y generarla mejor, que ahora solo es confuso
 func NewQueryMultiples(nombreTabla string, clavesRequeridas map[string]TipoVariable, parClaveRepresentacion map[string]ElementoInformacion, clavesOrdenar []string) (FnMultiplesDatos, error) {
 	expresionesClaves, representaciones, tiposWhere := informacionWhere(parClaveRepresentacion)
 	clavesOrdenadas, datosReferencias, tiposDatos, err := informacionClaves(clavesRequeridas)
@@ -94,7 +49,7 @@ func NewQueryMultiples(nombreTabla string, clavesRequeridas map[string]TipoVaria
 
 			rows, err := bdd.MySQL.Query(query, datosWhere...)
 			if err != nil {
-				return conjuntosDeDatos, err
+				return conjuntosDeDatos, fmt.Errorf("en query mutliple, al hacer query con where se tuvo: %v", err)
 			}
 
 			defer rows.Close()
@@ -131,7 +86,7 @@ func NewQueryMultiples(nombreTabla string, clavesRequeridas map[string]TipoVaria
 			defer rows.Close()
 			for rows.Next() {
 				if err := rows.Scan(datosReferencias...); err != nil {
-					return conjuntosDeDatos, err
+					return conjuntosDeDatos, fmt.Errorf("en query mutliple, al hacer query sin where se tuvo: %v", err)
 				}
 
 				if conjuntoDato, err := dereferenciarDatos(datosReferencias); err != nil {
@@ -177,7 +132,7 @@ func NewQueryFila(nombreTabla string, clavesRequeridas map[string]TipoVariable, 
 		conjuntoDatos := make(ConjuntoDato)
 		datosWhere, err := valoresWhere(datosRepresentativos)
 		if err != nil {
-			return conjuntoDatos, err
+			return conjuntoDatos, fmt.Errorf("en query fila, se tuvo: %v", err)
 		}
 
 		row := bdd.MySQL.QueryRow(query, datosWhere...)
@@ -224,4 +179,46 @@ func generarValoresWhere(tiposWhere []TipoVariable, representaciones []string) f
 		}
 		return valoresReales, nil
 	}
+}
+
+func informacionWhere(parClaveRepresentacion map[string]ElementoInformacion) ([]string, []string, []TipoVariable) {
+	expresionesClaves := make([]string, len(parClaveRepresentacion))
+	representaciones := make([]string, len(parClaveRepresentacion))
+	tiposWhere := make([]TipoVariable, len(parClaveRepresentacion))
+	contador := 0
+	for clave := range parClaveRepresentacion {
+		elemento := parClaveRepresentacion[clave]
+
+		expresionesClaves[contador] = fmt.Sprintf("%s = ?", clave)
+		representaciones[contador] = elemento.Representacion
+		tiposWhere[contador] = elemento.Tipo
+
+		contador++
+	}
+
+	return expresionesClaves, representaciones, tiposWhere
+}
+
+func informacionClaves(clavesRequeridas map[string]TipoVariable) ([]string, []any, []TipoVariable, error) {
+	clavesOrdenadas := make([]string, len(clavesRequeridas))
+	datosReferencias := make([]any, len(clavesRequeridas))
+	tiposDatos := make([]TipoVariable, len(clavesRequeridas))
+
+	contador := 0
+	for clave := range clavesRequeridas {
+		tipo := clavesRequeridas[clave]
+
+		clavesOrdenadas[contador] = clave
+		tiposDatos[contador] = tipo
+		if referencia, err := tipo.ReferenciaValor(); err != nil {
+			return clavesOrdenadas, datosReferencias, tiposDatos, fmt.Errorf("no se pudo hacer la referencia para la clave %s con: %v", clave, err)
+
+		} else {
+			datosReferencias[contador] = referencia
+		}
+
+		contador++
+	}
+
+	return clavesOrdenadas, datosReferencias, tiposDatos, nil
 }

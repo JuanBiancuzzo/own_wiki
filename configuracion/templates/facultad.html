@@ -10,11 +10,11 @@
 
 {{ block "carrera" . }}
     <h1 style="display: flex;"> {{ .Carrera.nombre }} </h1>
-    <hr>
+    <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row;">
-        <h5 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad > </h5>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad > </h4>
     </div>
-    <hr>
+    <hr style="margin-top: .5em;">
     {{ range .Materias }}
         <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
             {{ .nombre }}
@@ -29,14 +29,14 @@
 
 {{ block "materia" . }}
     <h1 style="display: flex;"> {{ .Materia.nombre }} </h1>
-    <hr>
+    <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row;">
-        <h5 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad > </h5>
-        <h5 hx-target="#centro" hx-get="{{ PathViewURL .EleccionCarrera }}"> {{ .Carrera.nombre }} </h5>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4> >
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionCarrera }}"> {{ .Carrera.nombre }} </h4>
     </div>
-    <hr>
+    <hr style="margin-top: .5em;">
     {{ range .Temas }}
-        <h3>
+        <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
             {{ .nombre }}
         </h3>
     {{ end }}
@@ -44,12 +44,12 @@
 
 {{ block "temaMateria" . }}
     <h1 style="display: flex;"> {{ .Tema.nombre }} </h1>
-    <hr>
     <div style="display: flex; flex-direction: row;">
-        <h5 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad > </h5>
-        <h5 hx-target="#centro" hx-get="{{ PathViewURL .EleccionCarrera }}"> {{ .Carrera.nombre }} > </h5>
-        <h5 hx-target="#centro" hx-get="{{ PathViewURL .EleccionMateria }}"> {{ .Materia.nombre }} </h5>
-    </div>
+    <div style="display: flex; flex-direction: row;">
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4> >
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionCarrera }}"> {{ .Carrera.nombre }} </hr> >
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionMateria }}"> {{ .Materia.nombre }} </h4>
+    <hr style="margin-top: .5em;">
     <hr>
     Notas del tema...
 {{ end }}

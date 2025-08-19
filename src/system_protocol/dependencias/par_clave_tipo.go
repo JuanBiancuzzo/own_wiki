@@ -68,14 +68,14 @@ func (tv TipoVariable) Desreferenciar(valorReferencia any) (any, error) {
 		if numero, ok := valorReferencia.(*int); !ok {
 			return nil, fmt.Errorf("se esperaba que fuera una referencia int pero es: %+v", valorReferencia)
 		} else {
-			return numero, nil
+			return *numero, nil
 		}
 
 	case TV_BOOL:
 		if booleano, ok := valorReferencia.(*bool); !ok {
 			return nil, fmt.Errorf("se esperaba que fuera una referencia bool pero es: %+v", valorReferencia)
 		} else {
-			return booleano, nil
+			return *booleano, nil
 		}
 
 	case TV_STRING:
@@ -86,7 +86,7 @@ func (tv TipoVariable) Desreferenciar(valorReferencia any) (any, error) {
 		if texto, ok := valorReferencia.(*string); !ok {
 			return nil, fmt.Errorf("se esperaba que fuera una referencia string pero es: %+v", valorReferencia)
 		} else {
-			return texto, nil
+			return *texto, nil
 		}
 	}
 

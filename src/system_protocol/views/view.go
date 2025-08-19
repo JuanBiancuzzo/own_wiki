@@ -19,6 +19,7 @@ type View struct {
 type DataView map[string]any
 
 func NewView(bdd *b.Bdd, nombre, bloque string, requisitos []string, informaciones map[string]Informacion) View {
+	fmt.Printf("Registrando %s...\n", nombre)
 	return View{
 		Nombre:           nombre,
 		Bloque:           bloque,
@@ -38,7 +39,7 @@ func (v View) GenerarEndpoint(ec echo.Context) error {
 	for nombreValor := range v.informaciones {
 		informacion := v.informaciones[nombreValor]
 		if valor, err := informacion.ObtenerInformacion(v.Bdd, valoresNecesarios); err != nil {
-			fmt.Printf("Error al utilizar endpoint /%s con error: %v\n", v.Nombre, err)
+			fmt.Printf("Error al utilizar endpoint /%s, dado la informacion %s con error: %v\n", v.Nombre, nombreValor, err)
 			return err
 
 		} else {

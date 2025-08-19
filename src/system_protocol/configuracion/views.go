@@ -58,7 +58,7 @@ type ParametroElementoUnico struct {
 	Tabla            string           `json:"tabla"`
 	Ordenar          []string         `json:"ordenar"`
 	ClavesSelectivas []string         `json:"claves"`
-	Condiciones      []CondicionTabla `json:"where"`
+	Condiciones      []CondicionTabla `json:"condicion"`
 }
 
 type CondicionTabla struct {
@@ -170,7 +170,7 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 					}
 
 					if query, err := d.NewQueryMultiples(tabla.NombreTabla, tiposPorClaves, parClaveRepresentacion, parametro.Ordenar); err != nil {
-						return nil, err
+						return nil, fmt.Errorf("en la view %s se tuvo: %v", infoView.Nombre, err)
 
 					} else {
 						informacion = v.NewInformacionTabla(query, referencias)
@@ -216,7 +216,7 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 					}
 
 					if query, err := d.NewQueryFila(tabla.NombreTabla, tiposPorClaves, parClaveRepresentacion, parametro.Ordenar); err != nil {
-						return nil, err
+						return nil, fmt.Errorf("en la view %s, en la clave: %s se tuvo: %v", infoView.Nombre, clave, err)
 
 					} else {
 						informacion = v.NewInformacionFila(query)

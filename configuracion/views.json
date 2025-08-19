@@ -59,7 +59,7 @@
                     "condicion": [
                         { "clave": "refCarrera", "equal": "idCarrera" }
                     ],
-                    "order": "",
+                    "order": [],
                     "referencias": [
                         {
                             "nombre": "url",
@@ -109,8 +109,7 @@
                     "tabla": "Carreras", 
                     "condicion": [ 
                         { "clave": "id", "equal": "idCarrera" }
-                    ],
-                    "ordenar": []
+                    ]
                 },
                 "Materia": {
                     "tipo": "elementoUnicoTabla", 
