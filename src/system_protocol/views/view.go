@@ -29,23 +29,33 @@ func NewView(bdd *b.Bdd, nombre, bloque string, requisitos []string, informacion
 	}
 }
 
-func (v View) GenerarEndpoint(ec echo.Context) error {
-	valoresNecesarios := make(map[string]string)
-	for _, requisito := range v.clavesNecesarias {
-		valoresNecesarios[requisito] = ec.QueryParam(requisito)
-	}
+func (v View) GenerarEndpoint(ruta string, e *echo.Echo) {
+	nombreVariables := []string{}
+	informaciones := []Informacion{}
 
-	data := make(DataView)
 	for nombreValor := range v.informaciones {
-		informacion := v.informaciones[nombreValor]
-		if valor, err := informacion.ObtenerInformacion(v.Bdd, valoresNecesarios); err != nil {
-			fmt.Printf("Error al utilizar endpoint /%s, dado la informacion %s con error: %v\n", v.Nombre, nombreValor, err)
-			return err
-
-		} else {
-			data[nombreValor] = valor
-		}
+		nombreVariables = append(nombreVariables, nombreValor)
+		informaciones = append(informaciones, v.informaciones[nombreValor])
 	}
 
-	return ec.Render(200, v.Bloque, data)
+	e.GET(ruta, func(ec echo.Context) error {
+		valoresNecesarios := make(map[string]string)
+		for _, requisito := range v.clavesNecesarias {
+			valoresNecesarios[requisito] = ec.QueryParam(requisito)
+		}
+
+		data := make(DataView)
+		for i, nombreValor := range nombreVariables {
+			informacion := informaciones[i]
+			if valor, err := informacion.ObtenerInformacion(v.Bdd, valoresNecesarios); err != nil {
+				fmt.Printf("Error al utilizar endpoint /%s, dado la informacion %s con error: %v\n", v.Nombre, nombreValor, err)
+				return err
+
+			} else {
+				data[nombreValor] = valor
+			}
+		}
+
+		return ec.Render(200, v.Bloque, data)
+	})
 }

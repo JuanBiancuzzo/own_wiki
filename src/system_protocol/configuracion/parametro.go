@@ -26,8 +26,9 @@ type ParametroPathView struct {
 
 type ParametroInsertar struct {
 	HeaderParametro
-	Tabla      string            `json:"table"`
-	Parametros map[string]string `json:"parametros"`
+	Tabla           string            `json:"table"`
+	Parametros      map[string]string `json:"parametros"`
+	BloqueRespuesta string            `json:"bloque"`
 }
 
 type ParametroElementos struct {

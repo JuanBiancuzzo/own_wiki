@@ -24,8 +24,12 @@
         {
             "nombre": "Facultad",
             "informacion": {
-                "UrlInsertar": {
+                "InsertarCarrera": {
                     "tabla": "Carreras",
+                    "parametros": {}
+                },
+                "InsertarMateria": {
+                    "tabla": "Materia",
                     "parametros": {}
                 },
                 "Carreras": { 
@@ -40,16 +44,11 @@
                         },
                         {
                             "tipo": "eliminar",
-                            "nombre": "urlEliminar"
+                            "nombre": "eliminarCarrera"
                         }, 
                         {
                             "tipo": "actualizar",
-                            "nombre": "urlActualizar",
-                            "parametros": {}
-                        },
-                        {
-                            "tipo": "insertar",
-                            "nombre": "urlInsertar",
+                            "nombre": "actualizarCarrera",
                             "parametros": {}
                         }
                     ]
@@ -61,6 +60,14 @@
             "nombre": "Carrera",
             "requisitos": [ "idCarrera" ],
             "informacion": {
+                "InsertarMateria": {
+                    "tabla": "Materia",
+                    "parametros": { "refCarrera": "idCarrera" }
+                },
+                "InsertarTema": {
+                    "tabla": "TemasMateria",
+                    "parametros": { "refCarrera": "idCarrera" }
+                },
                 "EleccionFacultad":{ 
                     "tipo": "pathView", 
                     "view": "Facultad" 
@@ -116,6 +123,20 @@
             "nombre": "Materia",
             "requisitos": [ "idCarrera", "idMateria" ],
             "informacion": {
+                "InsertarTema": {
+                    "tabla": "TemasMateria",
+                    "parametros": { 
+                        "refCarrera": "idCarrera",
+                        "refMateria": "idMateria"
+                    }
+                },
+                "InsertarNota": {
+                    "tabla": "Nota",
+                    "parametros": { 
+                        "refCarrera": "idCarrera",
+                        "refMateria": "idMateria"
+                    }
+                },
                 "EleccionFacultad":{ 
                     "tipo": "pathView", 
                     "view": "Facultad" 

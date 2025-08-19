@@ -35,6 +35,6 @@ func (t *InfoViews) GenerarEndpoints(e *echo.Echo) {
 			ruta = "/"
 		}
 
-		e.GET(ruta, view.GenerarEndpoint)
+		view.GenerarEndpoint(ruta, e)
 	}
 }

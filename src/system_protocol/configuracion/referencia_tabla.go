@@ -8,7 +8,6 @@ const (
 	TR_PATH_VIEW = "pathView"
 	TR_DELETE    = "eliminar"
 	TR_UPDATE    = "actualizar"
-	TR_INSERTAR  = "insertar"
 )
 
 type ReferenciaDeTabla struct {
@@ -29,13 +28,15 @@ type PathViewReferencia struct {
 // Se genera siempre para conseguir el id del elemento de la tabla
 type UpdateReferencia struct {
 	HeaderReferencia
-	Nombre string `json:"nombre"`
+	Nombre          string `json:"nombre"`
+	BloqueRespuesta string `json:"bloque"`
 }
 
 // Se genera siempre para conseguir el id del elemento de la tabla
 type DeleteReferencia struct {
 	HeaderReferencia
-	Nombre string `json:"nombre"`
+	Nombre          string `json:"nombre"`
+	BloqueRespuesta string `json:"bloque"`
 }
 
 func (r *ReferenciaDeTabla) UnmarshalJSON(d []byte) error {
