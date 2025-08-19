@@ -19,7 +19,8 @@ type Templates struct {
 
 func NewTemplate(pathTemplate string) (*Templates, error) {
 	templ := template.New("").Funcs(template.FuncMap{
-		"PathViewURL": v.CreateURL,
+		"PathViewURL":    v.CreateURLPathView,
+		"PedirElementos": v.CreateURLPedido,
 	})
 
 	if templUsuario, err := filepath.Glob(fmt.Sprintf("%s/*.html", pathTemplate)); err != nil {

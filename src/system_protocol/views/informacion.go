@@ -12,9 +12,6 @@ type Informacion interface {
 	NecesitaEndpoint() (bool, string)
 }
 
-// Equivale al ParametroElemntos
-//
-//	-> Hacer una informacion que sea para ir mandando poco a poco
 type InformacionTabla struct {
 	Ruta        string
 	Query       d.FnMultiplesDatos

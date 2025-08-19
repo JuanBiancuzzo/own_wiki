@@ -1,6 +1,8 @@
 package views
 
 import (
+	"fmt"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -20,6 +22,6 @@ func NewInfoViews(endpoint map[string]Endpoint, pathTemplates, pathCss string) *
 
 func (t *InfoViews) GenerarEndpoints(e *echo.Echo) {
 	for ruta := range t.Endpoints {
-		e.GET(ruta, echo.HandlerFunc(t.Endpoints[ruta]))
+		e.GET(fmt.Sprintf("/%s", ruta), echo.HandlerFunc(t.Endpoints[ruta]))
 	}
 }

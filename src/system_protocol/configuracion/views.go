@@ -73,7 +73,7 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 		ruta := infoView.Nombre
 		if ruta == info.Inicio {
 			hayInicio = true
-			ruta = "/"
+			ruta = ""
 		}
 
 		endpoints[ruta] = v.NewView(bdd, infoView.Template, infoView.Requisitos, informaciones)

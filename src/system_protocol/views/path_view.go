@@ -27,7 +27,7 @@ func (pv *PathView) AgregarParametro(clave string, valor any) error {
 	return nil
 }
 
-func CreateURL(pathView *PathView) string {
+func CreateURLPathView(pathView *PathView) string {
 	claveValor := []string{}
 	for clave := range pathView.Parametros {
 		valor := pathView.Parametros[clave]
