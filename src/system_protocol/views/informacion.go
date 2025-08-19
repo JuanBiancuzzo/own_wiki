@@ -8,18 +8,22 @@ import (
 
 type Informacion interface {
 	ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error)
+
+	NecesitaEndpoint() (bool, string)
 }
 
 // Equivale al ParametroElemntos
 //
 //	-> Hacer una informacion que sea para ir mandando poco a poco
 type InformacionTabla struct {
+	Ruta        string
 	Query       d.FnMultiplesDatos
 	Referencias map[string]InformacionReferencia
 }
 
-func NewInformacionTabla(query d.FnMultiplesDatos, referencias map[string]InformacionReferencia) InformacionTabla {
+func NewInformacionTabla(ruta string, query d.FnMultiplesDatos, referencias map[string]InformacionReferencia) InformacionTabla {
 	return InformacionTabla{
+		Ruta:        ruta,
 		Query:       query,
 		Referencias: referencias,
 	}
@@ -82,8 +86,16 @@ func (i InformacionTabla) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]s
 	return datos, nil
 }
 
+func (i InformacionTabla) NecesitaEndpoint() (bool, string) {
+	return true, i.Ruta
+}
+
 func (i InformacionFila) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error) {
 	return i.Condicion(bdd, requisitos)
+}
+
+func (i InformacionFila) NecesitaEndpoint() (bool, string) {
+	return false, ""
 }
 
 func (i InformacionReferencia) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error) {
@@ -101,4 +113,8 @@ func (i InformacionReferencia) ObtenerInformacion(bdd *b.Bdd, requisitos map[str
 	}
 
 	return pathView, nil
+}
+
+func (i InformacionReferencia) NecesitaEndpoint() (bool, string) {
+	return false, ""
 }

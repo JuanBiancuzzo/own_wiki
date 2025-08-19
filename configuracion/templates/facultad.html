@@ -17,16 +17,37 @@
         <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4>
     </div>
     <hr style="margin-top: .5em;">
-    {{ range .Materias }}
+
+    <div id="elementos" style="display: grid;" hx-swap="beforeend">
+        <div style="height: 0; width: 0;"
+            hx-target="#elementos"
+            hx-trigger="revealed"
+            hx-get="{{ PedirElementos .Materias.pedido }}"
+            hx-swap="delete">
+        </div>
+        <div 
+            hx-target="#elementos"
+            hx-trigger="revealed"
+            hx-get="{{ PedirElementos .MateriasEquivalente.pedido }}"
+            hx-swap="delete">
+            Cargando...
+        </div>
+    </div>
+{{ end }}
+
+{{ block "bloqueMateria" . }}
+    {{ range  .Materias }}
         <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
             {{ .nombre }}
         </h3>
     {{ end }}
-    {{ range .MateriasEquivalente }}
-        <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
-            {{ .nombre }}
-        </h3>
-    {{ end }}
+    <div 
+        hx-target="#elementos"
+        hx-trigger="revealed"
+        hx-get="{{ PedirElementos .pedido }}"
+        hx-swap="delete">
+        Cargando...
+    </div>
 {{ end }}
 
 {{ block "materia" . }}

@@ -24,34 +24,21 @@
         {
             "nombre": "Facultad",
             "informacion": {
-                "InsertarCarrera": {
-                    "tabla": "Carreras",
-                    "parametros": {}
-                },
-                "InsertarMateria": {
-                    "tabla": "Materia",
-                    "parametros": {}
-                },
                 "Carreras": { 
                     "tipo": "elementosTabla",
                     "tabla": "Carreras",
+                    "claves": [],
                     "referencias": [
                         {
                             "tipo": "pathView",
                             "nombre": "url",
                             "view": "Carrera",
                             "parametros": { "idCarrera": "id" }
-                        },
-                        {
-                            "tipo": "eliminar",
-                            "nombre": "eliminarCarrera"
-                        }, 
-                        {
-                            "tipo": "actualizar",
-                            "nombre": "actualizarCarrera",
-                            "parametros": {}
                         }
-                    ]
+                    ], 
+                    "elementos": {
+                        "pedirTodos": true
+                    }
                 }
             },
             "bloqueTemplate": "facultad"
@@ -60,14 +47,6 @@
             "nombre": "Carrera",
             "requisitos": [ "idCarrera" ],
             "informacion": {
-                "InsertarMateria": {
-                    "tabla": "Materia",
-                    "parametros": { "refCarrera": "idCarrera" }
-                },
-                "InsertarTema": {
-                    "tabla": "TemasMateria",
-                    "parametros": { "refCarrera": "idCarrera" }
-                },
                 "EleccionFacultad":{ 
                     "tipo": "pathView", 
                     "view": "Facultad" 
@@ -96,7 +75,12 @@
                                 "idMateria": "id" 
                             }
                         }
-                    ]
+                    ],
+                    "elementos": {
+                        "nombre": "Materias",
+                        "nombrePedido": "pedido",
+                        "bloquesElementos": "bloqueMateria"
+                    }
                 },
                 "MateriasEquivalente": { 
                     "tipo": "elementosTabla", 
@@ -114,7 +98,12 @@
                                 "idMateria": "refMateria" 
                             }
                         }
-                    ]
+                    ],
+                    "elementos": {
+                        "nombre": "Materias",
+                        "nombrePedido": "pedido",
+                        "bloquesElementos": "bloqueMateria"
+                    }
                 }
             },
             "bloqueTemplate": "carrera"
@@ -123,20 +112,6 @@
             "nombre": "Materia",
             "requisitos": [ "idCarrera", "idMateria" ],
             "informacion": {
-                "InsertarTema": {
-                    "tabla": "TemasMateria",
-                    "parametros": { 
-                        "refCarrera": "idCarrera",
-                        "refMateria": "idMateria"
-                    }
-                },
-                "InsertarNota": {
-                    "tabla": "Nota",
-                    "parametros": { 
-                        "refCarrera": "idCarrera",
-                        "refMateria": "idMateria"
-                    }
-                },
                 "EleccionFacultad":{ 
                     "tipo": "pathView", 
                     "view": "Facultad" 
@@ -177,7 +152,10 @@
                                 "idTema": "id" 
                             }
                         }
-                    ]
+                    ], 
+                    "elementos": {
+                        "pedirTodos": true
+                    }
                 }
             },
             "bloqueTemplate": "materia"

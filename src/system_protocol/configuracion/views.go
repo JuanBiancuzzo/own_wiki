@@ -68,7 +68,7 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 			}
 		}
 
-		views[i] = v.NewView(bdd, infoView.Nombre, infoView.Template, infoView.Requisitos, informaciones)
+		views[i] = v.NewView(bdd, infoView.Nombre, infoView.Template, infoView.Requisitos, informaciones, map[string]v.Endpoint{})
 	}
 
 	return v.NewInfoViews(info.Inicio, views, info.PathTemplates, info.PathCss)
@@ -115,7 +115,7 @@ func crearInformacionElementos(tabla *d.DescripcionTabla, infoView View, clave s
 		return nil, fmt.Errorf("en la view %s, en la clave: %s se tuvo: %v", infoView.Nombre, clave, err)
 
 	} else {
-		return v.NewInformacionTabla(query, referencias), nil
+		return v.NewInformacionTabla(clave, query, referencias), nil
 	}
 }
 

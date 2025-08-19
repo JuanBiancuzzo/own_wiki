@@ -2,18 +2,19 @@ package views
 
 import (
 	"fmt"
+	d "own_wiki/system_protocol/dependencias"
 	"strings"
 )
 
 type PathView struct {
 	View       string
-	Parametros DataView // Clave-valor
+	Parametros d.ConjuntoDato // Clave-valor
 }
 
 func NewPathView(view string) *PathView {
 	return &PathView{
 		View:       view,
-		Parametros: make(DataView),
+		Parametros: make(d.ConjuntoDato),
 	}
 }
 
