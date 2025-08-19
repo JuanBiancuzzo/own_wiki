@@ -36,8 +36,10 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 		tablasPorNombre[tabla.NombreTabla] = &tabla
 	}
 
-	views := make([]v.View, len(info.Views))
-	for i, infoView := range info.Views {
+	endpoints := make(map[string]v.Endpoint)
+	hayInicio := false
+
+	for _, infoView := range info.Views {
 		informaciones := make(map[string]v.Informacion)
 		for clave := range infoView.Parametros {
 			switch parametro := infoView.Parametros[clave].Parametro.(type) {
@@ -68,10 +70,20 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 			}
 		}
 
-		views[i] = v.NewView(bdd, infoView.Nombre, infoView.Template, infoView.Requisitos, informaciones, map[string]v.Endpoint{})
+		ruta := infoView.Nombre
+		if ruta == info.Inicio {
+			hayInicio = true
+			ruta = "/"
+		}
+
+		endpoints[ruta] = v.NewView(bdd, infoView.Template, infoView.Requisitos, informaciones)
 	}
 
-	return v.NewInfoViews(info.Inicio, views, info.PathTemplates, info.PathCss)
+	if !hayInicio {
+		return nil, fmt.Errorf("no hay punto de inicio")
+	}
+
+	return v.NewInfoViews(endpoints, info.PathTemplates, info.PathCss), nil
 }
 
 func crearInformacionElementos(tabla *d.DescripcionTabla, infoView View, clave string, parametro ParametroElementos) (v.Informacion, error) {

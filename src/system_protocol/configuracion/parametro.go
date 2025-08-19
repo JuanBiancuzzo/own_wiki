@@ -38,6 +38,14 @@ type ParametroElementos struct {
 	Ordenar          []string             `json:"ordenar"`
 	ClavesSelectivas []string             `json:"claves"`
 	Referencias      []PathViewReferencia `json:"referencias"`
+	Elementos        ElementosTabla       `json:"elementos"`
+}
+
+type ElementosTabla struct {
+	PedirTodos   bool   `json:"pedirTodos"`
+	Nombre       string `json:"nombre"`
+	NombrePedido string `json:"nombrePedido"`
+	Bloque       string `json:"bloqueElementos"`
 }
 
 type ParametroElementoUnico struct {

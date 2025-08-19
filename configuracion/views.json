@@ -102,7 +102,7 @@
                     "elementos": {
                         "nombre": "Materias",
                         "nombrePedido": "pedido",
-                        "bloquesElementos": "bloqueMateria"
+                        "bloqueElementos": "bloqueMateria"
                     }
                 }
             },
