@@ -11,28 +11,26 @@ type Informacion interface {
 }
 
 // Equivale al ParametroElemntos
+//
+//	-> Hacer una informacion que sea para ir mandando poco a poco
 type InformacionTabla struct {
-	Tabla       *d.DescripcionTabla
-	Condicion   d.Condicion
+	Query       d.FnMultiplesDatos
 	Referencias map[string]InformacionReferencia
 }
 
-func NewInformacionTabla(tabla *d.DescripcionTabla, condicion d.Condicion, referencias map[string]InformacionReferencia) InformacionTabla {
+func NewInformacionTabla(query d.FnMultiplesDatos, referencias map[string]InformacionReferencia) InformacionTabla {
 	return InformacionTabla{
-		Tabla:       tabla,
-		Condicion:   condicion,
+		Query:       query,
 		Referencias: referencias,
 	}
 }
 
 type InformacionFila struct {
-	Tabla     *d.DescripcionTabla
-	Condicion d.Condicion
+	Condicion d.FnUnDato
 }
 
-func NewInformacionFila(tabla *d.DescripcionTabla, condicion d.Condicion) InformacionFila {
+func NewInformacionFila(condicion d.FnUnDato) InformacionFila {
 	return InformacionFila{
-		Tabla:     tabla,
 		Condicion: condicion,
 	}
 }
@@ -49,19 +47,14 @@ func NewInformacionReferencia(view string, parametros map[string]string) Informa
 	}
 }
 
-type InformacionArray struct {
-	Elementos []Informacion
-}
-
 func (i InformacionTabla) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error) {
-	datos := []d.ConjuntoDato{}
-
-	iterador, err := i.Tabla.QueryAll(bdd, i.Condicion, requisitos)
+	listaConjuntos, err := i.Query(bdd, requisitos)
 	if err != nil {
-		return nil, fmt.Errorf("se tuvo un error al intentar iterar sobre la tabla: %s, con error: %v", i.Tabla.NombreTabla, err)
+		return nil, fmt.Errorf("se tuvo un error obtener valores, con error: %v", err)
 	}
 
-	for conjuntoDato := range iterador {
+	datos := make([]d.ConjuntoDato, len(listaConjuntos))
+	for idx, conjuntoDato := range listaConjuntos {
 		for nombre := range i.Referencias {
 			referencia := i.Referencias[nombre]
 			pathView := NewPathView(referencia.View)
@@ -76,21 +69,21 @@ func (i InformacionTabla) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]s
 					pathView.AgregarParametro(parametro, valor)
 
 				} else {
-					return nil, fmt.Errorf("se necesita valor en %s de la tabla %s, y no se consiguio", claveValor, i.Tabla.NombreTabla)
+					return nil, fmt.Errorf("se necesita valor en %s, y no se consiguio", claveValor)
 				}
 			}
 
 			conjuntoDato[nombre] = pathView
 		}
 
-		datos = append(datos, conjuntoDato)
+		datos[idx] = conjuntoDato
 	}
 
 	return datos, nil
 }
 
 func (i InformacionFila) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error) {
-	return i.Tabla.QueryElemento(bdd, i.Condicion, requisitos)
+	return i.Condicion(bdd, requisitos)
 }
 
 func (i InformacionReferencia) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error) {
@@ -108,17 +101,4 @@ func (i InformacionReferencia) ObtenerInformacion(bdd *b.Bdd, requisitos map[str
 	}
 
 	return pathView, nil
-}
-
-func (i InformacionArray) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error) {
-	datos := make([]any, len(i.Elementos))
-	for i, informacion := range i.Elementos {
-		if dato, err := informacion.ObtenerInformacion(bdd, requisitos); err != nil {
-			return datos, fmt.Errorf("en el elemento %d, se tuvo el error: %v", i, err)
-
-		} else {
-			datos[i] = dato
-		}
-	}
-	return datos, nil
 }

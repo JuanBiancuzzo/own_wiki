@@ -31,9 +31,7 @@
                         {
                             "nombre": "url",
                             "view": "Carrera",
-                            "parametros": { 
-                                "idCarrera": "id" 
-                            }
+                            "parametros": { "idCarrera": "id" }
                         }
                     ]
                 }
@@ -44,19 +42,24 @@
             "nombre": "Carrera",
             "requisitos": [ "idCarrera" ],
             "informacion": {
+                "EleccionFacultad":{ 
+                    "tipo": "pathView", 
+                    "view": "Facultad" 
+                },
                 "Carrera": {
                     "tipo": "elementoUnicoTabla", 
                     "tabla": "Carreras", 
-                    "where": [
+                    "condicion": [
                         { "clave": "id", "equal": "idCarrera" }
-                    ] 
+                    ]
                 },
                 "Materias": { 
                     "tipo": "elementosTabla", 
                     "tabla": "Materias", 
-                    "where": [
+                    "condicion": [
                         { "clave": "refCarrera", "equal": "idCarrera" }
                     ],
+                    "order": "",
                     "referencias": [
                         {
                             "nombre": "url",
@@ -71,7 +74,7 @@
                 "MateriasEquivalente": { 
                     "tipo": "elementosTabla", 
                     "tabla": "MateriasEquivalentes", 
-                    "where": [
+                    "condicion": [
                         { "clave": "refCarrera", "equal": "idCarrera" }
                     ],
                     "referencias": [
@@ -92,29 +95,94 @@
             "nombre": "Materia",
             "requisitos": [ "idCarrera", "idMateria" ],
             "informacion": {
+                "EleccionFacultad":{ 
+                    "tipo": "pathView", 
+                    "view": "Facultad" 
+                },
+                "EleccionCarrera":{ 
+                    "tipo": "pathView", 
+                    "view": "Carrera",
+                    "parametros": { "idCarrera": "idCarrera" }
+                },
                 "Carrera": {
                     "tipo": "elementoUnicoTabla", 
                     "tabla": "Carreras", 
-                    "where": [
+                    "condicion": [ 
                         { "clave": "id", "equal": "idCarrera" }
-                    ] 
+                    ],
+                    "ordenar": []
                 },
                 "Materia": {
                     "tipo": "elementoUnicoTabla", 
                     "tabla": "Materias", 
-                    "where": [
+                    "condicion": [
                         { "clave": "id", "equal": "idMateria" }
-                    ] 
+                    ]
                 }, 
                 "Temas": {
                     "tipo": "elementosTabla",
                     "tabla": "TemasMateria",
-                    "where": [
-                        { "clave": "refMateria", "equal": "idMateria" }
-                    ] 
+                    "condicion": [
+                        { "tipo": "expresion", "clave": "refMateria", "equal": "idMateria" }
+                    ],
+                    "referencias": [
+                        {
+                            "nombre": "url",
+                            "view": "TemaMateria",
+                            "parametros": { 
+                                "idCarrera": "idCarrera", 
+                                "idMateria": "idMateria",
+                                "idTema": "id" 
+                            }
+                        }
+                    ]
                 }
             },
             "bloqueTemplate": "materia"
+        },
+        {
+            "nombre": "TemaMateria",
+            "requisitos": [ "idCarrera", "idMateria", "idTema" ],
+            "informacion": {
+                "EleccionFacultad":{ 
+                    "tipo": "pathView", 
+                    "view": "Facultad" 
+                },
+                "EleccionCarrera":{ 
+                    "tipo": "pathView", 
+                    "view": "Carrera",
+                    "parametros": { "idCarrera": "idCarrera" }
+                },
+                "EleccionMateria": {
+                    "view": "Materia",
+                    "parametros": { 
+                        "idCarrera": "idCarrera", 
+                        "idMateria": "idMateria"
+                    }
+                },
+                "Carrera": {
+                    "tipo": "elementoUnicoTabla", 
+                    "tabla": "Carreras", 
+                    "condicion": [
+                        { "clave": "id", "equal": "idCarrera" }
+                    ]
+                },
+                "Materia": {
+                    "tipo": "elementoUnicoTabla", 
+                    "tabla": "Materias", 
+                    "condicion": [
+                        { "clave": "id", "equal": "idMateria" }
+                    ]
+                }, 
+                "Tema": {
+                    "tipo": "elementoUnicoTabla",
+                    "tabla": "TemasMateria",
+                    "condicion": [
+                        { "clave": "id", "equal": "idTema" }
+                    ]
+                }
+            },
+            "bloqueTemplate": "temaMateria"
         }
     ]
 }

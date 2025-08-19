@@ -8,29 +8,6 @@ import (
 	"time"
 )
 
-/*
-Que tablas necesitamos
-  - Archivos - DONE
-  - Tags - DONE
-  - Libros (con sus capitulos) - DONE
-  - Distribuciones - DONE
-  - Papers - DONE
-  - Carreras - DONE
-  - Materias - DONE
-  - Resumenes materias - DONE
-  - Cursos - DONE
-  - Resumenes cursos - DONE
-  - Referencias
-  - Data structures
-  - Documentos
-  - Teoremas, procposiciones y observaciones
-  - Temas de investigacion
-  - Impresion 3d (todavia ni lo tengo definido entonces tal vez despues)
-  - Librerias (todavia no completamente definido entonces tal vez despues)
-  - Programas (todavia no completamente definido entonces tal vez despues)
-  - Recetas (todavia no completamente definido entonces tal vez despues)
-*/
-
 func EstablecerConexionRelacional(canalMensajes chan string) (*sql.DB, error) {
 	dbUser := os.Getenv("MYSQL_USER")
 	dbPass := os.Getenv("MYSQL_PASSWORD")

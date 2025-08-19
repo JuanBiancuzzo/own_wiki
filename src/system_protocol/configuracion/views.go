@@ -46,15 +46,19 @@ type ParametroPathView struct {
 
 type ParametroElementos struct {
 	HeaderParametro
-	Tabla       string               `json:"tabla"`
-	Condiciones []CondicionTabla     `json:"where"`
-	Referencias []PathViewReferencia `json:"referencias"`
+	Tabla            string               `json:"tabla"`
+	Condiciones      []CondicionTabla     `json:"condicion"`
+	Ordenar          []string             `json:"ordenar"`
+	ClavesSelectivas []string             `json:"claves"`
+	Referencias      []PathViewReferencia `json:"referencias"`
 }
 
 type ParametroElementoUnico struct {
 	HeaderParametro
-	Tabla       string           `json:"tabla"`
-	Condiciones []CondicionTabla `json:"where"`
+	Tabla            string           `json:"tabla"`
+	Ordenar          []string         `json:"ordenar"`
+	ClavesSelectivas []string         `json:"claves"`
+	Condiciones      []CondicionTabla `json:"where"`
 }
 
 type CondicionTabla struct {
@@ -138,8 +142,39 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 						referencias[referencia.Nombre] = v.NewInformacionReferencia(referencia.View, referencia.Requisitos)
 					}
 
-					condicion := d.NewCondicion(clavesRepresentativas)
-					informacion = v.NewInformacionTabla(tabla, condicion, referencias)
+					// Hacer un chequeo con el template, o reduccion con el template, tal vez en vez de
+					// tener que definirlo en el archivo, que este completamente obtenido por el template
+					tiposPorClaves := make(map[string]d.TipoVariable)
+					if len(parametro.ClavesSelectivas) == 0 {
+						tiposPorClaves = tabla.TipoDadoClave
+					} else {
+						for _, clave := range parametro.ClavesSelectivas {
+							if tipo, ok := tabla.TipoDadoClave[clave]; !ok {
+								return nil, fmt.Errorf("la clave seleccionada %s no esta en la tabla", clave)
+							} else {
+								tiposPorClaves[clave] = tipo
+							}
+						}
+					}
+
+					parClaveRepresentacion := make(map[string]d.ElementoInformacion)
+					for clave := range clavesRepresentativas {
+						if tipo, ok := tabla.TipoDadoClave[clave]; !ok {
+							return nil, fmt.Errorf("no hay tipo para la clave %s", clave)
+						} else {
+							parClaveRepresentacion[clave] = d.ElementoInformacion{
+								Tipo:           tipo,
+								Representacion: clavesRepresentativas[clave],
+							}
+						}
+					}
+
+					if query, err := d.NewQueryMultiples(tabla.NombreTabla, tiposPorClaves, parClaveRepresentacion, parametro.Ordenar); err != nil {
+						return nil, err
+
+					} else {
+						informacion = v.NewInformacionTabla(query, referencias)
+					}
 				}
 
 			case ParametroElementoUnico:
@@ -152,8 +187,40 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 						clavesRepresentativas[condicion.Clave] = condicion.Equal
 					}
 
-					condicion := d.NewCondicion(clavesRepresentativas)
-					informacion = v.NewInformacionFila(tabla, condicion)
+					// Hacer un chequeo con el template, o reduccion con el template, tal vez en vez de
+					// tener que definirlo en el archivo, que este completamente obtenido por el template
+					tiposPorClaves := make(map[string]d.TipoVariable)
+					if len(parametro.ClavesSelectivas) == 0 {
+						tiposPorClaves = tabla.TipoDadoClave
+					} else {
+						for _, clave := range parametro.ClavesSelectivas {
+							if tipo, ok := tabla.TipoDadoClave[clave]; !ok {
+								return nil, fmt.Errorf("la clave seleccionada %s no esta en la tabla", clave)
+							} else {
+								tiposPorClaves[clave] = tipo
+							}
+						}
+
+					}
+
+					parClaveRepresentacion := make(map[string]d.ElementoInformacion)
+					for clave := range clavesRepresentativas {
+						if tipo, ok := tabla.TipoDadoClave[clave]; !ok {
+							return nil, fmt.Errorf("no hay tipo para la clave %s", clave)
+						} else {
+							parClaveRepresentacion[clave] = d.ElementoInformacion{
+								Tipo:           tipo,
+								Representacion: clavesRepresentativas[clave],
+							}
+						}
+					}
+
+					if query, err := d.NewQueryFila(tabla.NombreTabla, tiposPorClaves, parClaveRepresentacion, parametro.Ordenar); err != nil {
+						return nil, err
+
+					} else {
+						informacion = v.NewInformacionFila(query)
+					}
 				}
 			}
 

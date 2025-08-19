@@ -55,7 +55,39 @@ func (tv TipoVariable) ReferenciaValor() (any, error) {
 	case TV_DATE:
 		var texto string
 		return &texto, nil
+	}
 
+	return nil, fmt.Errorf("no tiene el tipo correcto, tiene: %v", tv)
+}
+
+func (tv TipoVariable) Desreferenciar(valorReferencia any) (any, error) {
+	switch tv {
+	case TV_INT:
+		fallthrough
+	case TV_REFERENCIA:
+		if numero, ok := valorReferencia.(*int); !ok {
+			return nil, fmt.Errorf("se esperaba que fuera una referencia int pero es: %+v", valorReferencia)
+		} else {
+			return numero, nil
+		}
+
+	case TV_BOOL:
+		if booleano, ok := valorReferencia.(*bool); !ok {
+			return nil, fmt.Errorf("se esperaba que fuera una referencia bool pero es: %+v", valorReferencia)
+		} else {
+			return booleano, nil
+		}
+
+	case TV_STRING:
+		fallthrough
+	case TV_ENUM:
+		fallthrough
+	case TV_DATE:
+		if texto, ok := valorReferencia.(*string); !ok {
+			return nil, fmt.Errorf("se esperaba que fuera una referencia string pero es: %+v", valorReferencia)
+		} else {
+			return texto, nil
+		}
 	}
 
 	return nil, fmt.Errorf("no tiene el tipo correcto, tiene: %v", tv)
