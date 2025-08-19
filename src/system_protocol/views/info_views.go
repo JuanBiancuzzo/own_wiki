@@ -30,11 +30,11 @@ func NewInfoViews(inicio string, views []View, pathTemplates, pathCss string) (*
 
 func (t *InfoViews) GenerarEndpoints(e *echo.Echo) {
 	for i, view := range t.Views {
+		ruta := fmt.Sprintf("/%s", view.Nombre)
 		if i == t.Inicio {
-			e.GET("/", view.GenerarEndpoint)
-			continue
+			ruta = "/"
 		}
 
-		e.GET(fmt.Sprintf("/%s", view.Nombre), view.GenerarEndpoint)
+		e.GET(ruta, view.GenerarEndpoint)
 	}
 }

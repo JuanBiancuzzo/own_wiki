@@ -24,14 +24,33 @@
         {
             "nombre": "Facultad",
             "informacion": {
+                "UrlInsertar": {
+                    "tabla": "Carreras",
+                    "parametros": {}
+                },
                 "Carreras": { 
                     "tipo": "elementosTabla",
                     "tabla": "Carreras",
                     "referencias": [
                         {
+                            "tipo": "pathView",
                             "nombre": "url",
                             "view": "Carrera",
                             "parametros": { "idCarrera": "id" }
+                        },
+                        {
+                            "tipo": "eliminar",
+                            "nombre": "urlEliminar"
+                        }, 
+                        {
+                            "tipo": "actualizar",
+                            "nombre": "urlActualizar",
+                            "parametros": {}
+                        },
+                        {
+                            "tipo": "insertar",
+                            "nombre": "urlInsertar",
+                            "parametros": {}
                         }
                     ]
                 }
@@ -62,6 +81,7 @@
                     "order": [],
                     "referencias": [
                         {
+                            "tipo": "pathView",
                             "nombre": "url",
                             "view": "Materia",
                             "parametros": { 
@@ -79,6 +99,7 @@
                     ],
                     "referencias": [
                         {
+                            "tipo": "pathView",
                             "nombre": "url",
                             "view": "Materia",
                             "parametros": { 
@@ -126,6 +147,7 @@
                     ],
                     "referencias": [
                         {
+                            "tipo": "pathView",
                             "nombre": "url",
                             "view": "TemaMateria",
                             "parametros": { 

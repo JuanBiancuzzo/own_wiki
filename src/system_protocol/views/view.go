@@ -19,7 +19,7 @@ type View struct {
 type DataView map[string]any
 
 func NewView(bdd *b.Bdd, nombre, bloque string, requisitos []string, informaciones map[string]Informacion) View {
-	fmt.Printf("Registrando %s...\n", nombre)
+	fmt.Println(nombre)
 	return View{
 		Nombre:           nombre,
 		Bloque:           bloque,

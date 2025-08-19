@@ -1,18 +1,20 @@
 {{ block "facultad" . }}
     <h1 style="display: flex;"> Facultad </h1>
     <hr>
-    {{ range .Carreras }}
-        <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
-            {{ .nombre }}
-        </h3>
-    {{ end }}
+    <div style="display: grid;">
+        {{ range .Carreras }}
+            <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
+                {{ .nombre }}
+            </h3>
+        {{ end }}
+    </div>
 {{ end }}
 
 {{ block "carrera" . }}
     <h1 style="display: flex;"> {{ .Carrera.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
-    <div style="display: flex; flex-direction: row;">
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad > </h4>
+    <div style="display: flex; flex-direction: row; padding-left: .5em;">
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4>
     </div>
     <hr style="margin-top: .5em;">
     {{ range .Materias }}
@@ -30,8 +32,9 @@
 {{ block "materia" . }}
     <h1 style="display: flex;"> {{ .Materia.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
-    <div style="display: flex; flex-direction: row;">
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4> >
+    <div style="display: flex; flex-direction: row; padding-left: .5em;">
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4> 
+            <p style="padding: 0 .5em 0 .5em;"> > </p>
         <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionCarrera }}"> {{ .Carrera.nombre }} </h4>
     </div>
     <hr style="margin-top: .5em;">
@@ -44,11 +47,14 @@
 
 {{ block "temaMateria" . }}
     <h1 style="display: flex;"> {{ .Tema.nombre }} </h1>
-    <div style="display: flex; flex-direction: row;">
-    <div style="display: flex; flex-direction: row;">
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4> >
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionCarrera }}"> {{ .Carrera.nombre }} </hr> >
+    <hr style="margin-bottom: .5em;">
+    <div style="display: flex; flex-direction: row; padding-left: .5em;">
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4> 
+            <p style="padding: 0 .5em 0 .5em;"> > </p>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionCarrera }}"> {{ .Carrera.nombre }} </hr> 
+            <p style="padding: 0 .5em 0 .5em;"> > </p>
         <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionMateria }}"> {{ .Materia.nombre }} </h4>
+    </div>
     <hr style="margin-top: .5em;">
     <hr>
     Notas del tema...
