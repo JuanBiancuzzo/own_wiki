@@ -92,37 +92,20 @@ func ProcesarNota(path string, meta *Frontmatter, tracker *d.TrackerDependencias
 		return fmt.Errorf("obtener fecha de la nota con error: %v", err)
 	}
 
-	nombreNota := Nombre(path)
-
-	err = tracker.Cargar(TABLA_NOTAS, d.ConjuntoDato{
-		"nombre":     nombreNota,
-		"etapa":      EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
-		"dia":        fecha.Representacion(),
-		"refArchivo": d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
-	})
-	if HABILITAR_ERROR && err != nil {
-		return fmt.Errorf("cargar nota con error: %v", err)
-	}
-
-	for _, vFacultad := range meta.VinculoFacultad {
-		err = tracker.Cargar(TABLA_NOTAS_VINCULO, d.ConjuntoDato{
-			"refNota": d.NewRelacion(TABLA_NOTAS, d.ConjuntoDato{"nombre": nombreNota}),
-			"refVinculo": d.NewRelacion(TABLA_TEMA_MATERIA, d.ConjuntoDato{
-				"nombre":   vFacultad.NombreTema,
-				"capitulo": NumeroODefault(vFacultad.CapituloTema, 1),
-				"refMateria": d.NewRelacion(TABLA_MATERIAS, d.ConjuntoDato{
-					"nombre":     vFacultad.NombreMateria,
-					"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": vFacultad.NombreCarrera}),
-				}),
+	vinculosNota := make([]d.RelacionTabla, len(meta.VinculoFacultad)+len(meta.VinculoCurso))
+	for i, vFacultad := range meta.VinculoFacultad {
+		vinculosNota[i] = d.NewRelacion(TABLA_TEMA_MATERIA, d.ConjuntoDato{
+			"nombre":   vFacultad.NombreTema,
+			"capitulo": NumeroODefault(vFacultad.CapituloTema, 1),
+			"refMateria": d.NewRelacion(TABLA_MATERIAS, d.ConjuntoDato{
+				"nombre":     vFacultad.NombreMateria,
+				"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": vFacultad.NombreCarrera}),
 			}),
-		},
-		)
-		if HABILITAR_ERROR && err != nil {
-			return fmt.Errorf("cargar vinculo con nota de faultad con error: %v", err)
-		}
+		})
 	}
 
-	for _, vCurso := range meta.VinculoCurso {
+	desfaseVinculo := len(meta.VinculoFacultad)
+	for i, vCurso := range meta.VinculoCurso {
 		tablaCurso := TABLA_CURSOS_ONLINE
 		if vCurso.TipoCurso == CURSO_PRESENCIAL {
 			tablaCurso = TABLA_CURSOS_PRESENECIAL
@@ -133,22 +116,25 @@ func ProcesarNota(path string, meta *Frontmatter, tracker *d.TrackerDependencias
 			return fmt.Errorf("obtener anio del curso %s con error: %v", vCurso.TipoCurso, err)
 		}
 
-		err = tracker.Cargar(TABLA_NOTAS_VINCULO,
-			d.ConjuntoDato{
-				"refNota": d.NewRelacion(TABLA_NOTAS, d.ConjuntoDato{"nombre": nombreNota}),
-				"refVinculo": d.NewRelacion(TABLA_TEMA_CURSO, d.ConjuntoDato{
-					"nombre":   vCurso.NombreTema,
-					"capitulo": NumeroODefault(vCurso.CapituloTema, 1),
-					"refCurso": d.NewRelacion(tablaCurso, d.ConjuntoDato{
-						"nombre": vCurso.NombreCurso,
-						"anio":   anio,
-					}),
-				}),
-			},
-		)
-		if HABILITAR_ERROR && err != nil {
-			return fmt.Errorf("cargar vinculo con nota de curso con error: %v", err)
-		}
+		vinculosNota[i+desfaseVinculo] = d.NewRelacion(TABLA_TEMA_CURSO, d.ConjuntoDato{
+			"nombre":   vCurso.NombreTema,
+			"capitulo": NumeroODefault(vCurso.CapituloTema, 1),
+			"refCurso": d.NewRelacion(tablaCurso, d.ConjuntoDato{
+				"nombre": vCurso.NombreCurso,
+				"anio":   anio,
+			}),
+		})
+	}
+
+	err = tracker.Cargar(TABLA_NOTAS, d.ConjuntoDato{
+		"nombre":      Nombre(path),
+		"etapa":       EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
+		"dia":         fecha.Representacion(),
+		"refArchivo":  d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+		"refVinculos": vinculosNota,
+	})
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar nota con error: %v", err)
 	}
 
 	return nil

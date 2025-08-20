@@ -18,43 +18,32 @@ func ProcesarCursoOnline(path string, meta *Frontmatter, tracker *d.TrackerDepen
 		return fmt.Errorf("obtener anio del curso online con error: %v", err)
 	}
 
-	err = tracker.Cargar(TABLA_CURSOS_ONLINE, d.ConjuntoDato{
-		"nombre":     meta.NombreCurso,
-		"etapa":      EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
-		"anio":       anio,
-		"url":        meta.Url,
-		"refArchivo": d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
-		"refPagina":  d.NewRelacion(TABLA_PAGINAS_CURSOS, d.ConjuntoDato{"nombre": meta.NombrePagina}),
-	})
-	if HABILITAR_ERROR && err != nil {
-		return fmt.Errorf("cargar curso online con error: %v", err)
-	}
+	profesores := make([]d.RelacionTabla, len(meta.NombreAutores))
+	for i, profesor := range meta.NombreAutores {
+		datosProfesor := d.ConjuntoDato{
+			"nombre":   strings.TrimSpace(profesor.Nombre),
+			"apellido": strings.TrimSpace(profesor.Apellido),
+		}
 
-	for _, profesor := range meta.NombreAutores {
-		nombre := strings.TrimSpace(profesor.Nombre)
-		apellido := strings.TrimSpace(profesor.Apellido)
-
-		err = tracker.Cargar(TABLA_PERSONAS, d.ConjuntoDato{
-			"nombre":   nombre,
-			"apellido": apellido,
-		})
+		err = tracker.Cargar(TABLA_PERSONAS, datosProfesor)
 		if HABILITAR_ERROR && err != nil {
 			return fmt.Errorf("cargar persona en curso online con error: %v", err)
 		}
 
-		err = tracker.Cargar(TABLA_PROFESORES_CURSO, d.ConjuntoDato{
-			"refCurso": d.NewRelacion(TABLA_CURSOS_ONLINE, d.ConjuntoDato{
-				"nombre": meta.NombreCurso,
-				"anio":   anio,
-			}),
-			"refPersona": d.NewRelacion(TABLA_PERSONAS, d.ConjuntoDato{
-				"nombre":   nombre,
-				"apellido": apellido,
-			}),
-		})
-		if HABILITAR_ERROR && err != nil {
-			return fmt.Errorf("cargar profesor en el curso online con error: %v", err)
-		}
+		profesores[i] = d.NewRelacion(TABLA_PERSONAS, datosProfesor)
+	}
+
+	err = tracker.Cargar(TABLA_CURSOS_ONLINE, d.ConjuntoDato{
+		"nombre":        meta.NombreCurso,
+		"etapa":         EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
+		"anio":          anio,
+		"url":           meta.Url,
+		"refArchivo":    d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+		"refPagina":     d.NewRelacion(TABLA_PAGINAS_CURSOS, d.ConjuntoDato{"nombre": meta.NombrePagina}),
+		"refProfesores": profesores,
+	})
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar curso online con error: %v", err)
 	}
 
 	return nil
@@ -66,41 +55,30 @@ func ProcesarCursoPresencial(path string, meta *Frontmatter, tracker *d.TrackerD
 		return fmt.Errorf("obtener anio del curso presencial con error: %v", err)
 	}
 
+	profesores := make([]d.RelacionTabla, len(meta.NombreAutores))
+	for i, profesor := range meta.NombreAutores {
+		datosProfesor := d.ConjuntoDato{
+			"nombre":   strings.TrimSpace(profesor.Nombre),
+			"apellido": strings.TrimSpace(profesor.Apellido),
+		}
+
+		err = tracker.Cargar(TABLA_PERSONAS, datosProfesor)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar persona en curso online con error: %v", err)
+		}
+
+		profesores[i] = d.NewRelacion(TABLA_PERSONAS, datosProfesor)
+	}
+
 	err = tracker.Cargar(TABLA_CURSOS_PRESENECIAL, d.ConjuntoDato{
-		"nombre":     meta.NombreCurso,
-		"etapa":      EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
-		"anio":       anio,
-		"refArchivo": d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+		"nombre":        meta.NombreCurso,
+		"etapa":         EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
+		"anio":          anio,
+		"refArchivo":    d.NewRelacion(TABLA_ARCHIVOS, d.ConjuntoDato{"path": path}),
+		"refProfesores": profesores,
 	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar curso presencial con error: %v", err)
-	}
-
-	for _, profesor := range meta.NombreAutores {
-		nombre := strings.TrimSpace(profesor.Nombre)
-		apellido := strings.TrimSpace(profesor.Apellido)
-
-		err = tracker.Cargar(TABLA_PERSONAS, d.ConjuntoDato{
-			"nombre":   nombre,
-			"apellido": apellido,
-		})
-		if HABILITAR_ERROR && err != nil {
-			return fmt.Errorf("cargar persona en curso presencial con error: %v", err)
-		}
-
-		err = tracker.Cargar(TABLA_PROFESORES_CURSO, d.ConjuntoDato{
-			"refCurso": d.NewRelacion(TABLA_CURSOS_PRESENECIAL, d.ConjuntoDato{
-				"nombre": meta.NombreCurso,
-				"anio":   anio,
-			}),
-			"refPersona": d.NewRelacion(TABLA_PERSONAS, d.ConjuntoDato{
-				"nombre":   nombre,
-				"apellido": apellido,
-			}),
-		})
-		if HABILITAR_ERROR && err != nil {
-			return fmt.Errorf("cargar profesor en el curso presencial con error: %v", err)
-		}
 	}
 
 	return nil

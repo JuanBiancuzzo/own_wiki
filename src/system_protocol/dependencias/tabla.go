@@ -15,77 +15,72 @@ const (
 	INDEPENDIENTE_DEPENDIBLE    = 0b11
 )
 
-type FnDependencias func() []DescripcionTabla
 type FnExiste func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error)
 type FnInsertar func(bdd *b.Bdd, datosIngresados ConjuntoDato) (int64, error)
+
+// type FnQueryMultiple => no deberia implementar esta, sino que tabla deberia implementar una
+// funcion que dado toda la informacion, pueda generarte una funcion de este tipo, de esta forma
+// integra todo su conocimiento de la tabla con la informacion pasada
+// type FnQuerySimple
+// type FnActualizar func(bdd *b.Bdd, datosIngresados ConjuntoDato) error
+// type FnEliminar func(bdd *b.Bdd, id int64) error
+
 type FnFKeys func(hash *Hash, datosIngresados ConjuntoDato) ([]ForeignKey, error)
 type FnHash func(hash *Hash, datosIngresados ConjuntoDato) (IntFK, error)
 type FnTabla func(bdd *b.Bdd) error
 
 type DescripcionTabla struct {
-	NombreTabla   string
-	TipoTabla     TipoTabla
-	TipoDadoClave map[string]TipoVariable
+	NombreTabla         string
+	TipoTabla           TipoTabla
+	TipoDadoClave       map[string]TipoVariable
+	ObtenerDependencias []DescripcionTabla
 
 	// funciones pre computadas
-	Existe              FnExiste
-	Insertar            FnInsertar
-	CrearForeignKey     FnFKeys
-	Hash                FnHash
-	CrearTablaRelajada  FnTabla
-	ObtenerDependencias FnDependencias
+	Existe             FnExiste
+	Insertar           FnInsertar
+	CrearForeignKey    FnFKeys
+	Hash               FnHash
+	CrearTablaRelajada FnTabla
 }
 
-func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) DescripcionTabla {
-	tipoDadoClave := make(map[string]TipoVariable)
-	tipoDadoClave["id"] = TV_INT
-
-	for _, claveTipo := range clavesTipo {
-		tipoDadoClave[claveTipo.Clave] = claveTipo.tipo
-	}
-
-	for _, referencia := range referencias {
-		tipoDadoClave[referencia.Clave] = TV_REFERENCIA
-		if len(referencia.Tablas) > 1 {
-			tipoDadoClave[fmt.Sprintf("tipo%s", referencia.Clave)] = TV_ENUM
-		}
+func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) DescripcionTabla {
+	var existe FnExiste
+	if elementosRepetidos {
+		existe = func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error) { return false, nil }
+	} else {
+		existe = generarExiste(nombreTabla, variables)
 	}
 
 	return DescripcionTabla{
 		NombreTabla:   nombreTabla,
 		TipoTabla:     tipoTabla,
-		TipoDadoClave: tipoDadoClave,
+		TipoDadoClave: make(map[string]TipoVariable),
 
-		Existe:              generarExiste(nombreTabla, elementosRepetidos, clavesTipo, referencias),
-		Insertar:            generarInsertar(nombreTabla, clavesTipo, referencias),
-		CrearForeignKey:     generarFKeys(referencias),
-		Hash:                generarHash(clavesTipo, referencias),
-		CrearTablaRelajada:  generarCrearTabla(nombreTabla, clavesTipo, referencias),
-		ObtenerDependencias: generarObtenerDependencias(referencias),
+		Existe:              existe,
+		Insertar:            generarInsertar(nombreTabla, variables),
+		CrearForeignKey:     generarFKeys(variables),
+		Hash:                generarHash(variables),
+		CrearTablaRelajada:  generarCrearTabla(nombreTabla, variables),
+		ObtenerDependencias: generarObtenerDependencias(variables),
 	}
 }
 
-func generarExiste(nombreTabla string, elementosRepetidos bool, clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) FnExiste {
-	if elementosRepetidos {
-		return func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error) {
-			return false, nil
-		}
-	}
-
+func generarExiste(nombreTabla string, variables []Variable) FnExiste {
 	queryParam := []string{}
 	claves := []string{} // tiene en cuenta incluso las claves que tienen valores multiples unicamente
 
-	for _, claveTipo := range clavesTipo {
-		if claveTipo.Representativa {
-			claves = append(claves, claveTipo.Clave)
-			queryParam = append(queryParam, fmt.Sprintf("%s = ?", claveTipo.Clave))
-		}
-	}
+	for _, variable := range variables {
+		claves = append(claves, variable.Clave)
+		switch variable.Informacion.(type) {
+		case VariableSimple:
+			queryParam = append(queryParam, fmt.Sprintf("%s = ?", variable.Clave))
+		case VariableString:
+			queryParam = append(queryParam, fmt.Sprintf("%s = ?", variable.Clave))
+		case VariableEnum:
+			queryParam = append(queryParam, fmt.Sprintf("%s = ?", variable.Clave))
 
-	for _, referencia := range referencias {
-		if referencia.Representativo && len(referencia.Tablas) > 1 {
-			claves = append(claves, referencia.Clave)
-			queryParam = append(queryParam, fmt.Sprintf("tipo%s = ?", referencia.Clave))
+		case VariableReferencia:
+			queryParam = append(queryParam, fmt.Sprintf("tipo%s = ?", variable.Clave))
 		}
 	}
 
@@ -116,27 +111,36 @@ func generarExiste(nombreTabla string, elementosRepetidos bool, clavesTipo []Par
 	}
 }
 
-func generarInsertar(nombreTabla string, clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) FnInsertar {
+func generarInsertar(nombreTabla string, variables []Variable) FnInsertar {
 	// Las claves insertar no tienen que tener a las claves ref que no tengan multiples
 	clavesInsertar := []string{}
 	clavesTotales := []string{}
 	valores := []string{}
 
-	for _, claveTipo := range clavesTipo {
-		clavesTotales = append(clavesTotales, claveTipo.Clave)
-		clavesInsertar = append(clavesInsertar, claveTipo.Clave)
-		valores = append(valores, "?")
-	}
-
-	for _, referencia := range referencias {
-
-		if len(referencia.Tablas) > 1 {
-			clavesTotales = append(clavesTotales, fmt.Sprintf("tipo%s", referencia.Clave))
-			clavesInsertar = append(clavesInsertar, referencia.Clave)
+	for _, variable := range variables {
+		switch informacion := variable.Informacion.(type) {
+		case VariableSimple:
+			clavesTotales = append(clavesTotales, variable.Clave)
+			clavesInsertar = append(clavesInsertar, variable.Clave)
 			valores = append(valores, "?")
+		case VariableString:
+			clavesTotales = append(clavesTotales, variable.Clave)
+			clavesInsertar = append(clavesInsertar, variable.Clave)
+			valores = append(valores, "?")
+		case VariableEnum:
+			clavesTotales = append(clavesTotales, variable.Clave)
+			clavesInsertar = append(clavesInsertar, variable.Clave)
+			valores = append(valores, "?")
+
+		case VariableReferencia:
+			if len(informacion.Tablas) > 1 {
+				clavesTotales = append(clavesTotales, fmt.Sprintf("tipo%s", variable.Clave))
+				clavesInsertar = append(clavesInsertar, variable.Clave)
+				valores = append(valores, "?")
+			}
+			clavesTotales = append(clavesTotales, variable.Clave)
+			valores = append(valores, "0")
 		}
-		clavesTotales = append(clavesTotales, referencia.Clave)
-		valores = append(valores, "0")
 	}
 
 	// Este ya tiene que tener los 0 en las referencias, asi no las tenemos q agregar
@@ -168,25 +172,29 @@ func generarInsertar(nombreTabla string, clavesTipo []ParClaveTipo, referencias 
 	}
 }
 
-func generarFKeys(referencias []ReferenciaTabla) FnFKeys {
+func generarFKeys(variables []Variable) FnFKeys {
 	fnHashs := []func(tabla string) FnHash{}
 	claves := []string{}
 
-	for _, referencia := range referencias {
-		claves = append(claves, referencia.Clave)
-		if len(referencia.Tablas) > 1 {
-			tablasHash := make(map[string]FnHash)
-			for _, tabla := range referencia.Tablas {
-				tablasHash[tabla.NombreTabla] = tabla.Hash
+	for _, variable := range variables {
+		claves = append(claves, variable.Clave)
+		if informacion, ok := variable.Informacion.(VariableReferencia); ok {
+
+			claves = append(claves, variable.Clave)
+			if len(informacion.Tablas) > 1 {
+				tablasHash := make(map[string]FnHash)
+				for _, tabla := range informacion.Tablas {
+					tablasHash[tabla.NombreTabla] = tabla.Hash
+				}
+
+				fnHashs = append(fnHashs, func(nombreTabla string) FnHash {
+					return tablasHash[nombreTabla]
+				})
+
+			} else {
+				tabla := informacion.Tablas[0]
+				fnHashs = append(fnHashs, func(_ string) FnHash { return tabla.Hash })
 			}
-
-			fnHashs = append(fnHashs, func(nombreTabla string) FnHash {
-				return tablasHash[nombreTabla]
-			})
-
-		} else {
-			tabla := referencia.Tablas[0]
-			fnHashs = append(fnHashs, func(_ string) FnHash { return tabla.Hash })
 		}
 	}
 
@@ -212,36 +220,48 @@ func generarFKeys(referencias []ReferenciaTabla) FnFKeys {
 	}
 }
 
-func generarHash(clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) FnHash {
+func generarHash(variables []Variable) FnHash {
 	clavesRepresentativas := []string{}
 	tieneReferenciasRepresentativos := false
 	fnHashs := []func(tabla string) FnHash{}
 
-	for _, claveTipo := range clavesTipo {
-		if claveTipo.Representativa {
-			clavesRepresentativas = append(clavesRepresentativas, claveTipo.Clave)
-			fnHashs = append(fnHashs, nil)
-		}
-	}
+	for _, variable := range variables {
+		switch informacion := variable.Informacion.(type) {
+		case VariableSimple:
+			if informacion.Representativo {
+				clavesRepresentativas = append(clavesRepresentativas, variable.Clave)
+				fnHashs = append(fnHashs, nil)
+			}
+		case VariableString:
+			if informacion.Representativo {
+				clavesRepresentativas = append(clavesRepresentativas, variable.Clave)
+				fnHashs = append(fnHashs, nil)
+			}
+		case VariableEnum:
+			if informacion.Representativo {
+				clavesRepresentativas = append(clavesRepresentativas, variable.Clave)
+				fnHashs = append(fnHashs, nil)
+			}
 
-	for _, referencia := range referencias {
-		if referencia.Representativo {
-			clavesRepresentativas = append(clavesRepresentativas, referencia.Clave)
-			tieneReferenciasRepresentativos = true
+		case VariableReferencia:
+			if informacion.Representativo {
+				clavesRepresentativas = append(clavesRepresentativas, variable.Clave)
+				tieneReferenciasRepresentativos = true
 
-			if len(referencia.Tablas) > 1 {
-				tablasHash := make(map[string]FnHash)
-				for _, tabla := range referencia.Tablas {
-					tablasHash[tabla.NombreTabla] = tabla.Hash
+				if len(informacion.Tablas) > 1 {
+					tablasHash := make(map[string]FnHash)
+					for _, tabla := range informacion.Tablas {
+						tablasHash[tabla.NombreTabla] = tabla.Hash
+					}
+
+					fnHashs = append(fnHashs, func(nombreTabla string) FnHash {
+						return tablasHash[nombreTabla]
+					})
+
+				} else {
+					tabla := informacion.Tablas[0]
+					fnHashs = append(fnHashs, func(_ string) FnHash { return tabla.Hash })
 				}
-
-				fnHashs = append(fnHashs, func(nombreTabla string) FnHash {
-					return tablasHash[nombreTabla]
-				})
-
-			} else {
-				tabla := referencia.Tablas[0]
-				fnHashs = append(fnHashs, func(_ string) FnHash { return tabla.Hash })
 			}
 		}
 	}
@@ -288,35 +308,24 @@ func generarHash(clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) FnHas
 	}
 }
 
-func generarObtenerDependencias(referencias []ReferenciaTabla) FnDependencias {
-	return func() []DescripcionTabla {
-		tablas := []DescripcionTabla{}
-		for _, referencia := range referencias {
-			for _, tabla := range referencia.Tablas {
+func generarObtenerDependencias(variables []Variable) []DescripcionTabla {
+	tablas := []DescripcionTabla{}
+	for _, variable := range variables {
+		if informacion, ok := variable.Informacion.(VariableReferencia); ok {
+			for _, tabla := range informacion.Tablas {
 				tablas = append(tablas, *tabla)
 			}
 		}
-		return tablas
 	}
+
+	return tablas
 }
 
-func generarCrearTabla(nombreTabla string, clavesTipo []ParClaveTipo, referencias []ReferenciaTabla) FnTabla {
+func generarCrearTabla(nombreTabla string, variables []Variable) FnTabla {
 	parametros := []string{}
-	for _, parClaveTipo := range clavesTipo {
-		parametros = append(parametros, fmt.Sprintf("%s %s", parClaveTipo.Clave, parClaveTipo.TipoSQL))
-	}
 
-	for _, referencia := range referencias {
-		if len(referencia.Tablas) > 1 {
-			tablasReferenciadas := make([]string, len(referencia.Tablas))
-			for i, tablaReferenciada := range referencia.Tablas {
-				tablasReferenciadas[i] = tablaReferenciada.NombreTabla
-			}
-			parClaveTipo := NewClaveEnum(false, fmt.Sprintf("tipo%s", referencia.Clave), tablasReferenciadas, false)
-			parametros = append(parametros, fmt.Sprintf("%s %s", parClaveTipo.Clave, parClaveTipo.TipoSQL))
-		}
-
-		parametros = append(parametros, fmt.Sprintf("%s INT", referencia.Clave))
+	for _, variable := range variables {
+		parametros = append(parametros, variable.ObtenerParametroSQL()...)
 	}
 
 	tabla := fmt.Sprintf(

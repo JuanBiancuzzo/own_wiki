@@ -17,6 +17,7 @@ const (
 	TV_BOOL       = "bool"
 	TV_DATE       = "date"
 	TV_REFERENCIA = "ref"
+	TV_ARRAY_REF  = "arrayRef"
 )
 
 type InfoTabla struct {
@@ -39,7 +40,7 @@ type InfoValorGuardar struct {
 	// String
 	Largo int `json:"largo"`
 
-	// Referencia
+	// Referencia y arrayReferencia
 	Tabla  string   `json:"tabla"`
 	Tablas []string `json:"tablas"`
 }
@@ -55,7 +56,10 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 	}
 
 	listaInfo := []InfoTabla{}
-	mapaReferenciados := make(map[string]uint8)
+	tipoTablas := []d.TipoTabla{}
+
+	mapaReferenciados := make(map[string]bool)
+	mapaExistencia := make(map[string]bool)
 
 	for decodificador.More() {
 		var info InfoTabla
@@ -65,16 +69,33 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 
 		listaInfo = append(listaInfo, info)
 		for _, valorGuardado := range info.ValoresGuardar {
-			if valorGuardado.Tipo != TV_REFERENCIA {
-				continue
+			independiente := true
+			_, dependible := mapaReferenciados[info.Nombre]
+
+			mapaExistencia[valorGuardado.Tabla] = true
+
+			if valorGuardado.Tipo == TV_REFERENCIA || valorGuardado.Tipo == TV_ARRAY_REF {
+				independiente = false
+
+				if valorGuardado.Tabla != "" {
+					mapaReferenciados[valorGuardado.Tabla] = true
+				}
+				for _, tabla := range valorGuardado.Tablas {
+					mapaReferenciados[tabla] = true
+				}
 			}
 
-			if valorGuardado.Tabla != "" {
-				mapaReferenciados[valorGuardado.Tabla] = 0
+			var tipoTabla d.TipoTabla
+			if independiente && dependible {
+				tipoTabla = d.INDEPENDIENTE_DEPENDIBLE
+			} else if independiente && !dependible {
+				tipoTabla = d.INDEPENDIENTE_NO_DEPENDIBLE
+			} else if !independiente && dependible {
+				tipoTabla = d.DEPENDIENTE_DEPENDIBLE
+			} else {
+				tipoTabla = d.DEPENDIENTE_NO_DEPENDIBLE
 			}
-			for _, tabla := range valorGuardado.Tablas {
-				mapaReferenciados[tabla] = 0
-			}
+			tipoTablas = append(tipoTablas, tipoTabla)
 		}
 	}
 
@@ -83,42 +104,38 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 		return tablas, err
 	}
 
+	nombresTablas := []string{}
+	for nombreTabla := range mapaExistencia {
+		nombresTablas = append(nombresTablas, nombreTabla)
+	}
+
 	mapaTablas := make(map[string]*d.DescripcionTabla)
-	for _, info := range listaInfo {
-		independiente := true
-		_, dependible := mapaReferenciados[info.Nombre]
-
-		paresClaveTipo := []d.ParClaveTipo{}
-		referenciasTablas := []d.ReferenciaTabla{}
+	for i, info := range listaInfo {
+		variables := []d.Variable{}
 		for _, vg := range info.ValoresGuardar {
-			var nuevoClaveTipo d.ParClaveTipo
-
 			necesario := vg.Necesario
 			representativo := vg.Representativo && necesario
+			clave := vg.Clave
 
 			switch vg.Tipo {
-			case TV_STRING:
-				nuevoClaveTipo = d.NewClaveString(representativo, vg.Clave, uint(vg.Largo), necesario)
-				paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
-
 			case TV_INT:
-				nuevoClaveTipo = d.NewClaveInt(representativo, vg.Clave, necesario)
-				paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
-
-			case TV_ENUM:
-				nuevoClaveTipo = d.NewClaveEnum(representativo, vg.Clave, vg.Valores, necesario)
-				paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
+				variables = append(variables, d.NewVariableInt(representativo, clave, necesario))
 
 			case TV_BOOL:
-				nuevoClaveTipo = d.NewClaveBool(representativo, vg.Clave, necesario)
-				paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
+				variables = append(variables, d.NewVariableBool(representativo, clave, necesario))
 
 			case TV_DATE:
-				nuevoClaveTipo = d.NewClaveDate(representativo, vg.Clave, necesario)
-				paresClaveTipo = append(paresClaveTipo, nuevoClaveTipo)
+				variables = append(variables, d.NewVariableDate(representativo, clave, necesario))
+
+			case TV_STRING:
+				variable := d.NewVariableString(representativo, clave, uint(vg.Largo), necesario)
+				variables = append(variables, variable)
+
+			case TV_ENUM:
+				variable := d.NewVariableEnum(representativo, clave, vg.Valores, necesario)
+				variables = append(variables, variable)
 
 			case TV_REFERENCIA:
-				independiente = false
 				var nombreTablas []string
 				if vg.Tabla != "" {
 					nombreTablas = []string{vg.Tabla}
@@ -129,17 +146,34 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 				tablasRelacionadas := make([]*d.DescripcionTabla, len(nombreTablas))
 				for i, nombreTabla := range nombreTablas {
 					if tabla, ok := mapaTablas[nombreTabla]; !ok {
-						nombreTablas := []string{}
-						for nombreTabla := range mapaTablas {
-							nombreTablas = append(nombreTablas, nombreTabla)
-						}
-						return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", nombreTabla, strings.Join(nombreTablas, ", "))
+						return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", nombreTabla, strings.Join(nombresTablas, ", "))
 					} else {
 						tablasRelacionadas[i] = tabla
 					}
 				}
-				nuevaReferencia := d.NewReferenciaTabla(vg.Clave, tablasRelacionadas, vg.Representativo)
-				referenciasTablas = append(referenciasTablas, nuevaReferencia)
+
+				variables = append(variables, d.NewVariableReferencia(vg.Representativo, clave, tablasRelacionadas))
+
+			case TV_ARRAY_REF:
+				/*
+					var nombreTablas []string
+					if vg.Tabla != "" {
+						nombreTablas = []string{vg.Tabla}
+					} else {
+						nombreTablas = vg.Tablas
+					}
+
+					tablasRelacionadas := make([]*d.DescripcionTabla, len(nombreTablas))
+					for i, nombreTabla := range nombreTablas {
+						if tabla, ok := mapaTablas[nombreTabla]; !ok {
+							return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", nombreTabla, strings.Join(nombresTablas, ", "))
+						} else {
+							tablasRelacionadas[i] = tabla
+						}
+					}
+
+					variables = append(variables, d.NewVariableArrayReferencias(clave, tablasRelacionadas))
+				*/
 
 			default:
 				return tablas, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)
@@ -147,18 +181,7 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 
 		}
 
-		var tipoTabla d.TipoTabla
-		if independiente && dependible {
-			tipoTabla = d.INDEPENDIENTE_DEPENDIBLE
-		} else if independiente && !dependible {
-			tipoTabla = d.INDEPENDIENTE_NO_DEPENDIBLE
-		} else if !independiente && dependible {
-			tipoTabla = d.DEPENDIENTE_DEPENDIBLE
-		} else {
-			tipoTabla = d.DEPENDIENTE_NO_DEPENDIBLE
-		}
-
-		nuevaTabla := d.ConstruirTabla(info.Nombre, tipoTabla, info.ElementosRepetidos, paresClaveTipo, referenciasTablas)
+		nuevaTabla := d.ConstruirTabla(info.Nombre, tipoTablas[i], info.ElementosRepetidos, variables)
 		mapaTablas[info.Nombre] = &nuevaTabla
 
 		tablas = append(tablas, nuevaTabla)

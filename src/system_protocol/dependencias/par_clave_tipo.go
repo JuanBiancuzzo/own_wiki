@@ -100,6 +100,7 @@ const (
 	TV_ENUM
 	TV_DATE
 	TV_REFERENCIA
+	TV_ARRAY_REFERENCIA
 )
 
 type ParClaveTipo struct {

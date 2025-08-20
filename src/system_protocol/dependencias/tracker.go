@@ -122,7 +122,7 @@ func crearTablas(tablasProcesar *u.Cola[DescripcionTabla]) ([]DescripcionTabla, 
 		}
 
 		tablasOrdenadas = append([]DescripcionTabla{tabla}, tablasOrdenadas...)
-		for _, tablaDependible := range tabla.ObtenerDependencias() {
+		for _, tablaDependible := range tabla.ObtenerDependencias {
 			tablasProcesar.Encolar(tablaDependible)
 		}
 	}
