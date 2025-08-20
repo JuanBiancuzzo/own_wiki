@@ -95,10 +95,21 @@
                 "clave": "codigo", "tipo": "string", "largo": 255, 
                 "necesario": false
             },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" },
-            { "clave": "refCarrera", "tipo": "ref", "tabla": "Carreras", "representativo": true },
-            { "clave": "refPlan", "tipo": "ref", "tabla": "PlanesCarrera" },
-            { "clave": "refCuatrimestre", "tipo": "ref", "tabla": "CuatrimestresCarrera" }
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            },
+            { 
+                "clave": "refCarrera", "tipo": "ref", "tabla": "Carreras", "representativo": true 
+            },
+            { 
+                "clave": "refPlan", "tipo": "ref", "tabla": "PlanesCarrera" 
+            },
+            { 
+                "clave": "refCuatrimestre", "tipo": "ref", "tabla": "CuatrimestresCarrera" 
+            },
+            {
+                "clave": "refCorrelativas", "tipo": "arrayRef", "tablas": ["Materias", "MateriasEquivalentes"]
+            }
         ]
     },
     {
@@ -113,17 +124,18 @@
                 "clave": "codigo", "tipo": "string", "largo": 255, 
                 "necesario": false
             },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" },
-            { "clave": "refCarrera", "tipo": "ref", "tabla": "Carreras", "representativo": true },
-            { "clave": "refMateria", "tipo": "ref", "tabla": "Materias" }
-        ]
-    },
-    {
-        "nombre": "MateriasCorrelativas",
-        "elementosRepetidos": false,
-        "valoresGuardar": [
-            { "clave": "refMateria", "tipo": "ref", "tablas": ["Materias", "MateriasEquivalentes"] },
-            { "clave": "refCorrelativa", "tipo": "ref", "tablas": ["Materias", "MateriasEquivalentes"] }
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            },
+            { 
+                "clave": "refCarrera", "tipo": "ref", "tabla": "Carreras", "representativo": true 
+            },
+            { 
+                "clave": "refMateria", "tipo": "ref", "tabla": "Materias" 
+            },
+            {
+                "clave": "refCorrelativas", "tipo": "arrayRef", "tablas": ["Materias", "MateriasEquivalentes"]
+            }
         ]
     },
     {
@@ -142,8 +154,12 @@
                 "clave": "parte", "tipo": "int", 
                 "necesario": false
             },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" },
-            { "clave": "refMateria", "tipo": "ref", "tabla": "Materias", "representativo": true }
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            },
+            { 
+                "clave": "refMateria", "tipo": "ref", "tabla": "Materias", "representativo": true 
+            }
         ]
     },
     {
@@ -176,8 +192,15 @@
                 "clave": "url", "tipo": "string", "largo": 255,
                 "representativo": false, "necesario": true
             },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" },
-            { "clave": "refPagina", "tipo": "ref", "tabla": "PaginasCursos" }
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            },
+            { 
+                "clave": "refPagina", "tipo": "ref", "tabla": "PaginasCursos" 
+            }, 
+            {
+                "clave": "refProfesores", "tipo": "arrayRef", "tabla": "Personas"
+            }
         ]
     },
     {
@@ -196,7 +219,12 @@
                 "clave": "anio", "tipo": "int", 
                 "representativo": true, "necesario": true
             },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" }
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            }, 
+            {
+                "clave": "refProfesores", "tipo": "arrayRef", "tabla": "Personas"
+            }
         ]
     },
     {
@@ -215,16 +243,12 @@
                 "clave": "parte", "tipo": "int", 
                 "necesario": false
             },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" },
-            { "clave": "refCurso", "tipo": "ref", "tablas": ["CursosOnline", "CursosPresencial"], "representativo": true }
-        ]
-    },
-    {
-        "nombre": "ProfesoresCurso",
-        "elementosRepetidos": false,
-        "valoresGuardar": [
-            { "clave": "refPersona", "tipo": "ref", "tabla": "Personas"  },
-            { "clave": "refCurso", "tipo": "ref", "tablas": ["CursosOnline", "CursosPresencial"] }
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            },
+            { 
+                "clave": "refCurso", "tipo": "ref", "tablas": ["CursosOnline", "CursosPresencial"], "representativo": true 
+            }
         ]
     },
     {
@@ -235,7 +259,9 @@
                 "clave": "nombre", "tipo": "string", "largo": 255,
                 "representativo": true, "necesario": true
             },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" }
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            }
         ]
     },
     {
@@ -250,17 +276,27 @@
                 "clave": "tipo", "tipo": "enum", "valores": ["Discreta", "Continua", "Multivariada"],
                 "representativo": false, "necesario": true
             }, 
-            { "clave": "refColeccion", "tipo": "ref", "tabla": "Colecciones" },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" }
+            { 
+                "clave": "refColeccion", "tipo": "ref", "tabla": "Colecciones" 
+            },
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            },
+            {
+                "clave": "refRelaciones", "tipo": "arrayRef", "tabla": "RelacionesDistribuciones"
+            }
         ]
     },
     {
         "nombre": "RelacionesDistribuciones",
         "elementosRepetidos": false,
         "valoresGuardar": [
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" },
-            { "clave": "refDistribucionA", "tipo": "ref", "tabla": "Distribuciones" },
-            { "clave": "refDistribucionB", "tipo": "ref", "tabla": "Distribuciones" }
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            },
+            { 
+                "clave": "refDistribucion", "tipo": "ref", "tabla": "Distribuciones" 
+            }
         ]
     },
     {
@@ -291,17 +327,18 @@
                 "clave": "url", "tipo": "string", "largo": 255,
                 "necesario": false
             },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" },
-            { "clave": "refEditorial", "tipo": "ref", "tabla": "Editoriales" },
-            { "clave": "refColeccion", "tipo": "ref", "tabla": "Colecciones" }
-        ]
-    },
-    {
-        "nombre": "AutoresLibro",
-        "elementosRepetidos": false,
-        "valoresGuardar": [
-            { "clave": "refLibro", "tipo": "ref", "tabla": "Libros" },
-            { "clave": "refPersona", "tipo": "ref", "tabla": "Personas" }
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            },
+            { 
+                "clave": "refEditorial", "tipo": "ref", "tabla": "Editoriales" 
+            },
+            { 
+                "clave": "refColeccion", "tipo": "ref", "tabla": "Colecciones" 
+            },
+            {
+                "clave": "refAutores", "tipo": "arrayRef", "tabla": "Personas"
+            }
         ]
     },
     {
@@ -324,16 +361,15 @@
                 "clave": "paginaFinal", "tipo": "int", 
                 "representativo": true, "necesario": true
             },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" },
-            { "clave": "refLibro", "tipo": "ref", "tabla": "Libros" }
-        ]
-    },
-    {
-        "nombre": "EditoresCapitulo",
-        "elementosRepetidos": false,
-        "valoresGuardar": [
-            { "clave": "refCapitulo", "tipo": "ref", "tabla": "Capitulos" },
-            { "clave": "refPersona", "tipo": "ref", "tabla": "Personas" }
+            { 
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+            },
+            { 
+                "clave": "refLibro", "tipo": "ref", "tabla": "Libros" 
+            }, 
+            {
+                "clave": "refEditores", "tipo": "arrayRef", "tabla": "Personas"
+            }
         ]
     },
     {
@@ -382,21 +418,21 @@
                 "clave": "doi", "tipo": "string", "largo": 255,
                 "necesario": false
             },
-            { "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" },
-            { "clave": "refColeccion", "tipo": "ref", "tabla": "Colecciones" },
-            { "clave": "refRevista", "tipo": "ref", "tabla": "RevistasDePaper" }
-        ]
-    },
-    {
-        "nombre": "EscritoresPaper",
-        "elementosRepetidos": false,
-        "valoresGuardar": [
             { 
-                "clave": "tipoEscritor", "tipo": "enum", "valores": ["Editor", "Autor"], 
-                "representativo": false, "necesario": true
+                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
             },
-            { "clave": "refPaper", "tipo": "ref", "tabla": "Papers" },
-            { "clave": "refPersona", "tipo": "ref", "tabla": "Personas" }
+            { 
+                "clave": "refColeccion", "tipo": "ref", "tabla": "Colecciones" 
+            },
+            { 
+                "clave": "refRevista", "tipo": "ref", "tabla": "RevistasDePaper" 
+            }, 
+            {
+                "clave": "refAutores", "tipo": "arrayRef", "tabla": "Personas"
+            },
+            {
+                "clave": "refEditores", "tipo": "arrayRef", "tabla": "Personas"
+            }
         ]
     },
     {
@@ -416,18 +452,9 @@
             },
             { 
                 "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
-            }
-        ]
-    },
-    {
-        "nombre": "NotasVinculo",
-        "elementosRepetidos": false,
-        "valoresGuardar": [
-            { 
-                "clave": "refNota", "tipo": "ref", "tabla": "Notas" 
             },
-            { 
-                "clave": "refVinculo", "tipo": "ref", "tablas": [ "TemasMateria", "TemasCurso" ] 
+            {
+                "clave": "refVinculos", "tipo": "arrayRef", "tablas": [ "TemasMateria", "TemasCurso" ]
             }
         ]
     }

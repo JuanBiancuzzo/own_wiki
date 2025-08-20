@@ -4,10 +4,23 @@ import (
 	"fmt"
 )
 
+const CANTIDAD_DEFAULT = 5
+
 type PedidoElementos struct {
 	Endpoint string
 	Cantidad int
 	Offset   int
+}
+
+func NewPedidoElementos(cantidad int) PedidoElementos {
+	if cantidad <= 0 {
+		cantidad = CANTIDAD_DEFAULT
+	}
+
+	return PedidoElementos{
+		Cantidad: cantidad,
+		Offset:   0,
+	}
 }
 
 func CreateURLPedido(pedido *PedidoElementos, cantidad int) string {
