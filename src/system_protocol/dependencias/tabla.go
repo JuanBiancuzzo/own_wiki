@@ -32,7 +32,6 @@ type FnTabla func(bdd *b.Bdd) error
 type DescripcionTabla struct {
 	NombreTabla         string
 	TipoTabla           TipoTabla
-	TipoDadoClave       map[string]TipoVariable
 	ObtenerDependencias []DescripcionTabla
 
 	// funciones pre computadas
@@ -52,16 +51,15 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 	}
 
 	return DescripcionTabla{
-		NombreTabla:   nombreTabla,
-		TipoTabla:     tipoTabla,
-		TipoDadoClave: make(map[string]TipoVariable),
+		NombreTabla: nombreTabla,
+		TipoTabla:   tipoTabla,
 
 		Existe:              existe,
 		Insertar:            generarInsertar(nombreTabla, variables),
 		CrearForeignKey:     generarFKeys(variables),
 		Hash:                generarHash(variables),
 		CrearTablaRelajada:  generarCrearTabla(nombreTabla, variables),
-		ObtenerDependencias: generarObtenerDependencias(variables),
+		ObtenerDependencias: describirDependencias(variables),
 	}
 }
 
@@ -308,7 +306,7 @@ func generarHash(variables []Variable) FnHash {
 	}
 }
 
-func generarObtenerDependencias(variables []Variable) []DescripcionTabla {
+func describirDependencias(variables []Variable) []DescripcionTabla {
 	tablas := []DescripcionTabla{}
 	for _, variable := range variables {
 		if informacion, ok := variable.Informacion.(VariableReferencia); ok {

@@ -14,7 +14,6 @@ type ElementoInformacion struct {
 	Representacion string
 }
 
-// Tengo que chequear bien esta funcion, y generarla mejor, que ahora solo es confuso
 func NewQueryMultiples(nombreTabla string, clavesRequeridas map[string]TipoVariable, parClaveRepresentacion map[string]ElementoInformacion, clavesOrdenar []string) (FnMultiplesDatos, error) {
 	expresionesClaves, representaciones, tiposWhere := informacionWhere(parClaveRepresentacion)
 	clavesOrdenadas, datosReferencias, tiposDatos, err := informacionClaves(clavesRequeridas)

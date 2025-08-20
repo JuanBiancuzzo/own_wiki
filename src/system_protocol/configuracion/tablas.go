@@ -40,9 +40,15 @@ type InfoValorGuardar struct {
 	// String
 	Largo int `json:"largo"`
 
-	// Referencia y arrayReferencia
-	Tabla  string   `json:"tabla"`
-	Tablas []string `json:"tablas"`
+	// Referencia y ArrayReferencia
+	Tabla        string            `json:"tabla"`
+	Tablas       []string          `json:"tablas"`
+	Construccion *InfoConstruccion `json:"construccion"`
+}
+
+type InfoConstruccion struct {
+	ElementosRepetidos bool               `json:"elementosRepetidos"`
+	ValoresGuardar     []InfoValorGuardar `json:"valoresGuardar"`
 }
 
 func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
@@ -155,7 +161,10 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 				variables = append(variables, d.NewVariableReferencia(vg.Representativo, clave, tablasRelacionadas))
 
 			case TV_ARRAY_REF:
-				/*
+				if vg.Construccion != nil {
+					// TODO:
+
+				} else {
 					var nombreTablas []string
 					if vg.Tabla != "" {
 						nombreTablas = []string{vg.Tabla}
@@ -173,7 +182,7 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 					}
 
 					variables = append(variables, d.NewVariableArrayReferencias(clave, tablasRelacionadas))
-				*/
+				}
 
 			default:
 				return tablas, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)

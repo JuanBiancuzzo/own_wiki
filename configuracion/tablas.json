@@ -283,19 +283,17 @@
                 "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
             },
             {
-                "clave": "refRelaciones", "tipo": "arrayRef", "tabla": "RelacionesDistribuciones"
-            }
-        ]
-    },
-    {
-        "nombre": "RelacionesDistribuciones",
-        "elementosRepetidos": false,
-        "valoresGuardar": [
-            { 
-                "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
-            },
-            { 
-                "clave": "refDistribucion", "tipo": "ref", "tabla": "Distribuciones" 
+                "clave": "refRelaciones", "tipo": "arrayRef", "construccion": {
+                    "elementosRepetidos": false,
+                    "valoresGuardar": [
+                        { 
+                            "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+                        },
+                        { 
+                            "clave": "refDistribucion", "tipo": "ref", "tabla": "Distribuciones" 
+                        }
+                    ]
+                }
             }
         ]
     },
