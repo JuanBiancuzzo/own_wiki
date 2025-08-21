@@ -5,96 +5,74 @@ import "encoding/json"
 type TipoParametro string
 
 const (
-	TP_PATH_VIEW      = "pathView"
-	TP_INSERTAR       = "insertar"
-	TP_ELEMENTOS      = "elementosTabla"
-	TP_ELEMENTO_UNICO = "elementoUnicoTabla"
+	TP_ELEMENTOS_PARCIAL  = "ElementosParcial"
+	TP_ELEMENTOS_COMPLETO = "ElementosCompleto"
+	TP_ELEMENTO_UNICO     = "ElementoUnico"
 )
 
-type Parametro struct {
-	Parametro any
+type Informacion struct {
+	Detalles any
 }
 
 type HeaderParametro struct {
 	Tipo TipoParametro `json:"tipo"`
 }
 
-type ParametroPathView struct {
-	HeaderParametro
-	View string `json:"view"`
-}
-
-type ParametroInsertar struct {
-	HeaderParametro
-	Tabla           string            `json:"table"`
-	Parametros      map[string]string `json:"parametros"`
-	BloqueRespuesta string            `json:"bloque"`
-}
-
-type ParametroElementos struct {
-	HeaderParametro
-	Tabla            string               `json:"tabla"`
-	Condiciones      []CondicionTabla     `json:"condicion"`
-	Ordenar          []string             `json:"ordenar"`
-	ClavesSelectivas []string             `json:"claves"`
-	Referencias      []PathViewReferencia `json:"referencias"`
-	Elementos        ElementosTabla       `json:"elementos"`
-}
-
-type ElementosTabla struct {
-	PedirTodos   bool   `json:"pedirTodos"`
-	Nombre       string `json:"nombre"`
-	NombrePedido string `json:"nombrePedido"`
-	Bloque       string `json:"bloqueElementos"`
-}
-
 type ParametroElementoUnico struct {
 	HeaderParametro
-	Tabla            string           `json:"tabla"`
-	Ordenar          []string         `json:"ordenar"`
-	ClavesSelectivas []string         `json:"claves"`
-	Condiciones      []CondicionTabla `json:"condicion"`
+	Tabla string `json:"tabla"`
+	Id    string `json:"id"`
 }
 
-type CondicionTabla struct {
-	Clave string `json:"clave"`
-	Equal string `json:"equal"`
+type ParametroElementosCompleto struct {
+	HeaderParametro
+	Tablas  map[string]InformacionTabla `json:"elementos"`
+	GroupBy []string                    `json:"groupBy"`
 }
 
-func (p *Parametro) UnmarshalJSON(d []byte) error {
+type InformacionTabla struct {
+	Condicion string   `json:"condicion"`
+	OrderBy   []string `json:"orderBy"`
+}
+
+type ParametroElementosParcial struct {
+	ParametroElementosCompleto
+	Elementos InformacionParcial `json:"elementos"`
+}
+
+type InformacionParcial struct {
+	Nombre   string `json:"nombrePedido"`
+	Bloque   string `json:"bloquesElementos"`
+	Cantidad int    `json:"cantidad"`
+}
+
+func (p *Informacion) UnmarshalJSON(d []byte) error {
 	var header HeaderParametro
 	if err := json.Unmarshal(d, &header); err != nil {
 		return err
 	}
 
 	switch header.Tipo {
-	case TP_PATH_VIEW:
-		var pathView ParametroPathView
-		if err := json.Unmarshal(d, &pathView); err != nil {
-			return err
-		}
-		p.Parametro = pathView
-
-	case TP_INSERTAR:
-		var insertar ParametroInsertar
-		if err := json.Unmarshal(d, &insertar); err != nil {
-			return err
-		}
-		p.Parametro = insertar
-
-	case TP_ELEMENTOS:
-		var elementos ParametroElementos
-		if err := json.Unmarshal(d, &elementos); err != nil {
-			return err
-		}
-		p.Parametro = elementos
-
 	case TP_ELEMENTO_UNICO:
 		var elementoUnico ParametroElementoUnico
 		if err := json.Unmarshal(d, &elementoUnico); err != nil {
 			return err
 		}
-		p.Parametro = elementoUnico
+		p.Detalles = elementoUnico
+
+	case TP_ELEMENTOS_COMPLETO:
+		var elementosCompleto ParametroElementosCompleto
+		if err := json.Unmarshal(d, &elementosCompleto); err != nil {
+			return err
+		}
+		p.Detalles = elementosCompleto
+
+	case TP_ELEMENTOS_PARCIAL:
+		var elementos ParametroElementosParcial
+		if err := json.Unmarshal(d, &elementos); err != nil {
+			return err
+		}
+		p.Detalles = elementos
 	}
 
 	return nil

@@ -17,9 +17,9 @@ type Templates struct {
 	templates *template.Template
 }
 
-func NewTemplate(pathTemplate string) (*Templates, error) {
+func NewTemplate(pathTemplate string, pathView *v.PathView) (*Templates, error) {
 	templ := template.New("").Funcs(template.FuncMap{
-		"PathViewURL":    v.CreateURLPathView,
+		"PathViewURL":    pathView.CreateURLPathView,
 		"PedirElementos": v.CreateURLPedido,
 	})
 

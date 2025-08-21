@@ -2,42 +2,49 @@ package views
 
 import (
 	"fmt"
-	d "own_wiki/system_protocol/dependencias"
 	"strings"
 )
 
+type claves []string
+
 type PathView struct {
-	View       string
-	Parametros d.ConjuntoDato // Clave-valor
+	Views map[string]claves
 }
 
-func NewPathView(view string) *PathView {
+func NewPathView() *PathView {
 	return &PathView{
-		View:       view,
-		Parametros: make(d.ConjuntoDato),
+		Views: make(map[string]claves),
 	}
 }
 
-func (pv *PathView) AgregarParametro(clave string, valor any) error {
-	if _, ok := pv.Parametros[clave]; ok {
+func (pv *PathView) AgregarView(view string, claves []string) error {
+	if _, ok := pv.Views[view]; ok {
 		return fmt.Errorf("ya se cargo ese parametro")
 	}
 
-	pv.Parametros[clave] = valor
+	pv.Views[view] = claves
 	return nil
 }
 
-func CreateURLPathView(pathView *PathView) string {
-	claveValor := []string{}
-	for clave := range pathView.Parametros {
-		valor := pathView.Parametros[clave]
-		claveValor = append(claveValor, fmt.Sprintf("%s=%v", clave, valor))
-	}
+func (pv *PathView) CreateURLPathView(view string, valores ...any) string {
+	if claves, ok := pv.Views[view]; !ok {
+		return "ERROR - No existe view"
 
-	parametros := ""
-	if len(claveValor) > 0 {
-		parametros = fmt.Sprintf("?%s", strings.Join(claveValor, "&"))
-	}
+	} else if len(claves) > len(valores) {
+		return "ERROR - No suficientes parametros"
 
-	return fmt.Sprintf("/%s%s", pathView.View, parametros)
+	} else {
+		claveValor := make([]string, len(claves))
+		for i, clave := range claves {
+			valor := valores[i]
+			claveValor = append(claveValor, fmt.Sprintf("%s=%v", clave, valor))
+		}
+
+		parametros := ""
+		if len(claveValor) > 0 {
+			parametros = fmt.Sprintf("?%s", strings.Join(claveValor, "&"))
+		}
+
+		return fmt.Sprintf("/%s%s", view, parametros)
+	}
 }

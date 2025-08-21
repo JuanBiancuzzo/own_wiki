@@ -41,14 +41,9 @@ type InfoValorGuardar struct {
 	Largo int `json:"largo"`
 
 	// Referencia y ArrayReferencia
-	Tabla        string            `json:"tabla"`
-	Tablas       []string          `json:"tablas"`
-	Construccion *InfoConstruccion `json:"construccion"`
-}
-
-type InfoConstruccion struct {
-	ElementosRepetidos bool               `json:"elementosRepetidos"`
-	ValoresGuardar     []InfoValorGuardar `json:"valoresGuardar"`
+	Tabla  string             `json:"tabla"`
+	Tablas []string           `json:"tablas"`
+	Extra  []InfoValorGuardar `json:"valoresExtra"`
 }
 
 func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
@@ -161,28 +156,28 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 				variables = append(variables, d.NewVariableReferencia(vg.Representativo, clave, tablasRelacionadas))
 
 			case TV_ARRAY_REF:
-				if vg.Construccion != nil {
-					// TODO:
-
+				var nombreTablas []string
+				if vg.Tabla != "" {
+					nombreTablas = []string{vg.Tabla}
 				} else {
-					var nombreTablas []string
-					if vg.Tabla != "" {
-						nombreTablas = []string{vg.Tabla}
-					} else {
-						nombreTablas = vg.Tablas
-					}
-
-					tablasRelacionadas := make([]*d.DescripcionTabla, len(nombreTablas))
-					for i, nombreTabla := range nombreTablas {
-						if tabla, ok := mapaTablas[nombreTabla]; !ok {
-							return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", nombreTabla, strings.Join(nombresTablas, ", "))
-						} else {
-							tablasRelacionadas[i] = tabla
-						}
-					}
-
-					variables = append(variables, d.NewVariableArrayReferencias(clave, tablasRelacionadas))
+					nombreTablas = vg.Tablas
 				}
+
+				tablasRelacionadas := make([]*d.DescripcionTabla, len(nombreTablas))
+				for i, nombreTabla := range nombreTablas {
+					if nombreTabla == info.Nombre {
+						tablasRelacionadas[i] = nil
+						continue
+					}
+
+					if tabla, ok := mapaTablas[nombreTabla]; !ok {
+						return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", nombreTabla, strings.Join(nombresTablas, ", "))
+					} else {
+						tablasRelacionadas[i] = tabla
+					}
+				}
+
+				variables = append(variables, d.NewVariableArrayReferencias(clave, tablasRelacionadas))
 
 			default:
 				return tablas, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)

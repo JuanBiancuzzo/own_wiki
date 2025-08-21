@@ -1,9 +1,13 @@
 {{ block "facultad" . }}
     <h1 style="display: flex;"> Facultad </h1>
-    <hr>
+    <hr style="margin-bottom: .5em;">
+    <div style="display: flex; flex-direction: row; padding-left: .5em;">
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Root }}"> Own wiki </h4> 
+    </div>
+    <hr style="margin-top: .5em;">
     <div style="display: grid;">
         {{ range .Carreras }}
-            <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
+            <h3 hx-target="#centro" hx-get="{{ PathViewURL Carrera .id }}">
                 {{ .nombre }}
             </h3>
         {{ end }}
@@ -14,69 +18,82 @@
     <h1 style="display: flex;"> {{ .Carrera.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Root }}"> Own wiki </h4> 
+            <p style="padding: 0 .5em 0 .5em;"> > </p>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Facultad }}"> Facultad </h4>
     </div>
     <hr style="margin-top: .5em;">
 
     <div id="elementos" style="display: grid;" hx-swap="beforeend">
-        <div style="height: 0; width: 0;"
-            hx-target="#elementos"
-            hx-trigger="revealed"
-            hx-get="{{ PedirElementos .Materias.pedido }}"
-            hx-swap="delete">
-        </div>
-        <div 
-            hx-target="#elementos"
-            hx-trigger="revealed"
-            hx-get="{{ PedirElementos .MateriasEquivalente.pedido }}"
-            hx-swap="delete">
-            Cargando...
-        </div>
+        {{ template bloqueMateria . }}
     </div>
 {{ end }}
 
 {{ block "bloqueMateria" . }}
     {{ range  .Materias }}
-        <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
+        <h3 hx-target="#centro" hx-get="{{ PathViewURL Materia .refCarrera .refMateria }}">
             {{ .nombre }}
         </h3>
     {{ end }}
     <div 
         hx-target="#elementos"
         hx-trigger="revealed"
-        hx-get="{{ PedirElementos .pedido }}"
+        hx-get="{{ PedirElementos .endpoint }}"
         hx-swap="delete">
         Cargando...
     </div>
 {{ end }}
 
 {{ block "materia" . }}
+    {{ $idCarrera := .Carrera.id }}
+    {{ $idMateria := .Materia.id }}
     <h1 style="display: flex;"> {{ .Materia.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4> 
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Root }}"> Own wiki </h4> 
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionCarrera }}"> {{ .Carrera.nombre }} </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Facultad }}"> Facultad </h4>
+            <p style="padding: 0 .5em 0 .5em;"> > </p>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Carrera $idCarrera }}"> {{ .Carrera.nombre }} </h4>
     </div>
     <hr style="margin-top: .5em;">
     {{ range .Temas }}
-        <h3 hx-target="#centro" hx-get="{{ PathViewURL .url }}">
+        <h3 hx-target="#centro" hx-get="{{ PathViewURL TemasMateria $idCarrera $idMateria .id }}">
             {{ .nombre }}
         </h3>
     {{ end }}
 {{ end }}
 
 {{ block "temaMateria" . }}
+    {{ $idCarrera := .Carrera.id }}
+    {{ $idMateria := .Materia.id }}
     <h1 style="display: flex;"> {{ .Tema.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionFacultad }}"> Facultad </h4> 
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Root }}"> Own wiki </h4> 
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionCarrera }}"> {{ .Carrera.nombre }} </hr> 
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Facultad }}"> Facultad </h4>
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL .EleccionMateria }}"> {{ .Materia.nombre }} </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Carrera $idCarrera }}"> {{ .Carrera.nombre }} </h4>
+            <p style="padding: 0 .5em 0 .5em;"> > </p>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Materia $idCarrera $idMateria }}"> {{ .Carrera.nombre }} </h4>
     </div>
     <hr style="margin-top: .5em;">
     <hr>
-    Notas del tema...
+    <div id="elementos" style="display: grid;" hx-swap="beforeend">
+        {{ template notas . }}
+    </div>
+{{ end }}
+
+{{ block "notas" . }}
+    {{ range  .Notas }}
+        <h3> {{ .nombre }} </h3>
+    {{ end }}
+    <div 
+        hx-target="#elementos"
+        hx-trigger="revealed"
+        hx-get="{{ PedirElementos .endpoint }}"
+        hx-swap="delete">
+        Cargando...
+    </div>
 {{ end }}

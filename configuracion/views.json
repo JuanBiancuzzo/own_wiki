@@ -5,104 +5,46 @@
     "views": [
         {
             "nombre": "Root",
-            "informacion": {
-                "EleccionFacultad":{ 
-                    "tipo": "pathView", 
-                    "view": "Facultad" 
-                },
-                "EleccionCursos": { 
-                    "tipo": "pathView", 
-                    "view": "Cursos" 
-                },
-                "EleccionColecciones": { 
-                    "tipo": "pathView", 
-                    "view": "Colecciones" 
-                }
-            },
             "bloqueTemplate": "index"
         },
         {
             "nombre": "Facultad",
             "informacion": {
                 "Carreras": { 
-                    "tipo": "elementosTabla",
-                    "tabla": "Carreras",
-                    "claves": [],
-                    "referencias": [
-                        {
-                            "tipo": "pathView",
-                            "nombre": "url",
-                            "view": "Carrera",
-                            "parametros": { "idCarrera": "id" }
-                        }
-                    ], 
-                    "elementos": {
-                        "pedirTodos": true
-                    }
+                    "tipo": "ElementosCompleto",
+                    "Carreras": {}
                 }
             },
             "bloqueTemplate": "facultad"
         }, 
         {
             "nombre": "Carrera",
-            "requisitos": [ "idCarrera" ],
+            "parametros": [ "idCarrera" ],
             "informacion": {
-                "EleccionFacultad":{ 
-                    "tipo": "pathView", 
-                    "view": "Facultad" 
-                },
                 "Carrera": {
-                    "tipo": "elementoUnicoTabla", 
+                    "tipo": "ElementoUnico", 
                     "tabla": "Carreras", 
-                    "condicion": [
-                        { "clave": "id", "equal": "idCarrera" }
-                    ]
+                    "id": "idCarrera"
                 },
                 "Materias": { 
-                    "tipo": "elementosTabla", 
-                    "tabla": "Materias", 
-                    "condicion": [
-                        { "clave": "refCarrera", "equal": "idCarrera" }
-                    ],
-                    "order": [],
-                    "referencias": [
-                        {
-                            "tipo": "pathView",
-                            "nombre": "url",
-                            "view": "Materia",
-                            "parametros": { 
-                                "idCarrera": "idCarrera", 
-                                "idMateria": "id" 
-                            }
-                        }
-                    ],
+                    "tipo": "ElementosParcial", 
+                    "Materias": {
+                        "condicion": "refCarrera == idCarrera",
+                        "orderBy": [ 
+                            "refCuatrimestre:anio=anio", 
+                            "refCuatrimestre:cuatrimestre=cuatrimestre" 
+                        ]
+                    }, 
+                    "MateriasEquivalente": {
+                        "condicion": "refCarrera == idCarrera",
+                        "orderBy": [ 
+                            "refMateria:refCuatrimestre:anio=anio", 
+                            "refMateria:refCuatrimestre:cuatrimestre=cuatrimestre" 
+                        ]
+                    },
                     "elementos": {
-                        "nombre": "Materias",
-                        "nombrePedido": "pedido",
-                        "bloquesElementos": "bloqueMateria"
-                    }
-                },
-                "MateriasEquivalente": { 
-                    "tipo": "elementosTabla", 
-                    "tabla": "MateriasEquivalentes", 
-                    "condicion": [
-                        { "clave": "refCarrera", "equal": "idCarrera" }
-                    ],
-                    "referencias": [
-                        {
-                            "tipo": "pathView",
-                            "nombre": "url",
-                            "view": "Materia",
-                            "parametros": { 
-                                "idCarrera": "idCarrera", 
-                                "idMateria": "refMateria" 
-                            }
-                        }
-                    ],
-                    "elementos": {
-                        "nombre": "Materias",
-                        "nombrePedido": "pedido",
-                        "bloqueElementos": "bloqueMateria",
+                        "nombrePedido": "endpoint",
+                        "bloquesElementos": "bloqueMateria",
                         "cantidad": 5
                     }
                 }
@@ -111,51 +53,23 @@
         }, 
         {
             "nombre": "Materia",
-            "requisitos": [ "idCarrera", "idMateria" ],
+            "parametros": [ "idCarrera", "idMateria" ],
             "informacion": {
-                "EleccionFacultad":{ 
-                    "tipo": "pathView", 
-                    "view": "Facultad" 
-                },
-                "EleccionCarrera":{ 
-                    "tipo": "pathView", 
-                    "view": "Carrera",
-                    "parametros": { "idCarrera": "idCarrera" }
-                },
                 "Carrera": {
-                    "tipo": "elementoUnicoTabla", 
+                    "tipo": "ElementoUnico", 
                     "tabla": "Carreras", 
-                    "condicion": [ 
-                        { "clave": "id", "equal": "idCarrera" }
-                    ]
+                    "id": "idCarrera"
                 },
                 "Materia": {
-                    "tipo": "elementoUnicoTabla", 
-                    "tabla": "Materias", 
-                    "condicion": [
-                        { "clave": "id", "equal": "idMateria" }
-                    ]
+                    "tipo": "ElementoUnico", 
+                    "tabla": "Materias",
+                    "id": "idMateria"
                 }, 
                 "Temas": {
-                    "tipo": "elementosTabla",
-                    "tabla": "TemasMateria",
-                    "condicion": [
-                        { "tipo": "expresion", "clave": "refMateria", "equal": "idMateria" }
-                    ],
-                    "referencias": [
-                        {
-                            "tipo": "pathView",
-                            "nombre": "url",
-                            "view": "TemaMateria",
-                            "parametros": { 
-                                "idCarrera": "idCarrera", 
-                                "idMateria": "idMateria",
-                                "idTema": "id" 
-                            }
-                        }
-                    ], 
-                    "elementos": {
-                        "pedirTodos": true
+                    "tipo": "ElementosCompleto",
+                    "TemasMateria": {
+                        "condicion": "refMateria == idMateria",
+                        "orderBy": [ "capitulo", "parte" ]
                     }
                 }
             },
@@ -163,44 +77,34 @@
         },
         {
             "nombre": "TemaMateria",
-            "requisitos": [ "idCarrera", "idMateria", "idTema" ],
+            "parametros": [ "idCarrera", "idMateria", "idTema" ],
             "informacion": {
-                "EleccionFacultad":{ 
-                    "tipo": "pathView", 
-                    "view": "Facultad" 
-                },
-                "EleccionCarrera":{ 
-                    "tipo": "pathView", 
-                    "view": "Carrera",
-                    "parametros": { "idCarrera": "idCarrera" }
-                },
-                "EleccionMateria": {
-                    "view": "Materia",
-                    "parametros": { 
-                        "idCarrera": "idCarrera", 
-                        "idMateria": "idMateria"
-                    }
-                },
                 "Carrera": {
-                    "tipo": "elementoUnicoTabla", 
+                    "tipo": "ElementoUnico", 
                     "tabla": "Carreras", 
-                    "condicion": [
-                        { "clave": "id", "equal": "idCarrera" }
-                    ]
+                    "id": "idCarrera"
                 },
                 "Materia": {
-                    "tipo": "elementoUnicoTabla", 
+                    "tipo": "ElementoUnico", 
                     "tabla": "Materias", 
-                    "condicion": [
-                        { "clave": "id", "equal": "idMateria" }
-                    ]
+                    "id": "idMateria"
                 }, 
                 "Tema": {
-                    "tipo": "elementoUnicoTabla",
+                    "tipo": "ElementoUnico",
                     "tabla": "TemasMateria",
-                    "condicion": [
-                        { "clave": "id", "equal": "idTema" }
-                    ]
+                    "id": "idTema"
+                },
+                "Notas": {
+                    "tipo": "ElementosParcial",
+                    "Notas": {
+                        "condicion": "refVinculos:ref == idTema && refVinculos:tabla == 'TemasMateria'",
+                        "orderBy": [ "nombre" ]
+                    },
+                    "elementos": {
+                        "nombrePedido": "endpoint",
+                        "bloqueElementos": "notas",
+                        "cantidad": 15
+                    }
                 }
             },
             "bloqueTemplate": "temaMateria"

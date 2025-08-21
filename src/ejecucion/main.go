@@ -30,12 +30,15 @@ func ObtenerTablas(dirConfiguracion string) ([]d.DescripcionTabla, error) {
 	}
 }
 
-func ObtenerViews(dirConfiguracion string, bdd *b.Bdd, tablas []d.DescripcionTabla) (*v.InfoViews, error) {
+func ObtenerViews(dirConfiguracion string, bdd *b.Bdd, tablas []d.DescripcionTabla) (*v.InfoViews, *v.PathView, error) {
 	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "views.json")); err != nil {
-		return nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
+		return nil, nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
+
+	} else if respuesta, err := c.CrearInfoViews(string(bytes), bdd, tablas); err != nil {
+		return nil, nil, err
 
 	} else {
-		return c.CrearInfoViews(string(bytes), bdd, tablas)
+		return respuesta.InfoView, respuesta.PathView, nil
 	}
 }
 
@@ -64,13 +67,13 @@ func Visualizar(carpetaConfiguracion string, canalMensajes chan string) {
 	if tablas, err := ObtenerTablas(carpetaConfiguracion); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo cargar las tablas, con error: %v", err)
 
-	} else if infoViews, err := ObtenerViews(carpetaConfiguracion, bdd, tablas); err != nil {
+	} else if infoViews, pathView, err := ObtenerViews(carpetaConfiguracion, bdd, tablas); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo cargar las views, con error: %v", err)
 
 	} else {
 		carpetaTemplates := fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathTemplates)
 
-		if e.Renderer, err = t.NewTemplate(carpetaTemplates); err != nil {
+		if e.Renderer, err = t.NewTemplate(carpetaTemplates, pathView); err != nil {
 			canalMensajes <- fmt.Sprintf("No se pudo crear el renderer, con error: %v", err)
 			return
 		}
