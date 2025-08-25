@@ -6,6 +6,7 @@ import (
 	b "own_wiki/system_protocol/bass_de_datos"
 	d "own_wiki/system_protocol/dependencias"
 	v "own_wiki/system_protocol/views"
+	"slices"
 	"strings"
 )
 
@@ -13,6 +14,7 @@ type InformacionViews struct {
 	Inicio        string `json:"inicio"`
 	PathTemplates string `json:"templates"`
 	PathCss       string `json:"css"`
+	PathImagenes  string `json:"imagenes"`
 	Views         []View `json:"views"`
 }
 
@@ -26,7 +28,7 @@ type View struct {
 }
 
 type RespuestaInformacion struct {
-	Informacion   v.Informacion
+	Informacion   v.FnInformacion
 	ExtraEndpoint map[string]v.Endpoint
 }
 
@@ -37,6 +39,7 @@ type RespuestaInformacionViews struct {
 
 func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla) (*RespuestaInformacionViews, error) {
 	decodificador := json.NewDecoder(strings.NewReader(archivoJson))
+	pathView := v.NewPathView()
 
 	var info InformacionViews
 	if err := decodificador.Decode(&info); err != nil {
@@ -52,14 +55,16 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 	hayInicio := false
 
 	for _, infoView := range info.Views {
-		informaciones := make(map[string]v.Informacion)
+		informaciones := make(map[string]v.FnInformacion)
+		pathView.AgregarView(infoView.Nombre, infoView.Parametros)
+
 		for nombreVariable := range infoView.Informacion {
 			switch detalles := infoView.Informacion[nombreVariable].Detalles.(type) {
 			case ParametroElementoUnico:
 				if tabla, ok := tablasPorNombre[detalles.Tabla]; !ok {
 					return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", detalles.Tabla)
 
-				} else if informacion, err := crearInformacionElementoUnico(tabla, infoView, nombreVariable, detalles); err != nil {
+				} else if informacion, err := crearInformacionElementoUnico(tabla, infoView.Parametros, detalles); err != nil {
 					return nil, err
 
 				} else {
@@ -125,108 +130,34 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 
 	return &RespuestaInformacionViews{
 		InfoView: v.NewInfoViews(endpoints, info.PathTemplates, info.PathCss),
-		PathView: v.NewPathView(),
+		PathView: pathView,
 	}, nil
+}
+
+func crearInformacionElementoUnico(tabla *d.DescripcionTabla, parametros []string, detalles ParametroElementoUnico) (v.FnInformacion, error) {
+	if !slices.Contains(parametros, detalles.PametroParaId) {
+		return nil, fmt.Errorf("el id de la tabla no es uno de los parametros")
+	}
+
+	if query, err := d.NewQuerySimple(tabla, detalles.ClavesUsadas); err != nil {
+		return nil, err
+
+	} else {
+		return v.NewInformacionFila(query, parametros, detalles.PametroParaId)
+	}
 }
 
 func crearInformacionElementosCompleto(infoView View, tablas InfoTablas, nombreVariable string, parametro ParametroElementosCompleto) (RespuestaInformacion, error) {
 
 	return RespuestaInformacion{
-		Informacion:   New,
 		ExtraEndpoint: make(map[string]v.Endpoint),
 	}, nil
 }
 
 func crearInformacionElementosParcial(infoView View, tablas InfoTablas, nombreVariable string, parametro ParametroElementosParcial) (RespuestaInformacion, error) {
+	endpoints := make(map[string]v.Endpoint)
 
 	return RespuestaInformacion{
-		ExtraEndpoint: make(map[string]v.Endpoint),
+		ExtraEndpoint: endpoints,
 	}, nil
-}
-
-func crearInformacionElementos(tabla *d.DescripcionTabla, infoView View, clave string, parametro ParametroElementos) (v.Informacion, error) {
-	clavesRepresentativas := make(map[string]string)
-	for _, condicion := range parametro.Condiciones {
-		clavesRepresentativas[condicion.Clave] = condicion.Equal
-	}
-	referencias := make(map[string]v.InformacionReferencia)
-	for _, referencia := range parametro.Referencias {
-		referencias[referencia.Nombre] = v.NewInformacionReferencia(referencia.View, referencia.Requisitos)
-	}
-
-	// Hacer un chequeo con el template, o reduccion con el template, tal vez en vez de
-	// tener que definirlo en el archivo, que este completamente obtenido por el template
-	tiposPorClaves := make(map[string]d.TipoVariable)
-	if len(parametro.ClavesSelectivas) == 0 {
-		tiposPorClaves = tabla.TipoDadoClave
-	} else {
-		for _, clave := range parametro.ClavesSelectivas {
-			if tipo, ok := tabla.TipoDadoClave[clave]; !ok {
-				return nil, fmt.Errorf("la clave seleccionada %s no esta en la tabla", clave)
-			} else {
-				tiposPorClaves[clave] = tipo
-			}
-		}
-	}
-
-	parClaveRepresentacion := make(map[string]d.ElementoInformacion)
-	for clave := range clavesRepresentativas {
-		if tipo, ok := tabla.TipoDadoClave[clave]; !ok {
-			return nil, fmt.Errorf("no hay tipo para la clave %s", clave)
-		} else {
-			parClaveRepresentacion[clave] = d.ElementoInformacion{
-				Tipo:           tipo,
-				Representacion: clavesRepresentativas[clave],
-			}
-		}
-	}
-
-	if query, err := d.NewQueryMultiples(tabla.NombreTabla, tiposPorClaves, parClaveRepresentacion, parametro.Ordenar); err != nil {
-		return nil, fmt.Errorf("en la view %s, en la clave: %s se tuvo: %v", infoView.Nombre, clave, err)
-
-	} else {
-		return v.NewInformacionTabla(clave, query, referencias), nil
-	}
-}
-
-func crearInformacionElementoUnico(tabla *d.DescripcionTabla, infoView View, clave string, parametro ParametroElementoUnico) (v.Informacion, error) {
-	clavesRepresentativas := make(map[string]string)
-	for _, condicion := range parametro.Condiciones {
-		clavesRepresentativas[condicion.Clave] = condicion.Equal
-	}
-
-	// Hacer un chequeo con el template, o reduccion con el template, tal vez en vez de
-	// tener que definirlo en el archivo, que este completamente obtenido por el template
-	tiposPorClaves := make(map[string]d.TipoVariable)
-	if len(parametro.ClavesSelectivas) == 0 {
-		tiposPorClaves = tabla.TipoDadoClave
-	} else {
-		for _, clave := range parametro.ClavesSelectivas {
-			if tipo, ok := tabla.TipoDadoClave[clave]; !ok {
-				return nil, fmt.Errorf("la clave seleccionada %s no esta en la tabla", clave)
-			} else {
-				tiposPorClaves[clave] = tipo
-			}
-		}
-
-	}
-
-	parClaveRepresentacion := make(map[string]d.ElementoInformacion)
-	for clave := range clavesRepresentativas {
-		if tipo, ok := tabla.TipoDadoClave[clave]; !ok {
-			return nil, fmt.Errorf("no hay tipo para la clave %s", clave)
-		} else {
-			parClaveRepresentacion[clave] = d.ElementoInformacion{
-				Tipo:           tipo,
-				Representacion: clavesRepresentativas[clave],
-			}
-		}
-	}
-
-	if query, err := d.NewQueryFila(tabla.NombreTabla, tiposPorClaves, parClaveRepresentacion, parametro.Ordenar); err != nil {
-		return nil, fmt.Errorf("en la view %s, en la clave: %s se tuvo: %v", infoView.Nombre, clave, err)
-
-	} else {
-		return v.NewInformacionFila(query), nil
-	}
 }

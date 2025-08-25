@@ -5,11 +5,32 @@ import (
 	"strings"
 )
 
-type informacionVariable any
+type TipoVariable byte
+
+func (tv TipoVariable) ObtenerReferencia() (any, error) {
+	return nil, nil
+}
+
+func (tv TipoVariable) Desreferenciar(valorReferencia any) (any, error) {
+
+	return nil, nil
+}
+
+const (
+	TV_INT = iota
+	TV_BOOL
+	TV_DATE
+	TV_STRING
+	TV_ENUM
+
+	TV_ERROR
+)
+
+type InformacionVariable any
 
 type Variable struct {
 	Clave       string
-	Informacion informacionVariable
+	Informacion InformacionVariable
 }
 
 func (v Variable) ObtenerParametroSQL() []string {
@@ -38,6 +59,26 @@ func (v Variable) ObtenerParametroSQL() []string {
 	}
 
 	return parametros
+}
+
+func (v Variable) ObtenerTipo() (TipoVariable, error) {
+	switch informacion := v.Informacion.(type) {
+	case VariableSimple:
+		switch informacion.Tipo {
+		case TVS_INT:
+			return TV_INT, nil
+		case TVS_BOOL:
+			return TV_BOOL, nil
+		case TVS_DATE:
+			return TV_DATE, nil
+		}
+
+	case VariableString:
+		return TV_STRING, nil
+	case VariableEnum:
+		return TV_ENUM, nil
+	}
+	return TV_ERROR, fmt.Errorf("no es una variable que pueda tener un tipo")
 }
 
 type TipoVariableSimple byte

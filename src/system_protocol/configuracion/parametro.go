@@ -20,8 +20,9 @@ type HeaderParametro struct {
 
 type ParametroElementoUnico struct {
 	HeaderParametro
-	Tabla string `json:"tabla"`
-	Id    string `json:"id"`
+	Tabla         string   `json:"tabla"`
+	PametroParaId string   `json:"id"`
+	ClavesUsadas  []string `json:"claves"`
 }
 
 type ParametroElementosCompleto struct {
@@ -31,8 +32,9 @@ type ParametroElementosCompleto struct {
 }
 
 type InformacionTabla struct {
-	Condicion string   `json:"condicion"`
-	OrderBy   []string `json:"orderBy"`
+	Condicion    string   `json:"condicion"`
+	OrderBy      []string `json:"orderBy"`
+	ClavesUsadas []string `json:"claves"`
 }
 
 type ParametroElementosParcial struct {

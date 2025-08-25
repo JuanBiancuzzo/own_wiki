@@ -18,10 +18,6 @@ const (
 type FnExiste func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error)
 type FnInsertar func(bdd *b.Bdd, datosIngresados ConjuntoDato) (int64, error)
 
-// type FnQueryMultiple => no deberia implementar esta, sino que tabla deberia implementar una
-// funcion que dado toda la informacion, pueda generarte una funcion de este tipo, de esta forma
-// integra todo su conocimiento de la tabla con la informacion pasada
-// type FnQuerySimple
 // type FnActualizar func(bdd *b.Bdd, datosIngresados ConjuntoDato) error
 // type FnEliminar func(bdd *b.Bdd, id int64) error
 
@@ -32,6 +28,7 @@ type FnTabla func(bdd *b.Bdd) error
 type DescripcionTabla struct {
 	NombreTabla         string
 	TipoTabla           TipoTabla
+	Variables           map[string]Variable
 	ObtenerDependencias []DescripcionTabla
 
 	// funciones pre computadas
@@ -50,8 +47,14 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 		existe = generarExiste(nombreTabla, variables)
 	}
 
+	variablesPorNombre := make(map[string]Variable)
+	for _, variable := range variables {
+		variablesPorNombre[variable.Clave] = variable
+	}
+
 	return DescripcionTabla{
 		NombreTabla: nombreTabla,
+		Variables:   variablesPorNombre,
 		TipoTabla:   tipoTabla,
 
 		Existe:              existe,

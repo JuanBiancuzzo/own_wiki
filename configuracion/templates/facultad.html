@@ -45,7 +45,7 @@
 {{ end }}
 
 {{ block "materia" . }}
-    {{ $idCarrera := .Carrera.id }}
+    {{ $idCarrera := .Materia.refCarrera.id }}
     {{ $idMateria := .Materia.id }}
     <h1 style="display: flex;"> {{ .Materia.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
@@ -54,7 +54,7 @@
             <p style="padding: 0 .5em 0 .5em;"> > </p>
         <h4 hx-target="#centro" hx-get="{{ PathViewURL Facultad }}"> Facultad </h4>
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Carrera $idCarrera }}"> {{ .Carrera.nombre }} </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Carrera $idCarrera }}"> {{ .Materia.refCarrera.nombre }} </h4>
     </div>
     <hr style="margin-top: .5em;">
     {{ range .Temas }}
@@ -65,8 +65,8 @@
 {{ end }}
 
 {{ block "temaMateria" . }}
-    {{ $idCarrera := .Carrera.id }}
-    {{ $idMateria := .Materia.id }}
+    {{ $idCarrera := .Tema.refMateria.refCarrera.id }}
+    {{ $idMateria := .Tema.refMateria.id }}
     <h1 style="display: flex;"> {{ .Tema.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
@@ -74,9 +74,9 @@
             <p style="padding: 0 .5em 0 .5em;"> > </p>
         <h4 hx-target="#centro" hx-get="{{ PathViewURL Facultad }}"> Facultad </h4>
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Carrera $idCarrera }}"> {{ .Carrera.nombre }} </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Carrera $idCarrera }}"> {{ .Tema.refMateria.refCarrera.nombre }} </h4>
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Materia $idCarrera $idMateria }}"> {{ .Carrera.nombre }} </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL Materia $idCarrera $idMateria }}"> {{ .Tema.refMateria.nombre }} </h4>
     </div>
     <hr style="margin-top: .5em;">
     <hr>

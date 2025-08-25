@@ -4,14 +4,68 @@ import (
 	"fmt"
 	b "own_wiki/system_protocol/bass_de_datos"
 	d "own_wiki/system_protocol/dependencias"
+	"slices"
+	"strings"
 )
 
-type Informacion interface {
-	ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error)
+type FnInformacion func(*b.Bdd, []string) (any, error)
 
-	NecesitaEndpoint() (bool, string)
+func NewInformacionFila(query d.QueryDato, parametrosEsperados []string, pametroParaId string) (FnInformacion, error) {
+	indiceIdNecesario := slices.Index(parametrosEsperados, pametroParaId)
+
+	datosReferencias := make([]any, len(query.Claves))
+	infoVariables := make([]d.InformacionClave, len(query.Claves))
+
+	for i, clave := range query.Claves {
+		infoVariables[i] = clave.ObtenerInfoVariable()
+		if referencia, err := infoVariables[i].Variable.ObtenerReferencia(); err != nil {
+			return nil, err
+
+		} else {
+			datosReferencias[i] = referencia
+		}
+	}
+
+	return func(bdd *b.Bdd, parametrosDados []string) (any, error) {
+		fila := bdd.MySQL.QueryRow(query.Select, parametrosDados[indiceIdNecesario])
+
+		if err := fila.Scan(datosReferencias...); err != nil {
+			return nil, fmt.Errorf("en lectura de una fila, con la query %s, se tuvo el error: %v", query.Select, err)
+		}
+
+		resultado := make(d.ConjuntoDato)
+		for i, info := range infoVariables {
+			subresultado := &resultado
+
+			for _, path := range info.Path {
+				if dato, ok := (*subresultado)[path]; !ok {
+					nuevoConjunto := make(d.ConjuntoDato)
+					ptrNuevoConjunto := &nuevoConjunto
+
+					(*subresultado)[path] = *ptrNuevoConjunto
+					subresultado = ptrNuevoConjunto
+
+				} else if lugar, ok := dato.(d.ConjuntoDato); !ok {
+					return nil, fmt.Errorf("se construyó mal el conjunto de datos para devolver al usuario")
+
+				} else {
+					subresultado = &lugar
+				}
+			}
+
+			if valor, err := info.Variable.Desreferenciar(datosReferencias[i]); err != nil {
+				return nil, fmt.Errorf("no se pudo desreferenciar %s.%s por: %v", strings.Join(info.Path, "."), info.Nombre, err)
+
+			} else {
+				(*subresultado)[info.Nombre] = valor
+			}
+		}
+
+		return resultado, nil
+	}, nil
 }
 
+/*
 type InformacionTabla struct {
 	Ruta        string
 	Query       d.FnMultiplesDatos
@@ -23,16 +77,6 @@ func NewInformacionTabla(ruta string, query d.FnMultiplesDatos, referencias map[
 		Ruta:        ruta,
 		Query:       query,
 		Referencias: referencias,
-	}
-}
-
-type InformacionFila struct {
-	Condicion d.FnUnDato
-}
-
-func NewInformacionFila(condicion d.FnUnDato) InformacionFila {
-	return InformacionFila{
-		Condicion: condicion,
 	}
 }
 
@@ -56,62 +100,10 @@ func (i InformacionTabla) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]s
 
 	datos := make([]d.ConjuntoDato, len(listaConjuntos))
 	for idx, conjuntoDato := range listaConjuntos {
-		for nombre := range i.Referencias {
-			referencia := i.Referencias[nombre]
-			pathView := NewPathView(referencia.View)
-
-			for parametro := range referencia.Parametros {
-				claveValor := referencia.Parametros[parametro]
-
-				if valor, ok := conjuntoDato[claveValor]; ok {
-					pathView.AgregarParametro(parametro, valor)
-
-				} else if valor, ok := requisitos[claveValor]; ok {
-					pathView.AgregarParametro(parametro, valor)
-
-				} else {
-					return nil, fmt.Errorf("se necesita valor en %s, y no se consiguio", claveValor)
-				}
-			}
-
-			conjuntoDato[nombre] = pathView
-		}
-
 		datos[idx] = conjuntoDato
 	}
 
 	return datos, nil
 }
 
-func (i InformacionTabla) NecesitaEndpoint() (bool, string) {
-	return true, i.Ruta
-}
-
-func (i InformacionFila) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error) {
-	return i.Condicion(bdd, requisitos)
-}
-
-func (i InformacionFila) NecesitaEndpoint() (bool, string) {
-	return false, ""
-}
-
-func (i InformacionReferencia) ObtenerInformacion(bdd *b.Bdd, requisitos map[string]string) (any, error) {
-	pathView := NewPathView(i.View)
-
-	for parametro := range i.Parametros {
-		claveValor := i.Parametros[parametro]
-
-		if valor, ok := requisitos[claveValor]; !ok {
-			return nil, fmt.Errorf("se necesita valor en %s, y no se consiguio", claveValor)
-
-		} else {
-			pathView.AgregarParametro(claveValor, valor)
-		}
-	}
-
-	return pathView, nil
-}
-
-func (i InformacionReferencia) NecesitaEndpoint() (bool, string) {
-	return false, ""
-}
+*/

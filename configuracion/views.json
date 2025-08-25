@@ -2,6 +2,7 @@
     "inicio": "Root",
     "templates": "./templates",
     "css": "./css",
+    "imagenes": "./imagenes",
     "views": [
         {
             "nombre": "Root",
@@ -12,7 +13,8 @@
             "informacion": {
                 "Carreras": { 
                     "tipo": "ElementosCompleto",
-                    "Carreras": {}
+                    "Carreras": {},
+                    "claves": [ "id", "nombre" ]
                 }
             },
             "bloqueTemplate": "facultad"
@@ -24,7 +26,15 @@
                 "Carrera": {
                     "tipo": "ElementoUnico", 
                     "tabla": "Carreras", 
-                    "id": "idCarrera"
+                    "id": "idCarrera",
+                    "claves": [ "nombre" ]
+                },
+                "Planes": {
+                    "tipo": "ElementosCompleto",
+                    "Materias": {
+                        "claves": [ "refPlan:nombre" ]
+                    },
+                    "groupBy": [ "refPlan" ]
                 },
                 "Materias": { 
                     "tipo": "ElementosParcial", 
@@ -33,14 +43,16 @@
                         "orderBy": [ 
                             "refCuatrimestre:anio=anio", 
                             "refCuatrimestre:cuatrimestre=cuatrimestre" 
-                        ]
+                        ],
+                        "claves": [ "nombre", "refCarrera", "refMateria" ]
                     }, 
                     "MateriasEquivalente": {
                         "condicion": "refCarrera == idCarrera",
                         "orderBy": [ 
                             "refMateria:refCuatrimestre:anio=anio", 
                             "refMateria:refCuatrimestre:cuatrimestre=cuatrimestre" 
-                        ]
+                        ],
+                        "claves": [ "nombre", "refCarrera", "refMateria" ]
                     },
                     "elementos": {
                         "nombrePedido": "endpoint",
@@ -55,15 +67,11 @@
             "nombre": "Materia",
             "parametros": [ "idCarrera", "idMateria" ],
             "informacion": {
-                "Carrera": {
-                    "tipo": "ElementoUnico", 
-                    "tabla": "Carreras", 
-                    "id": "idCarrera"
-                },
                 "Materia": {
                     "tipo": "ElementoUnico", 
                     "tabla": "Materias",
-                    "id": "idMateria"
+                    "id": "idMateria",
+                    "claves": [ "id", "nombre", "refCarrera:id", "refCarrera:nombre" ]
                 }, 
                 "Temas": {
                     "tipo": "ElementosCompleto",
@@ -79,20 +87,11 @@
             "nombre": "TemaMateria",
             "parametros": [ "idCarrera", "idMateria", "idTema" ],
             "informacion": {
-                "Carrera": {
-                    "tipo": "ElementoUnico", 
-                    "tabla": "Carreras", 
-                    "id": "idCarrera"
-                },
-                "Materia": {
-                    "tipo": "ElementoUnico", 
-                    "tabla": "Materias", 
-                    "id": "idMateria"
-                }, 
                 "Tema": {
                     "tipo": "ElementoUnico",
                     "tabla": "TemasMateria",
-                    "id": "idTema"
+                    "id": "idTema",
+                    "claves": [ "nombre", "refMateria:id", "refMateria:nombre", "refMateria:refCarrera:id", "refMateria:refCarrera:nombre" ]
                 },
                 "Notas": {
                     "tipo": "ElementosParcial",
@@ -100,6 +99,7 @@
                         "condicion": "refVinculos:ref == idTema && refVinculos:tabla == 'TemasMateria'",
                         "orderBy": [ "nombre" ]
                     },
+                    "claves": [ "nombre" ],
                     "elementos": {
                         "nombrePedido": "endpoint",
                         "bloqueElementos": "notas",
