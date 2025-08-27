@@ -18,18 +18,13 @@ type InformacionViews struct {
 	Views         []View `json:"views"`
 }
 
-type InfoTablas map[*d.DescripcionTabla]InformacionTabla
+type InfoTablas map[*d.DescripcionTabla]d.InformacionQuery
 
 type View struct {
 	Nombre      string                 `json:"nombre"`
 	Template    string                 `json:"bloqueTemplate"`
 	Parametros  []string               `json:"parametros"`
 	Informacion map[string]Informacion `json:"informacion"`
-}
-
-type RespuestaInformacion struct {
-	Informacion   v.FnInformacion
-	ExtraEndpoint map[string]v.Endpoint
 }
 
 type RespuestaInformacionViews struct {
@@ -72,38 +67,43 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 				}
 
 			case ParametroElementosCompleto:
-				tablas := make(map[*d.DescripcionTabla]InformacionTabla)
+				tablas := make(InfoTablas)
+
 				for tablaUsada := range detalles.Tablas {
 					if tabla, ok := tablasPorNombre[tablaUsada]; !ok {
 						return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", tablaUsada)
 
+					} else if queryDato, err := detalles.Tablas[tablaUsada].CrearInformacionQuery(); err != nil {
+						return nil, fmt.Errorf("hubo un error al obtener los detalles de la query, con error: %v", err)
+
 					} else {
-						tablas[tabla] = detalles.Tablas[tablaUsada]
+						tablas[tabla] = queryDato
 					}
 				}
 
-				if respuesta, err := crearInformacionElementosCompleto(infoView, tablas, nombreVariable, detalles); err != nil {
+				if informacion, err := crearInformacionElementosCompleto(tablas, infoView.Parametros, detalles.GroupBy); err != nil {
 					return nil, err
 
 				} else {
-					informaciones[nombreVariable] = respuesta.Informacion
-					for ruta := range respuesta.ExtraEndpoint {
-						endpoints[ruta] = respuesta.ExtraEndpoint[ruta]
-					}
+					informaciones[nombreVariable] = informacion
 				}
 
 			case ParametroElementosParcial:
-				tablas := make(map[*d.DescripcionTabla]InformacionTabla)
+				tablas := make(InfoTablas)
+
 				for tablaUsada := range detalles.Tablas {
 					if tabla, ok := tablasPorNombre[tablaUsada]; !ok {
 						return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", tablaUsada)
 
+					} else if queryDato, err := detalles.Tablas[tablaUsada].CrearInformacionQuery(); err != nil {
+						return nil, fmt.Errorf("hubo un error al obtener los detalles de la query, con error: %v", err)
+
 					} else {
-						tablas[tabla] = detalles.Tablas[tablaUsada]
+						tablas[tabla] = queryDato
 					}
 				}
 
-				if respuesta, err := crearInformacionElementosParcial(infoView, tablas, nombreVariable, detalles); err != nil {
+				if respuesta, err := crearInformacionElementosParcial(tablas, infoView.Parametros, detalles.GroupBy); err != nil {
 					return nil, err
 
 				} else {
@@ -139,25 +139,28 @@ func crearInformacionElementoUnico(tabla *d.DescripcionTabla, parametros []strin
 		return nil, fmt.Errorf("el id de la tabla no es uno de los parametros")
 	}
 
-	if query, err := d.NewQuerySimple(tabla, detalles.ClavesUsadas); err != nil {
+	if query, err := d.NewQuerySimple(tabla, detalles.ClavesUsadas, detalles.PametroParaId); err != nil {
 		return nil, err
 
 	} else {
-		return v.NewInformacionFila(query, parametros, detalles.PametroParaId)
+		return v.NewInformacionFila(query, parametros)
 	}
 }
 
-func crearInformacionElementosCompleto(infoView View, tablas InfoTablas, nombreVariable string, parametro ParametroElementosCompleto) (RespuestaInformacion, error) {
+func crearInformacionElementosCompleto(tablas InfoTablas, parametros []string, groupBy []string) (v.FnInformacion, error) {
+	if querys, err := d.NewQueryMultiples(tablas, groupBy); err != nil {
+		return nil, err
 
-	return RespuestaInformacion{
-		ExtraEndpoint: make(map[string]v.Endpoint),
-	}, nil
+	} else {
+		return v.NewInformacionCompleta(querys, parametros)
+	}
 }
 
-func crearInformacionElementosParcial(infoView View, tablas InfoTablas, nombreVariable string, parametro ParametroElementosParcial) (RespuestaInformacion, error) {
-	endpoints := make(map[string]v.Endpoint)
+func crearInformacionElementosParcial(tablas InfoTablas, parametros []string, groupBy []string) (v.RespuestaInformacion, error) {
+	if querys, err := d.NewQueryMultiples(tablas, groupBy); err != nil {
+		return v.RespuestaInformacion{}, err
 
-	return RespuestaInformacion{
-		ExtraEndpoint: endpoints,
-	}, nil
+	} else {
+		return v.NewInformacionParcial(querys, parametros)
+	}
 }

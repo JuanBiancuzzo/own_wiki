@@ -31,9 +31,15 @@
 
 {{ block "bloqueMateria" . }}
     {{ range  .Materias }}
-        <h3 hx-target="#centro" hx-get="{{ PathViewURL Materia .refCarrera .refMateria }}">
+        {{ if .Tipo == "Materias" }}
+        <h3 hx-target="#centro" hx-get="{{ PathViewURL Materia .refCarrera .refMateria }}" style="background-color: blue;">
             {{ .nombre }}
         </h3>
+        {{ else }}
+        <h3 hx-target="#centro" hx-get="{{ PathViewURL Materia .refCarrera .refMateria }}" style="background-color: green;">
+            {{ .nombre }}
+        </h3>
+        {{ end }}
     {{ end }}
     <div 
         hx-target="#elementos"

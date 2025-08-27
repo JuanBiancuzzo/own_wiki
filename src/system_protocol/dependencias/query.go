@@ -2,14 +2,21 @@ package dependencias
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 )
 
 type QueryDato struct {
-	Select string
-	Claves []*HojaClave
-	Where  []*HojaClave
+	SentenciaQuery string
+	ClaveSelect    []*HojaClave
+	ClaveWhere     []*HojaClave
+	Parametros     []string
+}
+
+type InformacionQuery struct {
+	Condiciones  []string // Claves de la tabla
+	Parametros   []string // valores pasados
+	OrderBy      []string
+	ClavesUsadas []string
 }
 
 /*
@@ -54,6 +61,10 @@ Otro ejemplo:
 
 # Resulta en la query
 
+	Todas las claves serian:
+		[ TemasMateria_id, TemasMateria_nombre, temp1_1.Materias_id, temp_1_1.Materias_nombre, temp_2_1.Carreras_id, temp_2_1.Carreras_nombre ]
+	por lo tanto se puede hacer un wrapper de esta sentencia, con todos los
+
 	SELECT TemasMateria.id AS TemasMateria_id, TemasMateria.nombre AS TemasMateria_nombre, temp1_1.* FROM TemasMateria
 	JOIN (
 		SELECT Materias.id AS Materias_id, Materias.nombre AS Materias_nombre, temp2_1.* FROM Materias
@@ -61,83 +72,134 @@ Otro ejemplo:
 			SELECT Carreras.id AS Carreras_id, Carreras.nombre AS Carreras_nombre FROM Carreras
 		)
 		AS temp2_1 ON Materias.refCarrera = temp2_1.Carreras_id
-		JOIN (
-			SELECT Carreras.id AS Carreras_id, Carreras.nombre AS Carreras_nombre FROM Carreras
-		)
-		AS temp2_2 ON Materias.refCarrera = temp2_1.Carreras_id
 	)
 	AS temp1_1 ON TemasMateria.refMateria = temp1_1.Materias_id
-	WHERE TemasMateria_id = 1;
+	WHERE TemasMateria_id = ?;
 */
-func generarSelect(nodo *NodoClave, profundidad int) string {
+func generarSetencia(nodo *NodoClave, profundidad int) string {
 	nombreTabla := nodo.Tabla.NombreTabla
-	claves := make([]string, len(nodo.Claves))
-	for i, clave := range nodo.Claves {
+	clavesSelect := make([]string, len(nodo.Select))
+	for i, clave := range nodo.Select {
 		nombreClave := clave.Nombre
-		claves[i] = fmt.Sprintf("%s.%s AS %s_%s", nombreTabla, nombreClave, nombreTabla, nombreClave)
+		alias := fmt.Sprintf("%s_%s", nombreTabla, nombreClave)
+		if clave.Nombre != clave.Alias {
+			alias = clave.Alias
+		}
+
+		clavesSelect[i] = fmt.Sprintf("%s.%s AS %s", nombreTabla, nombreClave, alias)
+	}
+
+	clavesWhere := make([]string, len(nodo.Where))
+	for i, clave := range nodo.Where {
+		clavesWhere[i] = fmt.Sprintf("%s_%s = ?", nombreTabla, clave.Nombre)
+	}
+
+	sentenciaWhere := ""
+	if len(clavesWhere) > 0 {
+		sentenciaWhere = fmt.Sprintf("WHERE %s", strings.Join(clavesWhere, " AND "))
 	}
 
 	if len(nodo.Referencias) == 0 {
-		return fmt.Sprintf("SELECT %s FROM %s", strings.Join(claves, ", "), nombreTabla)
+		return fmt.Sprintf("SELECT %s FROM %s %s", strings.Join(clavesSelect, ", "), nombreTabla, sentenciaWhere)
 	}
 
 	sentenciasJoin := make([]string, len(nodo.Referencias))
 	for i, referencia := range nodo.Referencias {
-		sentenciaInterna := generarSelect(referencia, profundidad+1)
+		sentenciaInterna := generarSetencia(referencia, profundidad+1)
+
+		nombreTemporal := fmt.Sprintf("temp_%d_%d", profundidad, i)
+		claveReferencia := fmt.Sprintf("%s.%s", nodo.Tabla.NombreTabla, referencia.Nombre)
+		claveId := fmt.Sprintf("%s.%s_id", nombreTemporal, referencia.Tabla.NombreTabla)
 
 		sentenciasJoin[i] = fmt.Sprintf(
-			"INNER JOIN (\n\t%s\n) AS temp_%d_%d ON %s.%s  temp_%d_%d.%s_id",
-			sentenciaInterna,
-			profundidad, i,
-			nodo.Tabla.NombreTabla,
-			referencia.Nombre,
-			profundidad, i,
-			referencia.Tabla.NombreTabla,
+			"INNER JOIN (\n\t%s\n) AS %s ON %s %s",
+			sentenciaInterna, nombreTemporal, claveReferencia, claveId,
 		)
 	}
 
 	return fmt.Sprintf(
-		"SELECT %s FROM %s %s",
-		strings.Join(claves, ", "),
+		"SELECT %s FROM %s %s %s",
+		strings.Join(clavesSelect, ", "),
 		nombreTabla,
 		strings.Join(sentenciasJoin, "\n"),
+		sentenciaWhere,
 	)
 }
 
-func NewQuerySimple(tabla *DescripcionTabla, clavesUsadas []string) (QueryDato, error) {
-	indiceId := slices.Index(clavesUsadas, "id")
-	if indiceId < 0 {
-		indiceId = len(clavesUsadas)
-		clavesUsadas = append(clavesUsadas, "id")
-	}
-
-	claves := make([]*HojaClave, len(clavesUsadas))
+func NewQuerySimple(tabla *DescripcionTabla, clavesUsadas []string, parametroId string) (QueryDato, error) {
+	claveSelect := make([]*HojaClave, len(clavesUsadas))
+	claveWhere := []*HojaClave{nil}
+	var err error
 
 	raiz := NewRaizClave(tabla)
 	for i, clave := range clavesUsadas {
-		if hoja, err := raiz.Insertar(clave); err != nil {
+		if claveSelect[i], err = raiz.InsertarSelect(clave); err != nil {
 			return QueryDato{}, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
-
-		} else {
-			claves[i] = hoja
 		}
 	}
 
+	if claveWhere[0], err = raiz.InsertarWhere("id"); err != nil {
+		return QueryDato{}, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
+	}
+
 	return QueryDato{
-		Select: fmt.Sprintf(
-			"%s WHERE %s = ?",
-			generarSelect(&raiz, 0),
-			claves[indiceId].NombreQuery(),
-		),
-		Claves: claves,
-		Where:  []*HojaClave{},
+		SentenciaQuery: generarSetencia(&raiz, 0),
+		ClaveSelect:    claveSelect,
+		ClaveWhere:     claveWhere,
+		Parametros:     []string{parametroId},
 	}, nil
 }
 
-func NewQueryMultiplesCompleto(tabla *DescripcionTabla, clavesUsadas []string, condicion string) (QueryDato, error) {
-	return QueryDato{}, nil
-}
+/*
+	type InformacionQuery struct {
+	    Condicion    string
+	    OrderBy      []string
+	    ClavesUsadas []string
+	}
 
-func NewQueryMultiplesParcial() (QueryDato, error) {
-	return QueryDato{}, nil
+	"Materias": {
+	    "Materias": {
+	        "condicion": "refCarrera:id == idCarrera",
+	        "orderBy": [ "refCuatrimestre:anio=anio", "refCuatrimestre:cuatrimestre=cuatrimestre" ],
+	        "claves": [ "id", "nombre", "refCarrera:id", "refCuatrimestre:anio", "refCuatrimestre:cuatrimestre" ]
+	    },
+	    "MateriasEquivalente": {
+	        "condicion": "refCarrera:id == idCarrera",
+	        "orderBy": [ "refMateria:refCuatrimestre:anio=anio", "refMateria:refCuatrimestre:cuatrimestre=cuatrimestre" ],
+	        "claves": [ "nombre", "refCarrera:id", "refMateria:id", "refMateria:refCuatrimestre:anio", "refMateria:refCuatrimestre:cuatrimestre" ]
+	    }
+	}
+*/
+func NewQueryMultiples(tablas map[*DescripcionTabla]InformacionQuery, groupBy []string) (map[string]QueryDato, error) {
+	datosQuery := make(map[string]QueryDato)
+
+	for tabla := range tablas {
+		info := tablas[tabla]
+
+		claveSelect := make([]*HojaClave, len(info.ClavesUsadas))
+		claveWhere := make([]*HojaClave, len(info.Condiciones))
+		var err error
+
+		raiz := NewRaizClave(tabla)
+		for i, clave := range info.ClavesUsadas {
+			if claveSelect[i], err = raiz.InsertarSelect(clave); err != nil {
+				return datosQuery, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
+			}
+		}
+
+		for i, clave := range info.Condiciones {
+			if claveWhere[i], err = raiz.InsertarWhere(clave); err != nil {
+				return datosQuery, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
+			}
+		}
+
+		datosQuery[tabla.NombreTabla] = QueryDato{
+			SentenciaQuery: generarSetencia(&raiz, 0),
+			ClaveSelect:    claveSelect,
+			ClaveWhere:     claveWhere,
+			Parametros:     info.Parametros,
+		}
+	}
+
+	return datosQuery, nil
 }

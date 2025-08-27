@@ -1,6 +1,11 @@
 package configuracion
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	d "own_wiki/system_protocol/dependencias"
+	"strings"
+)
 
 type TipoParametro string
 
@@ -32,9 +37,31 @@ type ParametroElementosCompleto struct {
 }
 
 type InformacionTabla struct {
-	Condicion    string   `json:"condicion"`
+	Condiciones  []string `json:"condicion"`
 	OrderBy      []string `json:"orderBy"`
 	ClavesUsadas []string `json:"claves"`
+}
+
+func (it InformacionTabla) CrearInformacionQuery() (d.InformacionQuery, error) {
+	condiciones := make([]string, len(it.Condiciones))
+	parametros := make([]string, len(it.Condiciones))
+
+	for i, expresion := range it.Condiciones {
+		separacion := strings.Split(expresion, "==")
+		if len(separacion) == 2 {
+			return d.InformacionQuery{}, fmt.Errorf("la expresion no tiene sentido, fue %s", expresion)
+		}
+
+		condiciones[i] = separacion[0]
+		parametros[i] = separacion[1]
+	}
+
+	return d.InformacionQuery{
+		Condiciones:  condiciones,
+		Parametros:   parametros,
+		OrderBy:      it.OrderBy,
+		ClavesUsadas: it.ClavesUsadas,
+	}, nil
 }
 
 type ParametroElementosParcial struct {
