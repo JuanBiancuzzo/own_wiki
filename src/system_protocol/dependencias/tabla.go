@@ -25,6 +25,22 @@ type FnFKeys func(hash *Hash, datosIngresados ConjuntoDato) ([]ForeignKey, error
 type FnHash func(hash *Hash, datosIngresados ConjuntoDato) (IntFK, error)
 type FnTabla func(bdd *b.Bdd) error
 
+type DescripcionTabla struct {
+	Nombre             string
+	Tipo               TipoTabla
+	ElementosRepetidos bool
+	Variables          []Variable
+}
+
+func NewDescripcionTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) DescripcionTabla {
+	return DescripcionTabla{
+		Nombre:             nombreTabla,
+		Tipo:               tipoTabla,
+		ElementosRepetidos: elementosRepetidos,
+		Variables:          variables,
+	}
+}
+
 type Tabla struct {
 	NombreTabla         string
 	TipoTabla           TipoTabla
@@ -39,30 +55,30 @@ type Tabla struct {
 	CrearTablaRelajada FnTabla
 }
 
-func ConstruirTabla(nombreTabla string, tracker *TrackerDependencias, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) Tabla {
+func ConstruirTabla(tracker *TrackerDependencias, descripcion DescripcionTabla) Tabla {
 	var existe FnExiste
-	if elementosRepetidos {
+	if descripcion.ElementosRepetidos {
 		existe = func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error) { return false, nil }
 	} else {
-		existe = generarExiste(nombreTabla, variables)
+		existe = generarExiste(descripcion.Nombre, descripcion.Variables)
 	}
 
 	variablesPorNombre := make(map[string]Variable)
-	for _, variable := range variables {
+	for _, variable := range descripcion.Variables {
 		variablesPorNombre[variable.Clave] = variable
 	}
 
 	return Tabla{
-		NombreTabla: nombreTabla,
+		NombreTabla: descripcion.Nombre,
 		Variables:   variablesPorNombre,
-		TipoTabla:   tipoTabla,
+		TipoTabla:   descripcion.Tipo,
 
 		Existe:              existe,
-		Insertar:            generarInsertar(nombreTabla, tracker, variables),
-		CrearForeignKey:     generarFKeys(variables),
-		Hash:                generarHash(variables),
-		CrearTablaRelajada:  generarCrearTabla(nombreTabla, variables),
-		ObtenerDependencias: describirDependencias(variables),
+		Insertar:            generarInsertar(descripcion.Nombre, tracker, descripcion.Variables),
+		CrearForeignKey:     generarFKeys(descripcion.Variables),
+		Hash:                generarHash(descripcion.Variables),
+		CrearTablaRelajada:  generarCrearTabla(descripcion.Nombre, descripcion.Variables),
+		ObtenerDependencias: describirDependencias(descripcion.Variables),
 	}
 }
 
