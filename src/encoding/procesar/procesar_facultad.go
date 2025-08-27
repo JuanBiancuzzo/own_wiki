@@ -40,17 +40,19 @@ func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 		return fmt.Errorf("cargar cuatri con error: %v", err)
 	}
 
-	materiasCorrelativas := make([]d.RelacionTabla, len(meta.Correlativas))
+	materiasCorrelativas := make([]d.ConjuntoDato, len(meta.Correlativas))
 	for i, infoCorrelativa := range meta.Correlativas {
 		tablaCorrelativa := TABLA_MATERIAS
 		if infoCorrelativa.Tipo == MATERIA_EQUIVALENTE {
 			tablaCorrelativa = TABLA_MATERIAS_EQ
 		}
 
-		materiasCorrelativas[i] = d.NewRelacion(tablaCorrelativa, d.ConjuntoDato{
-			"nombre":     infoCorrelativa.Materia,
-			"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": meta.NombreCarrera}),
-		})
+		materiasCorrelativas[i] = d.ConjuntoDato{
+			"refCorrelativa": d.NewRelacion(tablaCorrelativa, d.ConjuntoDato{
+				"nombre":     infoCorrelativa.Materia,
+				"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": meta.NombreCarrera}),
+			}),
+		}
 	}
 
 	err = tracker.Cargar(TABLA_MATERIAS, d.ConjuntoDato{
@@ -76,17 +78,19 @@ func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 func ProcesarMateriaEquivalente(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
 	infoMateria := meta.MateriaEquivalente
 
-	materiasCorrelativas := make([]d.RelacionTabla, len(meta.Correlativas))
+	materiasCorrelativas := make([]d.ConjuntoDato, len(meta.Correlativas))
 	for i, infoCorrelativa := range meta.Correlativas {
 		tablaCorrelativa := TABLA_MATERIAS
 		if infoCorrelativa.Tipo == MATERIA_EQUIVALENTE {
 			tablaCorrelativa = TABLA_MATERIAS_EQ
 		}
 
-		materiasCorrelativas[i] = d.NewRelacion(tablaCorrelativa, d.ConjuntoDato{
-			"nombre":     infoCorrelativa.Materia,
-			"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": meta.NombreCarrera}),
-		})
+		materiasCorrelativas[i] = d.ConjuntoDato{
+			"refCorrelativa": d.NewRelacion(tablaCorrelativa, d.ConjuntoDato{
+				"nombre":     infoCorrelativa.Materia,
+				"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": meta.NombreCarrera}),
+			}),
+		}
 	}
 
 	err := tracker.Cargar(TABLA_MATERIAS_EQ, d.ConjuntoDato{

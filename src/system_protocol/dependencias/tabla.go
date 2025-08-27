@@ -39,7 +39,7 @@ type DescripcionTabla struct {
 	CrearTablaRelajada FnTabla
 }
 
-func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) DescripcionTabla {
+func ConstruirTabla(nombreTabla string, tracker *TrackerDependencias, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) DescripcionTabla {
 	var existe FnExiste
 	if elementosRepetidos {
 		existe = func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error) { return false, nil }
@@ -58,7 +58,7 @@ func ConstruirTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos 
 		TipoTabla:   tipoTabla,
 
 		Existe:              existe,
-		Insertar:            generarInsertar(nombreTabla, variables),
+		Insertar:            generarInsertar(nombreTabla, tracker, variables),
 		CrearForeignKey:     generarFKeys(variables),
 		Hash:                generarHash(variables),
 		CrearTablaRelajada:  generarCrearTabla(nombreTabla, variables),
@@ -82,6 +82,10 @@ func generarExiste(nombreTabla string, variables []Variable) FnExiste {
 
 		case VariableReferencia:
 			queryParam = append(queryParam, fmt.Sprintf("tipo%s = ?", variable.Clave))
+
+		case VariableArrayReferencia:
+			// si la variable es esta, no deberia hacer nada porque no es un valor posible para buscar si existe
+			continue
 		}
 	}
 
@@ -112,7 +116,7 @@ func generarExiste(nombreTabla string, variables []Variable) FnExiste {
 	}
 }
 
-func generarInsertar(nombreTabla string, variables []Variable) FnInsertar {
+func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables []Variable) FnInsertar {
 	// Las claves insertar no tienen que tener a las claves ref que no tengan multiples
 	clavesInsertar := []string{}
 	clavesTotales := []string{}
@@ -141,6 +145,11 @@ func generarInsertar(nombreTabla string, variables []Variable) FnInsertar {
 			}
 			clavesTotales = append(clavesTotales, variable.Clave)
 			valores = append(valores, "0")
+
+		case VariableArrayReferencia:
+			// Yo no necesito como tal esta variable para la insercion de esta tabla,
+			// pero si necesito hacer que la otra tabla cree su "generarInsertar"
+			// para poder llamarla aca
 		}
 	}
 
@@ -151,6 +160,9 @@ func generarInsertar(nombreTabla string, variables []Variable) FnInsertar {
 		strings.Join(clavesTotales, ", "),
 		strings.Join(valores, ", "),
 	)
+
+	clavesExternas := []string{}
+	tablasExterna := []string{}
 
 	largoDatos := len(clavesInsertar)
 	return func(bdd *b.Bdd, datosIngresados ConjuntoDato) (int64, error) {
@@ -166,6 +178,18 @@ func generarInsertar(nombreTabla string, variables []Variable) FnInsertar {
 
 			} else {
 				datos[i] = dato
+			}
+		}
+
+		for i, clave := range clavesExternas {
+			if dato, ok := datosIngresados[clave]; !ok {
+				return 0, fmt.Errorf("el usuario no ingreso el dato para %s", clave)
+
+			} else if datosRelacion, ok := dato.([]ConjuntoDato); ok {
+				for _, datoRelacion := range datosRelacion {
+					datoRelacion["selfRef"] = NewRelacion(nombreTabla, datosIngresados)
+					tracker.Cargar(tablasExterna[i], datoRelacion)
+				}
 			}
 		}
 
@@ -264,6 +288,9 @@ func generarHash(variables []Variable) FnHash {
 					fnHashs = append(fnHashs, func(_ string) FnHash { return tabla.Hash })
 				}
 			}
+		case VariableArrayReferencia:
+			// Para este en particular, no la necestio, por lo tanto es irrelevante
+			continue
 		}
 	}
 

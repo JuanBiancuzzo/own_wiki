@@ -18,7 +18,7 @@ func ProcesarCursoOnline(path string, meta *Frontmatter, tracker *d.TrackerDepen
 		return fmt.Errorf("obtener anio del curso online con error: %v", err)
 	}
 
-	profesores := make([]d.RelacionTabla, len(meta.NombreAutores))
+	profesores := make([]d.ConjuntoDato, len(meta.NombreAutores))
 	for i, profesor := range meta.NombreAutores {
 		datosProfesor := d.ConjuntoDato{
 			"nombre":   strings.TrimSpace(profesor.Nombre),
@@ -30,7 +30,7 @@ func ProcesarCursoOnline(path string, meta *Frontmatter, tracker *d.TrackerDepen
 			return fmt.Errorf("cargar persona en curso online con error: %v", err)
 		}
 
-		profesores[i] = d.NewRelacion(TABLA_PERSONAS, datosProfesor)
+		profesores[i] = d.ConjuntoDato{"refProfesor": d.NewRelacion(TABLA_PERSONAS, datosProfesor)}
 	}
 
 	err = tracker.Cargar(TABLA_CURSOS_ONLINE, d.ConjuntoDato{
@@ -55,7 +55,7 @@ func ProcesarCursoPresencial(path string, meta *Frontmatter, tracker *d.TrackerD
 		return fmt.Errorf("obtener anio del curso presencial con error: %v", err)
 	}
 
-	profesores := make([]d.RelacionTabla, len(meta.NombreAutores))
+	profesores := make([]d.ConjuntoDato, len(meta.NombreAutores))
 	for i, profesor := range meta.NombreAutores {
 		datosProfesor := d.ConjuntoDato{
 			"nombre":   strings.TrimSpace(profesor.Nombre),
@@ -67,7 +67,7 @@ func ProcesarCursoPresencial(path string, meta *Frontmatter, tracker *d.TrackerD
 			return fmt.Errorf("cargar persona en curso online con error: %v", err)
 		}
 
-		profesores[i] = d.NewRelacion(TABLA_PERSONAS, datosProfesor)
+		profesores[i] = d.ConjuntoDato{"refProfesor": d.NewRelacion(TABLA_PERSONAS, datosProfesor)}
 	}
 
 	err = tracker.Cargar(TABLA_CURSOS_PRESENECIAL, d.ConjuntoDato{

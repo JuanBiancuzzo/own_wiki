@@ -50,7 +50,7 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 	edicion := NumeroODefault(meta.Edicion, 1)
 	volumen := NumeroODefault(meta.Volumen, 0)
 
-	autores := make([]d.RelacionTabla, len(meta.NombreAutores))
+	autores := make([]d.ConjuntoDato, len(meta.NombreAutores))
 	for i, autor := range meta.NombreAutores {
 		datosAutor := d.ConjuntoDato{
 			"nombre":   strings.TrimSpace(autor.Nombre),
@@ -62,7 +62,7 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 			return fmt.Errorf("cargar persona con error: %v", err)
 		}
 
-		autores[i] = d.NewRelacion(TABLA_PERSONAS, datosAutor)
+		autores[i] = d.ConjuntoDato{"refAutor": d.NewRelacion(TABLA_PERSONAS, datosAutor)}
 	}
 
 	err = tracker.Cargar(TABLA_LIBROS, d.ConjuntoDato{
@@ -86,7 +86,7 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		paginaInicio := NumeroODefault(capitulo.Paginas.Inicio, 0)
 		paginaFinal := NumeroODefault(capitulo.Paginas.Final, 1)
 
-		editores := make([]d.RelacionTabla, len(capitulo.Editores))
+		editores := make([]d.ConjuntoDato, len(capitulo.Editores))
 		for i, editor := range capitulo.Editores {
 			datosEditor := d.ConjuntoDato{
 				"nombre":   strings.TrimSpace(editor.Nombre),
@@ -98,7 +98,7 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 				return fmt.Errorf("cargar persona con error: %v", err)
 			}
 
-			editores[i] = d.NewRelacion(TABLA_PERSONAS, datosEditor)
+			editores[i] = d.ConjuntoDato{"refEditor": d.NewRelacion(TABLA_PERSONAS, datosEditor)}
 		}
 
 		err = tracker.Cargar(TABLA_CAPITULOS, d.ConjuntoDato{
@@ -143,7 +143,7 @@ func ProcesarPaper(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 	paginaInicio := NumeroODefault(meta.Paginas.Inicio, 0)
 	paginaFinal := NumeroODefault(meta.Paginas.Final, 1)
 
-	autores := make([]d.RelacionTabla, len(meta.Autores))
+	autores := make([]d.ConjuntoDato, len(meta.Autores))
 	for i, autor := range meta.Autores {
 		datosAutor := d.ConjuntoDato{
 			"nombre":   strings.TrimSpace(autor.Nombre),
@@ -155,10 +155,10 @@ func ProcesarPaper(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 			return fmt.Errorf("cargar persona con error: %v", err)
 		}
 
-		autores[i] = d.NewRelacion(TABLA_PERSONAS, datosAutor)
+		autores[i] = d.ConjuntoDato{"refAutor": d.NewRelacion(TABLA_PERSONAS, datosAutor)}
 	}
 
-	editores := make([]d.RelacionTabla, len(meta.Editores))
+	editores := make([]d.ConjuntoDato, len(meta.Editores))
 	for i, editor := range meta.Editores {
 		datosEditor := d.ConjuntoDato{
 			"nombre":   strings.TrimSpace(editor.Nombre),
@@ -170,7 +170,7 @@ func ProcesarPaper(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 			return fmt.Errorf("cargar persona con error: %v", err)
 		}
 
-		editores[i] = d.NewRelacion(TABLA_PERSONAS, datosEditor)
+		editores[i] = d.ConjuntoDato{"refEditor": d.NewRelacion(TABLA_PERSONAS, datosEditor)}
 	}
 
 	err = tracker.Cargar(TABLA_PAPERS, d.ConjuntoDato{

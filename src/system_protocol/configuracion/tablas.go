@@ -41,12 +41,12 @@ type InfoValorGuardar struct {
 	Largo int `json:"largo"`
 
 	// Referencia y ArrayReferencia
-	Tabla  string             `json:"tabla"`
-	Tablas []string           `json:"tablas"`
-	Extra  []InfoValorGuardar `json:"valoresExtra"`
+	Tabla      string             `json:"tabla"`
+	Tablas     []string           `json:"tablas"`
+	Estructura []InfoValorGuardar `json:"estructura"`
 }
 
-func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
+func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.DescripcionTabla, error) {
 	tablas := []d.DescripcionTabla{}
 
 	decodificador := json.NewDecoder(strings.NewReader(archivoJson))
@@ -156,6 +156,7 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 				variables = append(variables, d.NewVariableReferencia(vg.Representativo, clave, tablasRelacionadas))
 
 			case TV_ARRAY_REF:
+				continue
 				var nombreTablas []string
 				if vg.Tabla != "" {
 					nombreTablas = []string{vg.Tabla}
@@ -176,6 +177,10 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 						tablasRelacionadas[i] = tabla
 					}
 				}
+				/*
+					Hacer una variable => esta tiene la informacion para hacer la nueva tabla
+					Hacer un infoTabla y un tipoTabla, para acumularlo en el array
+				*/
 
 				variables = append(variables, d.NewVariableArrayReferencias(clave, tablasRelacionadas))
 
@@ -185,7 +190,7 @@ func CrearTablas(archivoJson string) ([]d.DescripcionTabla, error) {
 
 		}
 
-		nuevaTabla := d.ConstruirTabla(info.Nombre, tipoTablas[i], info.ElementosRepetidos, variables)
+		nuevaTabla := d.ConstruirTabla(info.Nombre, tracker, tipoTablas[i], info.ElementosRepetidos, variables)
 		mapaTablas[info.Nombre] = &nuevaTabla
 
 		tablas = append(tablas, nuevaTabla)

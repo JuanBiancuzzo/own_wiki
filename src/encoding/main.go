@@ -77,12 +77,18 @@ func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalM
 	return nil
 }
 
-func ObtenerTablas(dirConfiguracion string) ([]d.DescripcionTabla, error) {
+func CargarTablas(dirConfiguracion string, tracker *d.TrackerDependencias) error {
 	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "tablas.json")); err != nil {
-		return []d.DescripcionTabla{}, fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
+		return fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
+
+	} else if tablas, err := c.CrearTablas(string(bytes), tracker); err != nil {
+		return err
 
 	} else {
-		return c.CrearTablas(string(bytes))
+		for _, tabla := range tablas {
+			tracker.CargarTabla(tabla)
+		}
+		return nil
 	}
 }
 
@@ -104,18 +110,23 @@ func Encodear(dirInput, dirConfiguracion string, canalMensajes chan string) {
 	defer b.CerrarBddNoSQL(bddNoSQL)
 	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
-	tablas, err := ObtenerTablas(dirConfiguracion)
+	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional, bddNoSQL))
 	if err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo crear el tracker, se tuvo el error: %v", err)
+		return
+	}
+
+	if err = CargarTablas(dirConfiguracion, tracker); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo crear las tablas, se tuvo el error: %v", err)
 		return
 	}
 	canalMensajes <- "Se leyeron correctamente las tablas"
 
-	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional, bddNoSQL), tablas, canalMensajes)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo crear el tracker, se tuvo el error: %v", err)
+	if err = tracker.EmpezarProcesoInsertarDatos(canalMensajes); err != nil {
+		canalMensajes <- fmt.Sprintf("No se pudo iniciar el proceso de insercion de datos, se tuvo el error: %v", err)
 		return
 	}
+	canalMensajes <- "Iniciando el proceso de insertar datos"
 
 	if err = RecorrerDirectorio(dirInput, tracker, canalMensajes); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo recorrer todos los archivos, se tuvo el error: %v", err)

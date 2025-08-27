@@ -108,7 +108,11 @@
                 "clave": "refCuatrimestre", "tipo": "ref", "tabla": "CuatrimestresCarrera" 
             },
             {
-                "clave": "refCorrelativas", "tipo": "arrayRef", "tablas": ["Materias", "MateriasEquivalentes"]
+                "clave": "refCorrelativas", "tipo": "arrayRef", "estructura": [
+                    {
+                        "clave": "refCorrelativa", "tipo": "ref", "tablas": ["Materias", "MateriasEquivalentes"]
+                    }
+                ]
             }
         ]
     },
@@ -134,7 +138,11 @@
                 "clave": "refMateria", "tipo": "ref", "tabla": "Materias" 
             },
             {
-                "clave": "refCorrelativas", "tipo": "arrayRef", "tablas": ["Materias", "MateriasEquivalentes"]
+                "clave": "refCorrelativas", "tipo": "arrayRef", "estructura": [
+                    {
+                        "clave": "refCorrelativa", "tipo": "ref", "tablas": ["Materias", "MateriasEquivalentes"]
+                    }
+                ]
             }
         ]
     },
@@ -199,7 +207,11 @@
                 "clave": "refPagina", "tipo": "ref", "tabla": "PaginasCursos" 
             }, 
             {
-                "clave": "refProfesores", "tipo": "arrayRef", "tabla": "Personas"
+                "clave": "refProfesores", "tipo": "arrayRef", "estructura": [
+                    {
+                        "clave": "refProfesor", "tipo": "ref", "tabla": "Personas"
+                    }
+                ]
             }
         ]
     },
@@ -223,7 +235,11 @@
                 "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
             }, 
             {
-                "clave": "refProfesores", "tipo": "arrayRef", "tabla": "Personas"
+                "clave": "refProfesores", "tipo": "arrayRef", "estructura": [
+                    {
+                        "clave": "refProfesor", "tipo": "ref", "tabla": "Personas"
+                    }
+                ]
             }
         ]
     },
@@ -283,9 +299,12 @@
                 "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
             },
             {
-                "clave": "refRelaciones", "tipo": "arrayRef", "tabla": "Distribuciones",  "valoresExtra": [
+                "clave": "refRelaciones", "tipo": "arrayRef",  "estructura": [
                     { 
                         "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
+                    },
+                    { 
+                        "clave": "refDistribucion", "tipo": "ref", "tabla": "Distribuciones" 
                     }
                 ]
             }
@@ -329,7 +348,11 @@
                 "clave": "refColeccion", "tipo": "ref", "tabla": "Colecciones" 
             },
             {
-                "clave": "refAutores", "tipo": "arrayRef", "tabla": "Personas"
+                "clave": "refAutores", "tipo": "arrayRef", "estructura": [
+                    {
+                        "clave": "refAutor", "tipo": "ref", "tabla": "Personas" 
+                    }
+                ]
             }
         ]
     },
@@ -360,7 +383,11 @@
                 "clave": "refLibro", "tipo": "ref", "tabla": "Libros" 
             }, 
             {
-                "clave": "refEditores", "tipo": "arrayRef", "tabla": "Personas"
+                "clave": "refEditores", "tipo": "arrayRef", "estructura": [
+                    {
+                        "clave": "refEditor", "tipo": "ref", "tabla": "Personas"
+                    }
+                ]
             }
         ]
     },
@@ -420,10 +447,18 @@
                 "clave": "refRevista", "tipo": "ref", "tabla": "RevistasDePaper" 
             }, 
             {
-                "clave": "refAutores", "tipo": "arrayRef", "tabla": "Personas"
+                "clave": "refAutores", "tipo": "arrayRef", "estructura": [
+                    {
+                        "clave": "refAutor", "tipo": "ref", "tabla": "Personas"
+                    }
+                ]
             },
             {
-                "clave": "refEditores", "tipo": "arrayRef", "tabla": "Personas"
+                "clave": "refEditores", "tipo": "arrayRef", "estructura": [
+                    {
+                        "clave": "refEditor", "tipo": "ref", "tabla": "Personas"
+                    }
+                ]
             }
         ]
     },
@@ -446,7 +481,11 @@
                 "clave": "refArchivo", "tipo": "ref", "tabla": "Archivos" 
             },
             {
-                "clave": "refVinculos", "tipo": "arrayRef", "tablas": [ "TemasMateria", "TemasCurso" ]
+                "clave": "refVinculos", "tipo": "arrayRef", "estructura": [
+                    {
+                        "clave": "refVinculo", "tipo": "ref", "tablas": [ "TemasMateria", "TemasCurso" ]
+                    }
+                ]
             }
         ]
     }

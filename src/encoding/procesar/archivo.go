@@ -92,16 +92,18 @@ func ProcesarNota(path string, meta *Frontmatter, tracker *d.TrackerDependencias
 		return fmt.Errorf("obtener fecha de la nota con error: %v", err)
 	}
 
-	vinculosNota := make([]d.RelacionTabla, len(meta.VinculoFacultad)+len(meta.VinculoCurso))
+	vinculosNota := make([]d.ConjuntoDato, len(meta.VinculoFacultad)+len(meta.VinculoCurso))
 	for i, vFacultad := range meta.VinculoFacultad {
-		vinculosNota[i] = d.NewRelacion(TABLA_TEMA_MATERIA, d.ConjuntoDato{
-			"nombre":   vFacultad.NombreTema,
-			"capitulo": NumeroODefault(vFacultad.CapituloTema, 1),
-			"refMateria": d.NewRelacion(TABLA_MATERIAS, d.ConjuntoDato{
-				"nombre":     vFacultad.NombreMateria,
-				"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": vFacultad.NombreCarrera}),
+		vinculosNota[i] = d.ConjuntoDato{
+			"refVinculo": d.NewRelacion(TABLA_TEMA_MATERIA, d.ConjuntoDato{
+				"nombre":   vFacultad.NombreTema,
+				"capitulo": NumeroODefault(vFacultad.CapituloTema, 1),
+				"refMateria": d.NewRelacion(TABLA_MATERIAS, d.ConjuntoDato{
+					"nombre":     vFacultad.NombreMateria,
+					"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": vFacultad.NombreCarrera}),
+				}),
 			}),
-		})
+		}
 	}
 
 	desfaseVinculo := len(meta.VinculoFacultad)
@@ -116,14 +118,16 @@ func ProcesarNota(path string, meta *Frontmatter, tracker *d.TrackerDependencias
 			return fmt.Errorf("obtener anio del curso %s con error: %v", vCurso.TipoCurso, err)
 		}
 
-		vinculosNota[i+desfaseVinculo] = d.NewRelacion(TABLA_TEMA_CURSO, d.ConjuntoDato{
-			"nombre":   vCurso.NombreTema,
-			"capitulo": NumeroODefault(vCurso.CapituloTema, 1),
-			"refCurso": d.NewRelacion(tablaCurso, d.ConjuntoDato{
-				"nombre": vCurso.NombreCurso,
-				"anio":   anio,
+		vinculosNota[i+desfaseVinculo] = d.ConjuntoDato{
+			"refVinculo": d.NewRelacion(TABLA_TEMA_CURSO, d.ConjuntoDato{
+				"nombre":   vCurso.NombreTema,
+				"capitulo": NumeroODefault(vCurso.CapituloTema, 1),
+				"refCurso": d.NewRelacion(tablaCurso, d.ConjuntoDato{
+					"nombre": vCurso.NombreCurso,
+					"anio":   anio,
+				}),
 			}),
-		})
+		}
 	}
 
 	err = tracker.Cargar(TABLA_NOTAS, d.ConjuntoDato{

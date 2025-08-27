@@ -36,6 +36,9 @@ func (v Variable) ObtenerParametroSQL() []string {
 		}
 
 		parametros[cantidad-1] = fmt.Sprintf("%s INT", v.Clave)
+
+	case VariableArrayReferencia:
+		// no es necesario, ya que no tiene representacion en sql
 	}
 
 	return parametros

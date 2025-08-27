@@ -47,64 +47,23 @@ type TrackerDependencias struct {
 	RegistrarTablas map[string]DescripcionTabla
 	Hash            *Hash
 
+	tablasProcesar  *u.Cola[DescripcionTabla]
 	lockIncompletos *sync.Mutex
 	lockTablas      map[string]*sync.Mutex
+	nombreTablas    []string
 }
 
-func NewTrackerDependencias(bdd *b.Bdd, tablas []DescripcionTabla, canalMensajes chan string) (*TrackerDependencias, error) {
-	nombreTablas := []string{}
-	tablasProcesar := u.NewCola[DescripcionTabla]()
-	registrarTablas := make(map[string]DescripcionTabla)
-	lockTablas := make(map[string]*sync.Mutex)
-
-	for _, descripcion := range tablas {
-		nombreTablas = append(nombreTablas, fmt.Sprintf("\"%s\"", descripcion.NombreTabla))
-
-		registrarTablas[descripcion.NombreTabla] = descripcion
-		var lock sync.Mutex
-		lockTablas[descripcion.NombreTabla] = &lock
-
-		if !EsTipoDependible(descripcion.TipoTabla) {
-			tablasProcesar.Encolar(descripcion)
-		}
-	}
-	enumTablas := strings.Join(nombreTablas, ", ")
-
-	if err := bdd.CrearTabla(fmt.Sprintf(TABLA_DEPENDIBLES, enumTablas)); err != nil {
-		return nil, err
-
-	} else if err := bdd.CrearTabla(fmt.Sprintf(TABLA_INCOMPLETOS, enumTablas, enumTablas)); err != nil {
-		return nil, err
-
-	} else if tablasOrdenadas, err := crearTablas(tablasProcesar); err != nil {
-		return nil, err
-
-	} else {
-		for _, tabla := range slices.Backward(tablasOrdenadas) {
-			if err := bdd.EliminarTabla(tabla.NombreTabla); err != nil {
-				canalMensajes <- fmt.Sprintf("error al eliminar tabla %s con error: %v", tabla.NombreTabla, err)
-				continue
-			}
-		}
-
-		canalMensajes <- "Orden final de cargado:"
-		for _, tabla := range tablasOrdenadas {
-			canalMensajes <- "Tabla: " + tabla.NombreTabla
-
-			if err := tabla.CrearTablaRelajada(bdd); err != nil {
-				return nil, fmt.Errorf("error al crear tablas relajadas, especificamente en %s, con error: %v", tabla.NombreTabla, err)
-			}
-		}
-	}
-
+func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
 	var lock sync.Mutex
 	return &TrackerDependencias{
 		BasesDeDatos:    bdd,
-		RegistrarTablas: registrarTablas,
+		RegistrarTablas: make(map[string]DescripcionTabla),
 		Hash:            NewHash(),
 
+		tablasProcesar:  u.NewCola[DescripcionTabla](),
 		lockIncompletos: &lock,
-		lockTablas:      lockTablas,
+		lockTablas:      make(map[string]*sync.Mutex),
+		nombreTablas:    []string{},
 	}, nil
 }
 
@@ -128,6 +87,51 @@ func crearTablas(tablasProcesar *u.Cola[DescripcionTabla]) ([]DescripcionTabla, 
 	}
 
 	return tablasOrdenadas, nil
+}
+
+func (td *TrackerDependencias) CargarTabla(descripcion DescripcionTabla) {
+	td.nombreTablas = append(td.nombreTablas, fmt.Sprintf("\"%s\"", descripcion.NombreTabla))
+
+	td.RegistrarTablas[descripcion.NombreTabla] = descripcion
+	var lock sync.Mutex
+	td.lockTablas[descripcion.NombreTabla] = &lock
+
+	if !EsTipoDependible(descripcion.TipoTabla) {
+		td.tablasProcesar.Encolar(descripcion)
+	}
+}
+
+func (td *TrackerDependencias) EmpezarProcesoInsertarDatos(canalMensajes chan string) error {
+	enumTablas := strings.Join(td.nombreTablas, ", ")
+
+	if err := td.BasesDeDatos.CrearTabla(fmt.Sprintf(TABLA_DEPENDIBLES, enumTablas)); err != nil {
+		return err
+
+	} else if err := td.BasesDeDatos.CrearTabla(fmt.Sprintf(TABLA_INCOMPLETOS, enumTablas, enumTablas)); err != nil {
+		return err
+
+	} else if tablasOrdenadas, err := crearTablas(td.tablasProcesar); err != nil {
+		return err
+
+	} else {
+		for _, tabla := range slices.Backward(tablasOrdenadas) {
+			if err := td.BasesDeDatos.EliminarTabla(tabla.NombreTabla); err != nil {
+				canalMensajes <- fmt.Sprintf("error al eliminar tabla %s con error: %v", tabla.NombreTabla, err)
+				continue
+			}
+		}
+
+		canalMensajes <- "Orden final de cargado:"
+		for _, tabla := range tablasOrdenadas {
+			canalMensajes <- "Tabla: " + tabla.NombreTabla
+
+			if err := tabla.CrearTablaRelajada(td.BasesDeDatos); err != nil {
+				return fmt.Errorf("error al crear tablas relajadas, especificamente en %s, con error: %v", tabla.NombreTabla, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (td *TrackerDependencias) TerminarProcesoInsertarDatos() error {
