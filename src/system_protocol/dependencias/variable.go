@@ -245,10 +245,10 @@ func (ve VariableEnum) TipoSQL() string {
 
 type VariableReferencia struct {
 	Representativo bool
-	Tablas         []*DescripcionTabla
+	Tablas         []*Tabla
 }
 
-func NewVariableReferencia(representativo bool, clave string, tablas []*DescripcionTabla) Variable {
+func NewVariableReferencia(representativo bool, clave string, tablas []*Tabla) Variable {
 	return Variable{
 		Clave: clave,
 		Informacion: VariableReferencia{
@@ -259,10 +259,10 @@ func NewVariableReferencia(representativo bool, clave string, tablas []*Descripc
 }
 
 type VariableArrayReferencia struct {
-	Tablas []*DescripcionTabla
+	Tablas []*Tabla
 }
 
-func NewVariableArrayReferencias(clave string, tablas []*DescripcionTabla) Variable {
+func NewVariableArrayReferencias(clave string, tablas []*Tabla) Variable {
 	return Variable{
 		Clave: clave,
 		Informacion: VariableArrayReferencia{

@@ -18,7 +18,7 @@ type InformacionViews struct {
 	Views         []View `json:"views"`
 }
 
-type InfoTablas map[*d.DescripcionTabla]d.InformacionQuery
+type InfoTablas map[*d.Tabla]d.InformacionQuery
 
 type View struct {
 	Nombre      string                 `json:"nombre"`
@@ -32,7 +32,7 @@ type RespuestaInformacionViews struct {
 	PathView *v.PathView
 }
 
-func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla) (*RespuestaInformacionViews, error) {
+func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.Tabla) (*RespuestaInformacionViews, error) {
 	decodificador := json.NewDecoder(strings.NewReader(archivoJson))
 	pathView := v.NewPathView()
 
@@ -41,7 +41,7 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 		return nil, fmt.Errorf("error al codificar tablas, con err: %v", err)
 	}
 
-	tablasPorNombre := make(map[string]*d.DescripcionTabla)
+	tablasPorNombre := make(map[string]*d.Tabla)
 	for _, tabla := range tablas {
 		tablasPorNombre[tabla.NombreTabla] = &tabla
 	}
@@ -134,7 +134,7 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 	}, nil
 }
 
-func crearInformacionElementoUnico(tabla *d.DescripcionTabla, parametros []string, detalles ParametroElementoUnico) (v.FnInformacion, error) {
+func crearInformacionElementoUnico(tabla *d.Tabla, parametros []string, detalles ParametroElementoUnico) (v.FnInformacion, error) {
 	if !slices.Contains(parametros, detalles.PametroParaId) {
 		return nil, fmt.Errorf("el id de la tabla no es uno de los parametros")
 	}

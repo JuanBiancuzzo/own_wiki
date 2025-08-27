@@ -25,11 +25,11 @@ type FnFKeys func(hash *Hash, datosIngresados ConjuntoDato) ([]ForeignKey, error
 type FnHash func(hash *Hash, datosIngresados ConjuntoDato) (IntFK, error)
 type FnTabla func(bdd *b.Bdd) error
 
-type DescripcionTabla struct {
+type Tabla struct {
 	NombreTabla         string
 	TipoTabla           TipoTabla
 	Variables           map[string]Variable
-	ObtenerDependencias []DescripcionTabla
+	ObtenerDependencias []Tabla
 
 	// funciones pre computadas
 	Existe             FnExiste
@@ -39,7 +39,7 @@ type DescripcionTabla struct {
 	CrearTablaRelajada FnTabla
 }
 
-func ConstruirTabla(nombreTabla string, tracker *TrackerDependencias, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) DescripcionTabla {
+func ConstruirTabla(nombreTabla string, tracker *TrackerDependencias, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) Tabla {
 	var existe FnExiste
 	if elementosRepetidos {
 		existe = func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error) { return false, nil }
@@ -52,7 +52,7 @@ func ConstruirTabla(nombreTabla string, tracker *TrackerDependencias, tipoTabla 
 		variablesPorNombre[variable.Clave] = variable
 	}
 
-	return DescripcionTabla{
+	return Tabla{
 		NombreTabla: nombreTabla,
 		Variables:   variablesPorNombre,
 		TipoTabla:   tipoTabla,
@@ -336,8 +336,8 @@ func generarHash(variables []Variable) FnHash {
 	}
 }
 
-func describirDependencias(variables []Variable) []DescripcionTabla {
-	tablas := []DescripcionTabla{}
+func describirDependencias(variables []Variable) []Tabla {
+	tablas := []Tabla{}
 	for _, variable := range variables {
 		if informacion, ok := variable.Informacion.(VariableReferencia); ok {
 			for _, tabla := range informacion.Tablas {
@@ -371,7 +371,7 @@ func generarCrearTabla(nombreTabla string, variables []Variable) FnTabla {
 }
 
 // TODO
-func (dt DescripcionTabla) RestringirTabla(bdd *b.Bdd) error {
+func (dt Tabla) RestringirTabla(bdd *b.Bdd) error {
 	return nil
 }
 

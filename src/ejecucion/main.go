@@ -21,16 +21,16 @@ import (
 // tp "github.com/BurntSushi/toml"
 // "github.com/go-sql-driver/mysql"
 
-func ObtenerTablas(dirConfiguracion string) ([]d.DescripcionTabla, error) {
+func ObtenerTablas(dirConfiguracion string) ([]d.Tabla, error) {
 	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "tablas.json")); err != nil {
-		return []d.DescripcionTabla{}, fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
+		return []d.Tabla{}, fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
 
 	} else {
 		return c.CrearTablas(string(bytes))
 	}
 }
 
-func ObtenerViews(dirConfiguracion string, bdd *b.Bdd, tablas []d.DescripcionTabla) (*v.InfoViews, *v.PathView, error) {
+func ObtenerViews(dirConfiguracion string, bdd *b.Bdd, tablas []d.Tabla) (*v.InfoViews, *v.PathView, error) {
 	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "views.json")); err != nil {
 		return nil, nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
 

@@ -46,8 +46,8 @@ type InfoValorGuardar struct {
 	Estructura []InfoValorGuardar `json:"estructura"`
 }
 
-func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.DescripcionTabla, error) {
-	tablas := []d.DescripcionTabla{}
+func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Tabla, error) {
+	tablas := []d.Tabla{}
 
 	decodificador := json.NewDecoder(strings.NewReader(archivoJson))
 
@@ -110,7 +110,7 @@ func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Descri
 		nombresTablas = append(nombresTablas, nombreTabla)
 	}
 
-	mapaTablas := make(map[string]*d.DescripcionTabla)
+	mapaTablas := make(map[string]*d.Tabla)
 	for i, info := range listaInfo {
 		variables := []d.Variable{}
 		for _, vg := range info.ValoresGuardar {
@@ -144,7 +144,7 @@ func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Descri
 					nombreTablas = vg.Tablas
 				}
 
-				tablasRelacionadas := make([]*d.DescripcionTabla, len(nombreTablas))
+				tablasRelacionadas := make([]*d.Tabla, len(nombreTablas))
 				for i, nombreTabla := range nombreTablas {
 					if tabla, ok := mapaTablas[nombreTabla]; !ok {
 						return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", nombreTabla, strings.Join(nombresTablas, ", "))
@@ -164,7 +164,7 @@ func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Descri
 					nombreTablas = vg.Tablas
 				}
 
-				tablasRelacionadas := make([]*d.DescripcionTabla, len(nombreTablas))
+				tablasRelacionadas := make([]*d.Tabla, len(nombreTablas))
 				for i, nombreTabla := range nombreTablas {
 					if nombreTabla == info.Nombre {
 						tablasRelacionadas[i] = nil

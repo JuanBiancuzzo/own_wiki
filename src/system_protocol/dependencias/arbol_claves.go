@@ -21,7 +21,7 @@ type InformacionClave struct {
 
 type NodoClave struct {
 	Padre       *NodoClave
-	Tabla       *DescripcionTabla
+	Tabla       *Tabla
 	Nombre      string
 	Select      []HojaClave
 	Where       []HojaClave
@@ -35,7 +35,7 @@ type HojaClave struct {
 	Variable Variable
 }
 
-func NewRaizClave(tabla *DescripcionTabla) NodoClave {
+func NewRaizClave(tabla *Tabla) NodoClave {
 	return NodoClave{
 		Padre:       nil,
 		Tabla:       tabla,
@@ -46,7 +46,7 @@ func NewRaizClave(tabla *DescripcionTabla) NodoClave {
 	}
 }
 
-func NewNodoClave(padre *NodoClave, tabla *DescripcionTabla, nombreClave string) NodoClave {
+func NewNodoClave(padre *NodoClave, tabla *Tabla, nombreClave string) NodoClave {
 	return NodoClave{
 		Padre:       padre,
 		Tabla:       tabla,

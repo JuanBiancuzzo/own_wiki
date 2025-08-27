@@ -126,7 +126,7 @@ func generarSetencia(nodo *NodoClave, profundidad int) string {
 	)
 }
 
-func NewQuerySimple(tabla *DescripcionTabla, clavesUsadas []string, parametroId string) (QueryDato, error) {
+func NewQuerySimple(tabla *Tabla, clavesUsadas []string, parametroId string) (QueryDato, error) {
 	claveSelect := make([]*HojaClave, len(clavesUsadas))
 	claveWhere := []*HojaClave{nil}
 	var err error
@@ -170,7 +170,7 @@ func NewQuerySimple(tabla *DescripcionTabla, clavesUsadas []string, parametroId 
 	    }
 	}
 */
-func NewQueryMultiples(tablas map[*DescripcionTabla]InformacionQuery, groupBy []string) (map[string]QueryDato, error) {
+func NewQueryMultiples(tablas map[*Tabla]InformacionQuery, groupBy []string) (map[string]QueryDato, error) {
 	datosQuery := make(map[string]QueryDato)
 
 	for tabla := range tablas {

@@ -44,10 +44,10 @@ type ConjuntoDato map[string]any
 
 type TrackerDependencias struct {
 	BasesDeDatos    *b.Bdd
-	RegistrarTablas map[string]DescripcionTabla
+	RegistrarTablas map[string]Tabla
 	Hash            *Hash
 
-	tablasProcesar  *u.Cola[DescripcionTabla]
+	tablasProcesar  *u.Cola[Tabla]
 	lockIncompletos *sync.Mutex
 	lockTablas      map[string]*sync.Mutex
 	nombreTablas    []string
@@ -57,19 +57,19 @@ func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
 	var lock sync.Mutex
 	return &TrackerDependencias{
 		BasesDeDatos:    bdd,
-		RegistrarTablas: make(map[string]DescripcionTabla),
+		RegistrarTablas: make(map[string]Tabla),
 		Hash:            NewHash(),
 
-		tablasProcesar:  u.NewCola[DescripcionTabla](),
+		tablasProcesar:  u.NewCola[Tabla](),
 		lockIncompletos: &lock,
 		lockTablas:      make(map[string]*sync.Mutex),
 		nombreTablas:    []string{},
 	}, nil
 }
 
-func crearTablas(tablasProcesar *u.Cola[DescripcionTabla]) ([]DescripcionTabla, error) {
+func crearTablas(tablasProcesar *u.Cola[Tabla]) ([]Tabla, error) {
 	// Creando las tablas relajadas
-	var tablasOrdenadas []DescripcionTabla = []DescripcionTabla{}
+	var tablasOrdenadas []Tabla = []Tabla{}
 	for tabla := range tablasProcesar.DesencolarIterativamente {
 		nombreTabla := tabla.NombreTabla
 
@@ -80,7 +80,7 @@ func crearTablas(tablasProcesar *u.Cola[DescripcionTabla]) ([]DescripcionTabla, 
 			}
 		}
 
-		tablasOrdenadas = append([]DescripcionTabla{tabla}, tablasOrdenadas...)
+		tablasOrdenadas = append([]Tabla{tabla}, tablasOrdenadas...)
 		for _, tablaDependible := range tabla.ObtenerDependencias {
 			tablasProcesar.Encolar(tablaDependible)
 		}
@@ -89,7 +89,7 @@ func crearTablas(tablasProcesar *u.Cola[DescripcionTabla]) ([]DescripcionTabla, 
 	return tablasOrdenadas, nil
 }
 
-func (td *TrackerDependencias) CargarTabla(descripcion DescripcionTabla) {
+func (td *TrackerDependencias) CargarTabla(descripcion Tabla) {
 	td.nombreTablas = append(td.nombreTablas, fmt.Sprintf("\"%s\"", descripcion.NombreTabla))
 
 	td.RegistrarTablas[descripcion.NombreTabla] = descripcion
@@ -199,7 +199,7 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados Conjun
 	return nil
 }
 
-func (td *TrackerDependencias) procesoDependiente(tabla DescripcionTabla, idInsertado int64, fKeys []ForeignKey) error {
+func (td *TrackerDependencias) procesoDependiente(tabla Tabla, idInsertado int64, fKeys []ForeignKey) error {
 	for _, fKey := range fKeys {
 		// Vemos si ya fue insertado la dependencia
 		if id, err := td.BasesDeDatos.Obtener(QUERY_TABLA_DEPENDIENTES, fKey.TablaDestino, fKey.HashDatosDestino); err == nil {
@@ -227,7 +227,7 @@ func (td *TrackerDependencias) procesoDependiente(tabla DescripcionTabla, idInse
 	return nil
 }
 
-func (td *TrackerDependencias) procesoDependible(tabla DescripcionTabla, idInsertado int64, hashDatos IntFK) error {
+func (td *TrackerDependencias) procesoDependible(tabla Tabla, idInsertado int64, hashDatos IntFK) error {
 	if _, err := td.BasesDeDatos.Insertar(INSERTAR_TABLA_DEPENDIENTES, tabla.NombreTabla, idInsertado, hashDatos); err != nil {
 		return fmt.Errorf("error al insertar en dependientes: %s, con error: %v", tabla.NombreTabla, err)
 	}
