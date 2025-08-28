@@ -47,9 +47,9 @@ type InfoValorGuardar struct {
 	Estructura []InfoValorGuardar `json:"estructura"`
 }
 
-func procesarInformacionTabla(info InfoTabla, colaTablas *u.Cola[InfoTabla]) (DescripcionTabla, error) {
+func procesarInformacionTabla(info InfoTabla, colaTablas *u.Cola[InfoTabla]) (d.DescripcionTabla, error) {
 
-	variables := []DescripcionVariable{}
+	variables := []d.DescripcionVariable{}
 	for _, vg := range info.ValoresGuardar {
 		necesario := vg.Necesario
 		representativo := vg.Representativo && necesario
@@ -57,20 +57,20 @@ func procesarInformacionTabla(info InfoTabla, colaTablas *u.Cola[InfoTabla]) (De
 
 		switch vg.Tipo {
 		case TV_INT:
-			variables = append(variables, NewVariableSimple(d.TVS_INT, representativo, clave, necesario))
+			variables = append(variables, d.NewDescVariableSimple(d.TVS_INT, representativo, clave, necesario))
 
 		case TV_BOOL:
-			variables = append(variables, NewVariableSimple(d.TVS_BOOL, representativo, clave, necesario))
+			variables = append(variables, d.NewDescVariableSimple(d.TVS_BOOL, representativo, clave, necesario))
 
 		case TV_DATE:
-			variables = append(variables, NewVariableSimple(d.TVS_DATE, representativo, clave, necesario))
+			variables = append(variables, d.NewDescVariableSimple(d.TVS_DATE, representativo, clave, necesario))
 
 		case TV_STRING:
-			variable := NewVariableString(representativo, clave, uint(vg.Largo), necesario)
+			variable := d.NewDescVariableString(representativo, clave, uint(vg.Largo), necesario)
 			variables = append(variables, variable)
 
 		case TV_ENUM:
-			variable := NewVariableEnum(representativo, clave, vg.Valores, necesario)
+			variable := d.NewDescVariableEnum(representativo, clave, vg.Valores, necesario)
 			variables = append(variables, variable)
 
 		case TV_REFERENCIA:
@@ -82,7 +82,7 @@ func procesarInformacionTabla(info InfoTabla, colaTablas *u.Cola[InfoTabla]) (De
 				nombreTablas = make([]string, len(vg.Tablas))
 				copy(nombreTablas, vg.Tablas)
 			}
-			variables = append(variables, NewVariableReferencia(vg.Representativo, clave, nombreTablas))
+			variables = append(variables, d.NewDescVariableReferencia(vg.Representativo, clave, nombreTablas))
 
 		case TV_ARRAY_REF:
 			tablaReferenciada := fmt.Sprintf("array%s_%s", clave, info.Nombre)
@@ -102,22 +102,22 @@ func procesarInformacionTabla(info InfoTabla, colaTablas *u.Cola[InfoTabla]) (De
 				}, vg.Estructura...),
 			})
 
-			variables = append(variables, NewVariableArrayReferencias(clave, selfClave, tablaReferenciada))
+			variables = append(variables, d.NewDescVariableArrayReferencias(clave, selfClave, tablaReferenciada))
 
 		default:
-			return DescripcionTabla{}, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)
+			return d.DescripcionTabla{}, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)
 		}
 	}
 
-	return NewDescripcionTabla(
+	return d.NewDescripcionTabla(
 		info.Nombre,
 		info.ElementosRepetidos,
 		variables,
 	), nil
 }
 
-func DescripcionTablas(archivoJson string) ([]DescripcionTabla, error) {
-	descripcionTablas := []DescripcionTabla{}
+func DescribirTablas(archivoJson string) ([]d.DescripcionTabla, error) {
+	descripcionTablas := []d.DescripcionTabla{}
 	decodificador := json.NewDecoder(strings.NewReader(archivoJson))
 
 	// read open bracket
@@ -166,7 +166,7 @@ func DescripcionTablas(archivoJson string) ([]DescripcionTabla, error) {
 func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Tabla, error) {
 	tablas := []d.Tabla{}
 
-	descripcionTablas, err := DescripcionTablas(archivoJson)
+	descripcionTablas, err := DescribirTablas(archivoJson)
 	if err != nil {
 		return tablas, err
 	}
@@ -174,7 +174,7 @@ func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Tabla,
 	mapaReferenciados := make(map[string]bool)
 	for _, descTabla := range descripcionTablas {
 		for _, descVariable := range descTabla.Variables {
-			if detalle, ok := descVariable.Descripcion.(DescVariableReferencia); ok {
+			if detalle, ok := descVariable.Descripcion.(d.DescVariableReferencia); ok {
 				for _, tabla := range detalle.Tablas {
 					mapaReferenciados[tabla] = true
 				}
@@ -191,16 +191,16 @@ func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Tabla,
 		for i, descVariable := range descTabla.Variables {
 
 			switch detalle := descVariable.Descripcion.(type) {
-			case DescVariableSimple:
+			case d.DescVariableSimple:
 				variables[i] = d.NewVariableSimple(detalle.Tipo, detalle.Representativo, descVariable.Clave, detalle.Necesario)
 
-			case DescVariableString:
+			case d.DescVariableString:
 				variables[i] = d.NewVariableString(detalle.Representativo, descVariable.Clave, detalle.Largo, detalle.Necesario)
 
-			case DescVariableEnum:
+			case d.DescVariableEnum:
 				variables[i] = d.NewVariableEnum(detalle.Representativo, descVariable.Clave, detalle.Valores, detalle.Necesario)
 
-			case DescVariableReferencia:
+			case d.DescVariableReferencia:
 				independiente = false
 
 				tablasRelacionadas := make([]*d.Tabla, len(detalle.Tablas))
@@ -214,7 +214,7 @@ func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Tabla,
 
 				variables[i] = d.NewVariableReferencia(detalle.Representativo, descVariable.Clave, tablasRelacionadas)
 
-			case DescVariableArrayReferencia:
+			case d.DescVariableArrayReferencia:
 				variables[i] = d.NewVariableArrayReferencias(descVariable.Clave, detalle.ClaveSelf, detalle.TablaCreada)
 			}
 

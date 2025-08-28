@@ -13,7 +13,7 @@ const (
 )
 
 type InformacionClave struct {
-	Variable Variable
+	Variable DescripcionVariable
 	Nombre   string
 	Alias    string
 	Path     []string
@@ -21,7 +21,7 @@ type InformacionClave struct {
 
 type NodoClave struct {
 	Padre       *NodoClave
-	Tabla       *Tabla
+	Tabla       *DescripcionTabla
 	Nombre      string
 	Select      []HojaClave
 	Where       []HojaClave
@@ -32,10 +32,10 @@ type HojaClave struct {
 	Padre    NodoClave
 	Nombre   string
 	Alias    string
-	Variable Variable
+	Variable DescripcionVariable
 }
 
-func NewRaizClave(tabla *Tabla) NodoClave {
+func NewRaizClave(tabla *DescripcionTabla) NodoClave {
 	return NodoClave{
 		Padre:       nil,
 		Tabla:       tabla,
@@ -46,7 +46,7 @@ func NewRaizClave(tabla *Tabla) NodoClave {
 	}
 }
 
-func NewNodoClave(padre *NodoClave, tabla *Tabla, nombreClave string) NodoClave {
+func NewNodoClave(padre *NodoClave, tabla *DescripcionTabla, nombreClave string) NodoClave {
 	return NodoClave{
 		Padre:       padre,
 		Tabla:       tabla,
@@ -57,48 +57,48 @@ func NewNodoClave(padre *NodoClave, tabla *Tabla, nombreClave string) NodoClave 
 	}
 }
 
-func (nc NodoClave) InsertarWhere(clave string) (*HojaClave, error) {
-	return nc.insertar(clave, TI_WHERE)
+func (nc NodoClave) InsertarWhere(clave string, tablas map[string]*DescripcionTabla) (*HojaClave, error) {
+	return nc.insertar(clave, TI_WHERE, tablas)
 }
 
-func (nc NodoClave) InsertarSelect(clave string) (*HojaClave, error) {
-	return nc.insertar(clave, TI_SELECT)
+func (nc NodoClave) InsertarSelect(clave string, tablas map[string]*DescripcionTabla) (*HojaClave, error) {
+	return nc.insertar(clave, TI_SELECT, tablas)
 }
 
-func (nc NodoClave) insertar(clave string, tipo tipoInsercion) (*HojaClave, error) {
+func (nc NodoClave) insertar(clave string, tipo tipoInsercion, tablas map[string]*DescripcionTabla) (*HojaClave, error) {
 	indiceDivision := strings.Index(clave, ":")
 	primeraClave := clave
 	if indiceDivision > 0 {
 		primeraClave = clave[:indiceDivision]
 	}
-	variable, ok := nc.Tabla.Variables[primeraClave]
+	variable, ok := nc.Tabla.ObtenerVariable(primeraClave)
 	if !ok {
-		return nil, fmt.Errorf("la clave %s no existe en la tabla %s", clave, nc.Tabla.NombreTabla)
+		return nil, fmt.Errorf("la clave %s no existe en la tabla %s", clave, nc.Tabla.Nombre)
 	}
 
-	if info, ok := variable.Informacion.(VariableReferencia); ok {
+	if info, ok := variable.Descripcion.(DescVariableReferencia); ok {
 		if len(info.Tablas) > 1 {
 			return nil, fmt.Errorf("todavia no se puede referenciar multiples tablas")
 		}
-		tabla := info.Tablas[0]
 
 		var nodo *NodoClave = nil
 		for _, referencia := range nc.Referencias {
-			if referencia.Tabla.NombreTabla == primeraClave {
+			if referencia.Tabla.Nombre == primeraClave {
 				nodo = referencia
 				break
 			}
 		}
 
-		if nodo == nil {
+		// usando unicamente el primero por ahora
+		if tabla, ok := tablas[info.Tablas[0]]; ok && nodo == nil {
 			nuevoNodo := NewNodoClave(&nc, tabla, primeraClave)
 			nc.Referencias = append(nc.Referencias, &nuevoNodo)
 			nodo = &nuevoNodo
 		}
 
-		return nodo.insertar(clave[indiceDivision:], tipo)
+		return nodo.insertar(clave[indiceDivision:], tipo, tablas)
 
-	} else if _, ok := variable.Informacion.(VariableArrayReferencia); ok {
+	} else if _, ok := variable.Descripcion.(DescVariableArrayReferencia); ok {
 		return nil, fmt.Errorf("todavia no esta soportado las array referencia")
 
 	} else if indice, contiene := nc.ContieneClave(clave, tipo); contiene {
@@ -151,7 +151,7 @@ func (nc NodoClave) ObtenerPath() []string {
 		return []string{}
 	}
 
-	return append(nc.Padre.ObtenerPath(), nc.Tabla.NombreTabla)
+	return append(nc.Padre.ObtenerPath(), nc.Tabla.Nombre)
 }
 
 func (hc HojaClave) ObtenerInfoVariable() InformacionClave {

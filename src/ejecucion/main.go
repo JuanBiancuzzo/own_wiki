@@ -6,7 +6,6 @@ import (
 	t "own_wiki/ejecucion/web_view"
 	b "own_wiki/system_protocol/bass_de_datos"
 	c "own_wiki/system_protocol/configuracion"
-	d "own_wiki/system_protocol/dependencias"
 	v "own_wiki/system_protocol/views"
 	"strings"
 	"sync"
@@ -21,24 +20,18 @@ import (
 // tp "github.com/BurntSushi/toml"
 // "github.com/go-sql-driver/mysql"
 
-func ObtenerTablas(dirConfiguracion string) ([]d.Tabla, error) {
+func ObtenerViews(dirConfiguracion string, bdd *b.Bdd) (*v.InfoViews, error) {
 	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "tablas.json")); err != nil {
-		return []d.Tabla{}, fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
+		return nil, fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
+
+	} else if descripcionTablas, err := c.DescribirTablas(string(bytes)); err != nil {
+		return nil, err
+
+	} else if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "views.json")); err != nil {
+		return nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
 
 	} else {
-		return c.CrearTablas(string(bytes))
-	}
-}
-
-func ObtenerViews(dirConfiguracion string, bdd *b.Bdd, tablas []d.Tabla) (*v.InfoViews, *v.PathView, error) {
-	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "views.json")); err != nil {
-		return nil, nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
-
-	} else if respuesta, err := c.CrearInfoViews(string(bytes), bdd, tablas); err != nil {
-		return nil, nil, err
-
-	} else {
-		return respuesta.InfoView, respuesta.PathView, nil
+		return c.CrearInfoViews(string(bytes), bdd, descripcionTablas)
 	}
 }
 
@@ -64,16 +57,13 @@ func Visualizar(carpetaConfiguracion string, canalMensajes chan string) {
 	bdd := b.NewBdd(bddRelacional, bddNoSQL)
 	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
-	if tablas, err := ObtenerTablas(carpetaConfiguracion); err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo cargar las tablas, con error: %v", err)
-
-	} else if infoViews, pathView, err := ObtenerViews(carpetaConfiguracion, bdd, tablas); err != nil {
+	if infoViews, err := ObtenerViews(carpetaConfiguracion, bdd); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo cargar las views, con error: %v", err)
 
 	} else {
 		carpetaTemplates := fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathTemplates)
 
-		if e.Renderer, err = t.NewTemplate(carpetaTemplates, pathView); err != nil {
+		if e.Renderer, err = t.NewTemplate(carpetaTemplates, infoViews.PathView); err != nil {
 			canalMensajes <- fmt.Sprintf("No se pudo crear el renderer, con error: %v", err)
 			return
 		}

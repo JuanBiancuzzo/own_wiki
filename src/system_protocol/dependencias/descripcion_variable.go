@@ -1,8 +1,4 @@
-package configuracion
-
-import (
-	d "own_wiki/system_protocol/dependencias"
-)
+package dependencias
 
 type DescripcionVariable struct {
 	Clave       string
@@ -10,12 +6,12 @@ type DescripcionVariable struct {
 }
 
 type DescVariableSimple struct {
-	Tipo           d.TipoVariableSimple
+	Tipo           TipoVariableSimple
 	Representativo bool
 	Necesario      bool
 }
 
-func NewVariableSimple(tipo d.TipoVariableSimple, representativo bool, clave string, necesario bool) DescripcionVariable {
+func NewDescVariableSimple(tipo TipoVariableSimple, representativo bool, clave string, necesario bool) DescripcionVariable {
 	return DescripcionVariable{
 		Clave: clave,
 		Descripcion: DescVariableSimple{
@@ -32,7 +28,7 @@ type DescVariableString struct {
 	Largo          uint
 }
 
-func NewVariableString(representativo bool, clave string, largo uint, necesario bool) DescripcionVariable {
+func NewDescVariableString(representativo bool, clave string, largo uint, necesario bool) DescripcionVariable {
 	return DescripcionVariable{
 		Clave: clave,
 		Descripcion: DescVariableString{
@@ -49,7 +45,7 @@ type DescVariableEnum struct {
 	Valores        []string
 }
 
-func NewVariableEnum(representativo bool, clave string, valores []string, necesario bool) DescripcionVariable {
+func NewDescVariableEnum(representativo bool, clave string, valores []string, necesario bool) DescripcionVariable {
 	return DescripcionVariable{
 		Clave: clave,
 		Descripcion: DescVariableEnum{
@@ -65,7 +61,7 @@ type DescVariableReferencia struct {
 	Tablas         []string
 }
 
-func NewVariableReferencia(representativo bool, clave string, tablas []string) DescripcionVariable {
+func NewDescVariableReferencia(representativo bool, clave string, tablas []string) DescripcionVariable {
 	return DescripcionVariable{
 		Clave: clave,
 		Descripcion: DescVariableReferencia{
@@ -80,26 +76,12 @@ type DescVariableArrayReferencia struct {
 	TablaCreada string
 }
 
-func NewVariableArrayReferencias(clave, claveSelf, tablaCreada string) DescripcionVariable {
+func NewDescVariableArrayReferencias(clave, claveSelf, tablaCreada string) DescripcionVariable {
 	return DescripcionVariable{
 		Clave: clave,
 		Descripcion: DescVariableArrayReferencia{
 			ClaveSelf:   claveSelf,
 			TablaCreada: tablaCreada,
 		},
-	}
-}
-
-type DescripcionTabla struct {
-	Nombre             string
-	ElementosRepetidos bool
-	Variables          []DescripcionVariable
-}
-
-func NewDescripcionTabla(nombreTabla string, elementosRepetidos bool, variables []DescripcionVariable) DescripcionTabla {
-	return DescripcionTabla{
-		Nombre:             nombreTabla,
-		ElementosRepetidos: elementosRepetidos,
-		Variables:          variables,
 	}
 }

@@ -18,7 +18,7 @@ type InformacionViews struct {
 	Views         []View `json:"views"`
 }
 
-type InfoTablas map[*d.Tabla]d.InformacionQuery
+type InfoTablas map[*d.DescripcionTabla]d.InformacionQuery
 
 type View struct {
 	Nombre      string                 `json:"nombre"`
@@ -27,12 +27,7 @@ type View struct {
 	Informacion map[string]Informacion `json:"informacion"`
 }
 
-type RespuestaInformacionViews struct {
-	InfoView *v.InfoViews
-	PathView *v.PathView
-}
-
-func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.Tabla) (*RespuestaInformacionViews, error) {
+func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla) (*v.InfoViews, error) {
 	decodificador := json.NewDecoder(strings.NewReader(archivoJson))
 	pathView := v.NewPathView()
 
@@ -41,9 +36,9 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.Tabla) (*Respuest
 		return nil, fmt.Errorf("error al codificar tablas, con err: %v", err)
 	}
 
-	tablasPorNombre := make(map[string]*d.Tabla)
+	tablasPorNombre := make(map[string]*d.DescripcionTabla)
 	for _, tabla := range tablas {
-		tablasPorNombre[tabla.NombreTabla] = &tabla
+		tablasPorNombre[tabla.Nombre] = &tabla
 	}
 
 	endpoints := make(map[string]v.Endpoint)
@@ -56,10 +51,7 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.Tabla) (*Respuest
 		for nombreVariable := range infoView.Informacion {
 			switch detalles := infoView.Informacion[nombreVariable].Detalles.(type) {
 			case ParametroElementoUnico:
-				if tabla, ok := tablasPorNombre[detalles.Tabla]; !ok {
-					return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", detalles.Tabla)
-
-				} else if informacion, err := crearInformacionElementoUnico(tabla, infoView.Parametros, detalles); err != nil {
+				if informacion, err := crearInformacionElementoUnico(infoView.Parametros, detalles, tablasPorNombre); err != nil {
 					return nil, err
 
 				} else {
@@ -81,7 +73,7 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.Tabla) (*Respuest
 					}
 				}
 
-				if informacion, err := crearInformacionElementosCompleto(tablas, infoView.Parametros, detalles.GroupBy); err != nil {
+				if informacion, err := crearInformacionElementosCompleto(tablas, infoView.Parametros, detalles.GroupBy, tablasPorNombre); err != nil {
 					return nil, err
 
 				} else {
@@ -103,7 +95,7 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.Tabla) (*Respuest
 					}
 				}
 
-				if respuesta, err := crearInformacionElementosParcial(tablas, infoView.Parametros, detalles.GroupBy); err != nil {
+				if respuesta, err := crearInformacionElementosParcial(tablas, infoView.Parametros, detalles.GroupBy, tablasPorNombre); err != nil {
 					return nil, err
 
 				} else {
@@ -128,18 +120,20 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.Tabla) (*Respuest
 		return nil, fmt.Errorf("no hay punto de inicio")
 	}
 
-	return &RespuestaInformacionViews{
-		InfoView: v.NewInfoViews(endpoints, info.PathTemplates, info.PathCss),
-		PathView: pathView,
-	}, nil
+	return v.NewInfoViews(endpoints, info.PathTemplates, info.PathCss, info.PathImagenes, pathView), nil
 }
 
-func crearInformacionElementoUnico(tabla *d.Tabla, parametros []string, detalles ParametroElementoUnico) (v.FnInformacion, error) {
+func crearInformacionElementoUnico(parametros []string, detalles ParametroElementoUnico, descripciones map[string]*d.DescripcionTabla) (v.FnInformacion, error) {
+	tabla, ok := descripciones[detalles.Tabla]
+	if !ok {
+		return nil, fmt.Errorf("no existe la descripcion de la tabla %s", detalles.Tabla)
+	}
+
 	if !slices.Contains(parametros, detalles.PametroParaId) {
 		return nil, fmt.Errorf("el id de la tabla no es uno de los parametros")
 	}
 
-	if query, err := d.NewQuerySimple(tabla, detalles.ClavesUsadas, detalles.PametroParaId); err != nil {
+	if query, err := d.NewQuerySimple(tabla, detalles.ClavesUsadas, detalles.PametroParaId, descripciones); err != nil {
 		return nil, err
 
 	} else {
@@ -147,8 +141,8 @@ func crearInformacionElementoUnico(tabla *d.Tabla, parametros []string, detalles
 	}
 }
 
-func crearInformacionElementosCompleto(tablas InfoTablas, parametros []string, groupBy []string) (v.FnInformacion, error) {
-	if querys, err := d.NewQueryMultiples(tablas, groupBy); err != nil {
+func crearInformacionElementosCompleto(tablas InfoTablas, parametros []string, groupBy []string, descripciones map[string]*d.DescripcionTabla) (v.FnInformacion, error) {
+	if querys, err := d.NewQueryMultiples(tablas, groupBy, descripciones); err != nil {
 		return nil, err
 
 	} else {
@@ -156,8 +150,8 @@ func crearInformacionElementosCompleto(tablas InfoTablas, parametros []string, g
 	}
 }
 
-func crearInformacionElementosParcial(tablas InfoTablas, parametros []string, groupBy []string) (v.RespuestaInformacion, error) {
-	if querys, err := d.NewQueryMultiples(tablas, groupBy); err != nil {
+func crearInformacionElementosParcial(tablas InfoTablas, parametros []string, groupBy []string, descripciones map[string]*d.DescripcionTabla) (v.RespuestaInformacion, error) {
+	if querys, err := d.NewQueryMultiples(tablas, groupBy, descripciones); err != nil {
 		return v.RespuestaInformacion{}, err
 
 	} else {

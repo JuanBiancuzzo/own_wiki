@@ -9,14 +9,18 @@ import (
 type InfoViews struct {
 	PathTemplates string
 	PathCss       string
+	PathImagenes  string
+	PathView      *PathView
 	Endpoints     map[string]Endpoint
 }
 
-func NewInfoViews(endpoint map[string]Endpoint, pathTemplates, pathCss string) *InfoViews {
+func NewInfoViews(endpoint map[string]Endpoint, pathTemplates, pathCss, pathImagenes string, pathView *PathView) *InfoViews {
 	return &InfoViews{
 		Endpoints:     endpoint,
 		PathTemplates: pathTemplates,
 		PathCss:       pathCss,
+		PathImagenes:  pathImagenes,
+		PathView:      pathView,
 	}
 }
 
