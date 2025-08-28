@@ -2,7 +2,6 @@ package dependencias
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -42,100 +41,6 @@ func (v Variable) ObtenerParametroSQL() []string {
 	}
 
 	return parametros
-}
-
-func (v Variable) ValorPorRepresentacion(representacion string) (any, error) {
-	switch informacion := v.Informacion.(type) {
-	case VariableSimple:
-		switch informacion.Tipo {
-		case TVS_INT:
-			return strconv.Atoi(representacion)
-		case TVS_BOOL:
-			switch strings.ToLower(strings.TrimSpace(representacion)) {
-			case "true":
-				return true, nil
-			case "false":
-				return false, nil
-			default:
-				return false, fmt.Errorf("la representacion no es un bool ya que es: %v", representacion)
-			}
-		case TVS_DATE:
-			return representacion, nil
-		}
-
-	case VariableString:
-		return representacion, nil
-	case VariableEnum:
-		return representacion, nil
-	}
-	return nil, fmt.Errorf("no es una variable que pueda tener un valor de una rerpresentacion")
-}
-
-func (v Variable) ObtenerReferencia() (any, error) {
-	switch informacion := v.Informacion.(type) {
-	case VariableSimple:
-		switch informacion.Tipo {
-		case TVS_INT:
-			var numero int
-			return &numero, nil
-		case TVS_BOOL:
-			var booleano bool
-			return &booleano, nil
-		case TVS_DATE:
-			var representacion string
-			return &representacion, nil
-		}
-
-	case VariableString:
-		var representacion string
-		return &representacion, nil
-	case VariableEnum:
-		var representacion string
-		return &representacion, nil
-	}
-
-	return nil, fmt.Errorf("no es una variable que pueda tener un valor de una rerpresentacion")
-}
-
-func (v Variable) Desreferenciar(referencia any) (any, error) {
-	switch informacion := v.Informacion.(type) {
-	case VariableSimple:
-		switch informacion.Tipo {
-		case TVS_INT:
-			if numeroRef, ok := referencia.(*int); !ok {
-				return nil, fmt.Errorf("se esperaba que fuera un numero, pero no lo es")
-			} else {
-				return *numeroRef, nil
-			}
-		case TVS_BOOL:
-			if booleanRef, ok := referencia.(*bool); !ok {
-				return nil, fmt.Errorf("se esperaba que fuera un boolean, pero no lo es")
-			} else {
-				return *booleanRef, nil
-			}
-		case TVS_DATE:
-			if stringRef, ok := referencia.(*string); !ok {
-				return nil, fmt.Errorf("se esperaba que fuera un date, pero no lo es")
-			} else {
-				return *stringRef, nil
-			}
-		}
-
-	case VariableString:
-		if stringRef, ok := referencia.(*string); !ok {
-			return nil, fmt.Errorf("se esperaba que fuera un string, pero no lo es")
-		} else {
-			return *stringRef, nil
-		}
-	case VariableEnum:
-		if stringRef, ok := referencia.(*string); !ok {
-			return nil, fmt.Errorf("se esperaba que fuera un enum, pero no lo es")
-		} else {
-			return *stringRef, nil
-		}
-	}
-
-	return nil, fmt.Errorf("no es una variable que pueda tener un valor de una rerpresentacion")
 }
 
 type TipoVariableSimple byte

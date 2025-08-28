@@ -161,8 +161,8 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados Conjun
 	}
 	tabla := td.RegistrarTablas[nombreTabla]
 
-	td.lockTablas[nombreTabla].Lock()
-	if existe, err := tabla.Existe(td.BasesDeDatos, datosIngresados); err != nil {
+	lock := td.lockTablas[nombreTabla]
+	if existe, err := tabla.Existe(td.BasesDeDatos, datosIngresados, lock); err != nil {
 		td.lockTablas[nombreTabla].Unlock()
 		return err
 
@@ -170,8 +170,7 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados Conjun
 		td.lockTablas[nombreTabla].Unlock()
 		return nil
 	}
-	id, err := tabla.Insertar(td.BasesDeDatos, datosIngresados)
-	td.lockTablas[nombreTabla].Unlock()
+	id, err := tabla.Insertar(td.BasesDeDatos, datosIngresados, lock)
 
 	if err != nil {
 		return err

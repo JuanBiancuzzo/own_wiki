@@ -69,7 +69,7 @@ func Visualizar(carpetaConfiguracion string, canalMensajes chan string) {
 		}
 
 		// Ver que hacer con esto
-		e.Static("/imagenes", "ejecucion/imagenes")
+		e.Static("/imagenes", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathImagenes))
 		e.Static("/css", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathCss))
 
 		infoViews.GenerarEndpoints(e)

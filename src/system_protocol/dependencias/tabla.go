@@ -4,6 +4,7 @@ import (
 	"fmt"
 	b "own_wiki/system_protocol/bass_de_datos"
 	"strings"
+	"sync"
 )
 
 type TipoTabla byte
@@ -15,8 +16,8 @@ const (
 	INDEPENDIENTE_DEPENDIBLE    = 0b11
 )
 
-type FnExiste func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error)
-type FnInsertar func(bdd *b.Bdd, datosIngresados ConjuntoDato) (int64, error)
+type FnExiste func(bdd *b.Bdd, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error)
+type FnInsertar func(bdd *b.Bdd, datosIngresados ConjuntoDato, lock *sync.Mutex) (int64, error)
 
 // type FnActualizar func(bdd *b.Bdd, datosIngresados ConjuntoDato) error
 // type FnEliminar func(bdd *b.Bdd, id int64) error
@@ -42,7 +43,7 @@ type Tabla struct {
 func ConstruirTabla(tracker *TrackerDependencias, nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) Tabla {
 	var existe FnExiste
 	if elementosRepetidos {
-		existe = func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error) { return false, nil }
+		existe = func(bdd *b.Bdd, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) { return false, nil }
 	} else {
 		existe = generarExiste(nombreTabla, variables)
 	}
@@ -100,10 +101,12 @@ func generarExiste(nombreTabla string, variables []Variable) FnExiste {
 
 	largoDatos := len(claves)
 
-	return func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error) {
+	return func(bdd *b.Bdd, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) {
+		lock.Lock()
 		datos := make([]any, largoDatos)
 		for _, clave := range claves {
 			if dato, ok := datosIngresados[clave]; !ok {
+				lock.Unlock()
 				return false, fmt.Errorf("el usuario no ingreso el dato para %s", clave)
 
 			} else if relacion, ok := dato.(RelacionTabla); ok {
@@ -115,6 +118,7 @@ func generarExiste(nombreTabla string, variables []Variable) FnExiste {
 		}
 
 		_, err := bdd.Obtener(query, datos...)
+		lock.Unlock()
 		return err == nil, nil
 	}
 }
@@ -170,7 +174,7 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 	)
 
 	largoDatos := len(clavesInsertar)
-	return func(bdd *b.Bdd, datosIngresados ConjuntoDato) (int64, error) {
+	return func(bdd *b.Bdd, datosIngresados ConjuntoDato, lock *sync.Mutex) (int64, error) {
 		datos := make([]any, largoDatos)
 
 		for i, clave := range clavesInsertar {
@@ -186,6 +190,13 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 			}
 		}
 
+		lock.Lock()
+		id, err := bdd.Insertar(insertarQuery, datos...)
+		lock.Unlock()
+		if err != nil {
+			return 0, err
+		}
+
 		for i, clave := range clavesExternas {
 			if dato, ok := datosIngresados[clave]; !ok {
 				continue
@@ -198,7 +209,7 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 			}
 		}
 
-		return bdd.Insertar(insertarQuery, datos...)
+		return id, nil
 	}
 }
 
