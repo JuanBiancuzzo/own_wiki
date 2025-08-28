@@ -25,22 +25,6 @@ type FnFKeys func(hash *Hash, datosIngresados ConjuntoDato) ([]ForeignKey, error
 type FnHash func(hash *Hash, datosIngresados ConjuntoDato) (IntFK, error)
 type FnTabla func(bdd *b.Bdd) error
 
-type DescripcionTabla struct {
-	Nombre             string
-	Tipo               TipoTabla
-	ElementosRepetidos bool
-	Variables          []Variable
-}
-
-func NewDescripcionTabla(nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) DescripcionTabla {
-	return DescripcionTabla{
-		Nombre:             nombreTabla,
-		Tipo:               tipoTabla,
-		ElementosRepetidos: elementosRepetidos,
-		Variables:          variables,
-	}
-}
-
 type Tabla struct {
 	NombreTabla         string
 	TipoTabla           TipoTabla
@@ -55,30 +39,30 @@ type Tabla struct {
 	CrearTablaRelajada FnTabla
 }
 
-func ConstruirTabla(tracker *TrackerDependencias, descripcion DescripcionTabla) Tabla {
+func ConstruirTabla(tracker *TrackerDependencias, nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) Tabla {
 	var existe FnExiste
-	if descripcion.ElementosRepetidos {
+	if elementosRepetidos {
 		existe = func(bdd *b.Bdd, datosIngresados ConjuntoDato) (bool, error) { return false, nil }
 	} else {
-		existe = generarExiste(descripcion.Nombre, descripcion.Variables)
+		existe = generarExiste(nombreTabla, variables)
 	}
 
 	variablesPorNombre := make(map[string]Variable)
-	for _, variable := range descripcion.Variables {
+	for _, variable := range variables {
 		variablesPorNombre[variable.Clave] = variable
 	}
 
 	return Tabla{
-		NombreTabla: descripcion.Nombre,
+		NombreTabla: nombreTabla,
 		Variables:   variablesPorNombre,
-		TipoTabla:   descripcion.Tipo,
+		TipoTabla:   tipoTabla,
 
 		Existe:              existe,
-		Insertar:            generarInsertar(descripcion.Nombre, tracker, descripcion.Variables),
-		CrearForeignKey:     generarFKeys(descripcion.Variables),
-		Hash:                generarHash(descripcion.Variables),
-		CrearTablaRelajada:  generarCrearTabla(descripcion.Nombre, descripcion.Variables),
-		ObtenerDependencias: describirDependencias(descripcion.Variables),
+		Insertar:            generarInsertar(nombreTabla, tracker, variables),
+		CrearForeignKey:     generarFKeys(variables),
+		Hash:                generarHash(variables),
+		CrearTablaRelajada:  generarCrearTabla(nombreTabla, variables),
+		ObtenerDependencias: describirDependencias(variables),
 	}
 }
 
@@ -87,21 +71,24 @@ func generarExiste(nombreTabla string, variables []Variable) FnExiste {
 	claves := []string{} // tiene en cuenta incluso las claves que tienen valores multiples unicamente
 
 	for _, variable := range variables {
-		claves = append(claves, variable.Clave)
 		switch variable.Informacion.(type) {
 		case VariableSimple:
 			queryParam = append(queryParam, fmt.Sprintf("%s = ?", variable.Clave))
+			claves = append(claves, variable.Clave)
+
 		case VariableString:
 			queryParam = append(queryParam, fmt.Sprintf("%s = ?", variable.Clave))
+			claves = append(claves, variable.Clave)
 		case VariableEnum:
 			queryParam = append(queryParam, fmt.Sprintf("%s = ?", variable.Clave))
+			claves = append(claves, variable.Clave)
 
 		case VariableReferencia:
 			queryParam = append(queryParam, fmt.Sprintf("tipo%s = ?", variable.Clave))
+			claves = append(claves, variable.Clave)
 
 		case VariableArrayReferencia:
 			// si la variable es esta, no deberia hacer nada porque no es un valor posible para buscar si existe
-			continue
 		}
 	}
 
@@ -138,6 +125,11 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 	clavesTotales := []string{}
 	valores := []string{}
 
+	// Esto es para manejar los arrays
+	clavesExternas := []string{}
+	tablasExterna := []string{}
+	selfClaves := []string{}
+
 	for _, variable := range variables {
 		switch informacion := variable.Informacion.(type) {
 		case VariableSimple:
@@ -163,9 +155,9 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 			valores = append(valores, "0")
 
 		case VariableArrayReferencia:
-			// Yo no necesito como tal esta variable para la insercion de esta tabla,
-			// pero si necesito hacer que la otra tabla cree su "generarInsertar"
-			// para poder llamarla aca
+			clavesExternas = append(clavesExternas, variable.Clave)
+			tablasExterna = append(tablasExterna, informacion.TablaCreada)
+			selfClaves = append(selfClaves, informacion.ClaveSelf)
 		}
 	}
 
@@ -176,9 +168,6 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 		strings.Join(clavesTotales, ", "),
 		strings.Join(valores, ", "),
 	)
-
-	clavesExternas := []string{}
-	tablasExterna := []string{}
 
 	largoDatos := len(clavesInsertar)
 	return func(bdd *b.Bdd, datosIngresados ConjuntoDato) (int64, error) {
@@ -199,11 +188,11 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 
 		for i, clave := range clavesExternas {
 			if dato, ok := datosIngresados[clave]; !ok {
-				return 0, fmt.Errorf("el usuario no ingreso el dato para %s", clave)
+				continue
 
 			} else if datosRelacion, ok := dato.([]ConjuntoDato); ok {
 				for _, datoRelacion := range datosRelacion {
-					datoRelacion["selfRef"] = NewRelacion(nombreTabla, datosIngresados)
+					datoRelacion[selfClaves[i]] = NewRelacion(nombreTabla, datosIngresados)
 					tracker.Cargar(tablasExterna[i], datoRelacion)
 				}
 			}
@@ -218,9 +207,7 @@ func generarFKeys(variables []Variable) FnFKeys {
 	claves := []string{}
 
 	for _, variable := range variables {
-		claves = append(claves, variable.Clave)
 		if informacion, ok := variable.Informacion.(VariableReferencia); ok {
-
 			claves = append(claves, variable.Clave)
 			if len(informacion.Tablas) > 1 {
 				tablasHash := make(map[string]FnHash)
@@ -306,7 +293,6 @@ func generarHash(variables []Variable) FnHash {
 			}
 		case VariableArrayReferencia:
 			// Para este en particular, no la necestio, por lo tanto es irrelevante
-			continue
 		}
 	}
 

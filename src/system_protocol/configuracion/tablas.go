@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	d "own_wiki/system_protocol/dependencias"
+	u "own_wiki/system_protocol/utilidades"
 )
 
 type TipoVariable string
@@ -22,8 +23,6 @@ const (
 
 type InfoTabla struct {
 	Nombre             string             `json:"nombre"`
-	Independiente      bool               `json:"independiente"`
-	Dependible         bool               `json:"dependible"`
 	ElementosRepetidos bool               `json:"elementosRepetidos"`
 	ValoresGuardar     []InfoValorGuardar `json:"valoresGuardar"`
 }
@@ -40,158 +39,200 @@ type InfoValorGuardar struct {
 	// String
 	Largo int `json:"largo"`
 
-	// Referencia y ArrayReferencia
-	Tabla      string             `json:"tabla"`
-	Tablas     []string           `json:"tablas"`
+	// Referencia
+	Tabla  string   `json:"tabla"`
+	Tablas []string `json:"tablas"`
+
+	// Array de referencias
 	Estructura []InfoValorGuardar `json:"estructura"`
 }
 
-func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Tabla, error) {
-	tablas := []d.Tabla{}
+func procesarInformacionTabla(info InfoTabla, colaTablas *u.Cola[InfoTabla]) (DescripcionTabla, error) {
 
+	variables := []DescripcionVariable{}
+	for _, vg := range info.ValoresGuardar {
+		necesario := vg.Necesario
+		representativo := vg.Representativo && necesario
+		clave := vg.Clave
+
+		switch vg.Tipo {
+		case TV_INT:
+			variables = append(variables, NewVariableSimple(d.TVS_INT, representativo, clave, necesario))
+
+		case TV_BOOL:
+			variables = append(variables, NewVariableSimple(d.TVS_BOOL, representativo, clave, necesario))
+
+		case TV_DATE:
+			variables = append(variables, NewVariableSimple(d.TVS_DATE, representativo, clave, necesario))
+
+		case TV_STRING:
+			variable := NewVariableString(representativo, clave, uint(vg.Largo), necesario)
+			variables = append(variables, variable)
+
+		case TV_ENUM:
+			variable := NewVariableEnum(representativo, clave, vg.Valores, necesario)
+			variables = append(variables, variable)
+
+		case TV_REFERENCIA:
+			var nombreTablas []string
+			if strings.TrimSpace(vg.Tabla) != "" {
+				nombreTablas = []string{vg.Tabla}
+
+			} else {
+				nombreTablas = make([]string, len(vg.Tablas))
+				copy(nombreTablas, vg.Tablas)
+			}
+			variables = append(variables, NewVariableReferencia(vg.Representativo, clave, nombreTablas))
+
+		case TV_ARRAY_REF:
+			tablaReferenciada := fmt.Sprintf("array%s_%s", clave, info.Nombre)
+			selfClave := "selfRef"
+
+			colaTablas.Encolar(InfoTabla{
+				Nombre:             tablaReferenciada,
+				ElementosRepetidos: false,
+				ValoresGuardar: append([]InfoValorGuardar{
+					{
+						Clave:          selfClave,
+						Tipo:           TV_REFERENCIA,
+						Representativo: true,
+						Necesario:      true,
+						Tabla:          info.Nombre,
+					},
+				}, vg.Estructura...),
+			})
+
+			variables = append(variables, NewVariableArrayReferencias(clave, selfClave, tablaReferenciada))
+
+		default:
+			return DescripcionTabla{}, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)
+		}
+	}
+
+	return NewDescripcionTabla(
+		info.Nombre,
+		info.ElementosRepetidos,
+		variables,
+	), nil
+}
+
+func DescripcionTablas(archivoJson string) ([]DescripcionTabla, error) {
+	descripcionTablas := []DescripcionTabla{}
 	decodificador := json.NewDecoder(strings.NewReader(archivoJson))
 
 	// read open bracket
 	if _, err := decodificador.Token(); err != nil {
-		return tablas, err
+		return descripcionTablas, err
 	}
 
-	listaInfo := []InfoTabla{}
-	tipoTablas := []d.TipoTabla{}
-
-	mapaReferenciados := make(map[string]bool)
-	mapaExistencia := make(map[string]bool)
+	extraTablas := u.NewCola[InfoTabla]()
 
 	for decodificador.More() {
 		var info InfoTabla
 		if err := decodificador.Decode(&info); err != nil {
-			return tablas, fmt.Errorf("error al codificar tablas, con err: %v", err)
+			return descripcionTablas, fmt.Errorf("error al codificar tablas, con err: %v", err)
 		}
 
-		listaInfo = append(listaInfo, info)
-		for _, valorGuardado := range info.ValoresGuardar {
-			independiente := true
-			_, dependible := mapaReferenciados[info.Nombre]
+		if descripcion, err := procesarInformacionTabla(info, extraTablas); err != nil {
+			return descripcionTablas, fmt.Errorf("tuvo un error al procesar, con error: %v", err)
 
-			mapaExistencia[valorGuardado.Tabla] = true
-
-			if valorGuardado.Tipo == TV_REFERENCIA || valorGuardado.Tipo == TV_ARRAY_REF {
-				independiente = false
-
-				if valorGuardado.Tabla != "" {
-					mapaReferenciados[valorGuardado.Tabla] = true
-				}
-				for _, tabla := range valorGuardado.Tablas {
-					mapaReferenciados[tabla] = true
-				}
-			}
-
-			var tipoTabla d.TipoTabla
-			if independiente && dependible {
-				tipoTabla = d.INDEPENDIENTE_DEPENDIBLE
-			} else if independiente && !dependible {
-				tipoTabla = d.INDEPENDIENTE_NO_DEPENDIBLE
-			} else if !independiente && dependible {
-				tipoTabla = d.DEPENDIENTE_DEPENDIBLE
-			} else {
-				tipoTabla = d.DEPENDIENTE_NO_DEPENDIBLE
-			}
-			tipoTablas = append(tipoTablas, tipoTabla)
+		} else {
+			descripcionTablas = append(descripcionTablas, descripcion)
 		}
 	}
 
 	// read closing bracket
 	if _, err := decodificador.Token(); err != nil {
+		return descripcionTablas, err
+	}
+
+	for !extraTablas.Lista.Vacia() {
+		nuevasTablasProcesar := extraTablas.Lista.Items()
+		extraTablas.Lista.Vaciar()
+
+		for _, info := range nuevasTablasProcesar {
+			if descripcion, err := procesarInformacionTabla(info, extraTablas); err != nil {
+				return descripcionTablas, fmt.Errorf("tuvo un error al procesar, con error: %v", err)
+
+			} else {
+				descripcionTablas = append(descripcionTablas, descripcion)
+			}
+		}
+	}
+
+	return descripcionTablas, nil
+}
+
+func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Tabla, error) {
+	tablas := []d.Tabla{}
+
+	descripcionTablas, err := DescripcionTablas(archivoJson)
+	if err != nil {
 		return tablas, err
 	}
 
-	nombresTablas := []string{}
-	for nombreTabla := range mapaExistencia {
-		nombresTablas = append(nombresTablas, nombreTabla)
+	mapaReferenciados := make(map[string]bool)
+	for _, descTabla := range descripcionTablas {
+		for _, descVariable := range descTabla.Variables {
+			if detalle, ok := descVariable.Descripcion.(DescVariableReferencia); ok {
+				for _, tabla := range detalle.Tablas {
+					mapaReferenciados[tabla] = true
+				}
+			}
+		}
 	}
 
 	mapaTablas := make(map[string]*d.Tabla)
-	for i, info := range listaInfo {
-		variables := []d.Variable{}
-		for _, vg := range info.ValoresGuardar {
-			necesario := vg.Necesario
-			representativo := vg.Representativo && necesario
-			clave := vg.Clave
+	for _, descTabla := range descripcionTablas {
+		independiente := true
+		_, dependible := mapaReferenciados[descTabla.Nombre]
 
-			switch vg.Tipo {
-			case TV_INT:
-				variables = append(variables, d.NewVariableInt(representativo, clave, necesario))
+		variables := make([]d.Variable, len(descTabla.Variables))
+		for i, descVariable := range descTabla.Variables {
 
-			case TV_BOOL:
-				variables = append(variables, d.NewVariableBool(representativo, clave, necesario))
+			switch detalle := descVariable.Descripcion.(type) {
+			case DescVariableSimple:
+				variables[i] = d.NewVariableSimple(detalle.Tipo, detalle.Representativo, descVariable.Clave, detalle.Necesario)
 
-			case TV_DATE:
-				variables = append(variables, d.NewVariableDate(representativo, clave, necesario))
+			case DescVariableString:
+				variables[i] = d.NewVariableString(detalle.Representativo, descVariable.Clave, detalle.Largo, detalle.Necesario)
 
-			case TV_STRING:
-				variable := d.NewVariableString(representativo, clave, uint(vg.Largo), necesario)
-				variables = append(variables, variable)
+			case DescVariableEnum:
+				variables[i] = d.NewVariableEnum(detalle.Representativo, descVariable.Clave, detalle.Valores, detalle.Necesario)
 
-			case TV_ENUM:
-				variable := d.NewVariableEnum(representativo, clave, vg.Valores, necesario)
-				variables = append(variables, variable)
+			case DescVariableReferencia:
+				independiente = false
 
-			case TV_REFERENCIA:
-				var nombreTablas []string
-				if vg.Tabla != "" {
-					nombreTablas = []string{vg.Tabla}
-				} else {
-					nombreTablas = vg.Tablas
-				}
-
-				tablasRelacionadas := make([]*d.Tabla, len(nombreTablas))
-				for i, nombreTabla := range nombreTablas {
+				tablasRelacionadas := make([]*d.Tabla, len(detalle.Tablas))
+				for i, nombreTabla := range detalle.Tablas {
 					if tabla, ok := mapaTablas[nombreTabla]; !ok {
-						return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", nombreTabla, strings.Join(nombresTablas, ", "))
+						return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo", nombreTabla)
 					} else {
 						tablasRelacionadas[i] = tabla
 					}
 				}
 
-				variables = append(variables, d.NewVariableReferencia(vg.Representativo, clave, tablasRelacionadas))
+				variables[i] = d.NewVariableReferencia(detalle.Representativo, descVariable.Clave, tablasRelacionadas)
 
-			case TV_ARRAY_REF:
-				continue
-				var nombreTablas []string
-				if vg.Tabla != "" {
-					nombreTablas = []string{vg.Tabla}
-				} else {
-					nombreTablas = vg.Tablas
-				}
-
-				tablasRelacionadas := make([]*d.Tabla, len(nombreTablas))
-				for i, nombreTabla := range nombreTablas {
-					if nombreTabla == info.Nombre {
-						tablasRelacionadas[i] = nil
-						continue
-					}
-
-					if tabla, ok := mapaTablas[nombreTabla]; !ok {
-						return tablas, fmt.Errorf("la tabla %s no esta registrada, esto puede ser un error de tipeo, ya que el resto de las tablas son: [%s]", nombreTabla, strings.Join(nombresTablas, ", "))
-					} else {
-						tablasRelacionadas[i] = tabla
-					}
-				}
-				/*
-					Hacer una variable => esta tiene la informacion para hacer la nueva tabla
-					Hacer un infoTabla y un tipoTabla, para acumularlo en el array
-				*/
-
-				variables = append(variables, d.NewVariableArrayReferencias(clave, tablasRelacionadas))
-
-			default:
-				return tablas, fmt.Errorf("el tipo de dato %s no existe, debe ser un error", vg.Tipo)
+			case DescVariableArrayReferencia:
+				variables[i] = d.NewVariableArrayReferencias(descVariable.Clave, detalle.ClaveSelf, detalle.TablaCreada)
 			}
 
 		}
 
-		nuevaTabla := d.ConstruirTabla(info.Nombre, tracker, tipoTablas[i], info.ElementosRepetidos, variables)
-		mapaTablas[info.Nombre] = &nuevaTabla
+		var tipoTabla d.TipoTabla
+		if independiente && dependible {
+			tipoTabla = d.INDEPENDIENTE_DEPENDIBLE
+		} else if independiente && !dependible {
+			tipoTabla = d.INDEPENDIENTE_NO_DEPENDIBLE
+		} else if !independiente && dependible {
+			tipoTabla = d.DEPENDIENTE_DEPENDIBLE
+		} else {
+			tipoTabla = d.DEPENDIENTE_NO_DEPENDIBLE
+		}
+
+		nuevaTabla := d.ConstruirTabla(tracker, descTabla.Nombre, tipoTabla, descTabla.ElementosRepetidos, variables)
+		mapaTablas[descTabla.Nombre] = &nuevaTabla
 
 		tablas = append(tablas, nuevaTabla)
 	}

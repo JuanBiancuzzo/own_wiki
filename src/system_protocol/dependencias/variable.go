@@ -152,6 +152,17 @@ type VariableSimple struct {
 	Necesario      bool
 }
 
+func NewVariableSimple(tipo TipoVariableSimple, representativo bool, clave string, necesario bool) Variable {
+	return Variable{
+		Clave: clave,
+		Informacion: VariableSimple{
+			Tipo:           tipo,
+			Representativo: representativo,
+			Necesario:      necesario,
+		},
+	}
+}
+
 func NewVariableInt(representativo bool, clave string, necesario bool) Variable {
 	return Variable{
 		Clave: clave,
@@ -259,14 +270,16 @@ func NewVariableReferencia(representativo bool, clave string, tablas []*Tabla) V
 }
 
 type VariableArrayReferencia struct {
-	Tablas []*Tabla
+	ClaveSelf   string
+	TablaCreada string
 }
 
-func NewVariableArrayReferencias(clave string, tablas []*Tabla) Variable {
+func NewVariableArrayReferencias(clave, claveSelf, tablaCreada string) Variable {
 	return Variable{
 		Clave: clave,
 		Informacion: VariableArrayReferencia{
-			Tablas: tablas,
+			ClaveSelf:   claveSelf,
+			TablaCreada: tablaCreada,
 		},
 	}
 }
