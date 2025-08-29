@@ -16,7 +16,17 @@ type RespuestaInformacion struct {
 }
 
 func deepCopyDatos(datos d.ConjuntoDato) d.ConjuntoDato {
-	return datos
+	copia := make(d.ConjuntoDato)
+	for clave := range datos {
+		dato := datos[clave]
+		copia[clave] = dato
+
+		if subDatos, ok := dato.(d.ConjuntoDato); ok {
+			copia[clave] = deepCopyDatos(subDatos)
+		}
+	}
+
+	return copia
 }
 
 func crearDatosSegunEstructura(infoVariables []d.InformacionClave) (d.ConjuntoDato, []*d.ConjuntoDato, error) {
@@ -161,6 +171,8 @@ func crearFuncionGenerador(query d.QueryDato, parametrosEsperados []string) (FnI
 						(*subresultado)[info.Nombre] = valor
 					}
 				}
+
+				fmt.Printf("Resultado: %+v\n", resultado)
 
 				if !yield(deepCopyDatos(resultado)) {
 					return
