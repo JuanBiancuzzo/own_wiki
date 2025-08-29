@@ -15,6 +15,10 @@ func NewDescripcionTabla(nombreTabla string, elementosRepetidos bool, variables 
 }
 
 func (dt DescripcionTabla) ObtenerVariable(clave string) (DescripcionVariable, bool) {
+	if clave == "id" {
+		return NewDescVariableSimple(TVS_INT, true, clave, true), true
+	}
+
 	for _, variable := range dt.Variables {
 		if variable.Clave == clave {
 			return variable, true

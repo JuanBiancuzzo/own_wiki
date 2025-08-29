@@ -21,10 +21,10 @@ type InformacionViews struct {
 type InfoTablas map[*d.DescripcionTabla]d.InformacionQuery
 
 type View struct {
-	Nombre      string                 `json:"nombre"`
-	Template    string                 `json:"bloqueTemplate"`
-	Parametros  []string               `json:"parametros"`
-	Informacion map[string]Informacion `json:"informacion"`
+	Nombre      string        `json:"nombre"`
+	Template    string        `json:"bloqueTemplate"`
+	Parametros  []string      `json:"parametros,omitempty"`
+	Informacion []Informacion `json:"informacion,omitempty"`
 }
 
 func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla) (*v.InfoViews, error) {
@@ -48,24 +48,24 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 		informaciones := make(map[string]v.FnInformacion)
 		pathView.AgregarView(infoView.Nombre, infoView.Parametros)
 
-		for nombreVariable := range infoView.Informacion {
-			switch detalles := infoView.Informacion[nombreVariable].Detalles.(type) {
+		for _, variable := range infoView.Informacion {
+			switch detalles := variable.Detalles.(type) {
 			case ParametroElementoUnico:
 				if informacion, err := crearInformacionElementoUnico(infoView.Parametros, detalles, tablasPorNombre); err != nil {
 					return nil, err
 
 				} else {
-					informaciones[nombreVariable] = informacion
+					informaciones[detalles.Nombre] = informacion
 				}
 
 			case ParametroElementosCompleto:
 				tablas := make(InfoTablas)
 
-				for tablaUsada := range detalles.Tablas {
-					if tabla, ok := tablasPorNombre[tablaUsada]; !ok {
-						return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", tablaUsada)
+				for _, infoTabla := range detalles.Tablas {
+					if tabla, ok := tablasPorNombre[infoTabla.Tabla]; !ok {
+						return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", infoTabla.Tabla)
 
-					} else if queryDato, err := detalles.Tablas[tablaUsada].CrearInformacionQuery(); err != nil {
+					} else if queryDato, err := infoTabla.CrearInformacionQuery(); err != nil {
 						return nil, fmt.Errorf("hubo un error al obtener los detalles de la query, con error: %v", err)
 
 					} else {
@@ -77,17 +77,17 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 					return nil, err
 
 				} else {
-					informaciones[nombreVariable] = informacion
+					informaciones[detalles.Nombre] = informacion
 				}
 
 			case ParametroElementosParcial:
 				tablas := make(InfoTablas)
 
-				for tablaUsada := range detalles.Tablas {
-					if tabla, ok := tablasPorNombre[tablaUsada]; !ok {
-						return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", tablaUsada)
+				for _, infoTabla := range detalles.Tablas {
+					if tabla, ok := tablasPorNombre[infoTabla.Tabla]; !ok {
+						return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", infoTabla.Tabla)
 
-					} else if queryDato, err := detalles.Tablas[tablaUsada].CrearInformacionQuery(); err != nil {
+					} else if queryDato, err := infoTabla.CrearInformacionQuery(); err != nil {
 						return nil, fmt.Errorf("hubo un error al obtener los detalles de la query, con error: %v", err)
 
 					} else {
@@ -99,7 +99,7 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 					return nil, err
 
 				} else {
-					informaciones[nombreVariable] = respuesta.Informacion
+					informaciones[detalles.Nombre] = respuesta.Informacion
 					for ruta := range respuesta.ExtraEndpoint {
 						endpoints[ruta] = respuesta.ExtraEndpoint[ruta]
 					}
@@ -108,12 +108,12 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 		}
 
 		ruta := infoView.Nombre
+		endpoints[ruta] = v.NewView(bdd, infoView.Template, infoView.Parametros, informaciones)
 		if ruta == info.Inicio {
 			hayInicio = true
-			ruta = ""
+			endpoints[""] = v.NewView(bdd, infoView.Template, infoView.Parametros, informaciones)
 		}
 
-		endpoints[ruta] = v.NewView(bdd, infoView.Template, infoView.Parametros, informaciones)
 	}
 
 	if !hayInicio {
@@ -142,10 +142,15 @@ func crearInformacionElementoUnico(parametros []string, detalles ParametroElemen
 }
 
 func crearInformacionElementosCompleto(tablas InfoTablas, parametros []string, groupBy []string, descripciones map[string]*d.DescripcionTabla) (v.FnInformacion, error) {
+	fmt.Printf("Informacion completa: %+v\n", tablas)
 	if querys, err := d.NewQueryMultiples(tablas, groupBy, descripciones); err != nil {
 		return nil, err
 
 	} else {
+		for tabla := range querys {
+			fmt.Printf("Se tiene para la tabla %s, la query: %s\n", tabla, querys[tabla].SentenciaQuery)
+		}
+
 		return v.NewInformacionCompleta(querys, parametros)
 	}
 }

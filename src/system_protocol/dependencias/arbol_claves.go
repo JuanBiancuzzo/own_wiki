@@ -96,7 +96,7 @@ func (nc NodoClave) insertar(clave string, tipo tipoInsercion, tablas map[string
 			nodo = &nuevoNodo
 		}
 
-		return nodo.insertar(clave[indiceDivision:], tipo, tablas)
+		return nodo.insertar(clave[indiceDivision+1:], tipo, tablas)
 
 	} else if _, ok := variable.Descripcion.(DescVariableArrayReferencia); ok {
 		return nil, fmt.Errorf("todavia no esta soportado las array referencia")

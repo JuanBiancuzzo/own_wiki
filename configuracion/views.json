@@ -10,103 +10,125 @@
         },
         {
             "nombre": "Facultad",
-            "informacion": {
-                "Carreras": { 
+            "informacion": [
+                { 
                     "tipo": "ElementosCompleto",
-                    "Carreras": {},
-                    "claves": [ "id", "nombre" ]
+                    "nombre": "Carreras",
+                    "tablas": [
+                        {
+                            "tabla": "Carreras",
+                            "claves": [ "id", "nombre" ]
+                        }
+                    ]
                 }
-            },
+            ],
             "bloqueTemplate": "facultad"
         }, 
         {
             "nombre": "Carrera",
             "parametros": [ "idCarrera" ],
-            "informacion": {
-                "Carrera": {
+            "informacion": [
+                {
                     "tipo": "ElementoUnico", 
+                    "nombre": "Carrera",
                     "tabla": "Carreras", 
                     "id": "idCarrera",
                     "claves": [ "nombre" ]
                 },
-                "Planes": {
+                {
                     "tipo": "ElementosCompleto",
+                    "nombre": "Planes",
                     "Materias": {
                         "claves": [ "refPlan:nombre" ]
                     },
                     "groupBy": [ "refPlan" ]
                 },
-                "Materias": { 
+                { 
                     "tipo": "ElementosParcial", 
-                    "Materias": {
-                        "condicion": [ "refCarrera == idCarrera" ],
-                        "orderBy": [ 
-                            "refCuatrimestre:anio=anio", 
-                            "refCuatrimestre:cuatrimestre=cuatrimestre" 
-                        ],
-                        "claves": [ "id", "nombre", "refCarrera:id", "refCuatrimestre:anio", "refCuatrimestre:cuatrimestre" ]
-                    }, 
-                    "MateriasEquivalente": {
-                        "condicion": [ "refCarrera == idCarrera" ],
-                        "orderBy": [ 
-                            "refMateria:refCuatrimestre:anio=anio", 
-                            "refMateria:refCuatrimestre:cuatrimestre=cuatrimestre" 
-                        ],
-                        "claves": [ "nombre", "refCarrera:id", "refMateria:id", "refMateria:refCuatrimestre:anio", "refMateria:refCuatrimestre:cuatrimestre" ]
-                    },
+                    "nombre": "Materias",
+                    "tablas": [
+                        {
+                            "tabla": "Materias",
+                            "condicion": [ "refCarrera == idCarrera" ],
+                            "orderBy": [ 
+                                "refCuatrimestre:anio=anio", 
+                                "refCuatrimestre:cuatrimestre=cuatrimestre" 
+                            ],
+                            "claves": [ "id", "nombre", "refCarrera:id", "refCuatrimestre:anio", "refCuatrimestre:cuatrimestre" ]
+                        },
+                        {
+                            "tabla": "MateriasEquivalente",
+                            "condicion": [ "refCarrera == idCarrera" ],
+                            "orderBy": [ 
+                                "refMateria:refCuatrimestre:anio=anio", 
+                                "refMateria:refCuatrimestre:cuatrimestre=cuatrimestre" 
+                            ],
+                            "claves": [ "nombre", "refCarrera:id", "refMateria:id", "refMateria:refCuatrimestre:anio", "refMateria:refCuatrimestre:cuatrimestre" ]
+                        }
+                    ],
                     "elementos": {
                         "nombrePedido": "endpoint",
                         "bloquesElementos": "bloqueMateria",
                         "cantidad": 5
                     }
                 }
-            },
+            ],
             "bloqueTemplate": "carrera"
         }, 
         {
             "nombre": "Materia",
             "parametros": [ "idCarrera", "idMateria" ],
-            "informacion": {
-                "Materia": {
+            "informacion": [
+                {
                     "tipo": "ElementoUnico", 
+                    "nombre": "Materia",
                     "tabla": "Materias",
                     "id": "idMateria",
                     "claves": [ "id", "nombre", "refCarrera:id", "refCarrera:nombre" ]
                 }, 
-                "Temas": {
+                {
                     "tipo": "ElementosCompleto",
-                    "TemasMateria": {
-                        "condicion": [ "refMateria == idMateria" ],
-                        "orderBy": [ "capitulo", "parte" ]
-                    }
+                    "nombre": "Temas",
+                    "tablas": [
+                        {
+                            "tabla": "TemasMateria",
+                            "condicion": [ "refMateria == idMateria" ],
+                            "orderBy": [ "capitulo", "parte" ]
+                        }
+                    ]
                 }
-            },
+            ],
             "bloqueTemplate": "materia"
         },
         {
             "nombre": "TemaMateria",
             "parametros": [ "idCarrera", "idMateria", "idTema" ],
-            "informacion": {
-                "Tema": {
+            "informacion": [
+                {
                     "tipo": "ElementoUnico",
+                    "nombre": "Tema",
                     "tabla": "TemasMateria",
                     "id": "idTema",
                     "claves": [ "nombre", "refMateria:id", "refMateria:nombre", "refMateria:refCarrera:id", "refMateria:refCarrera:nombre" ]
                 },
-                "Notas": {
+                {
                     "tipo": "ElementosParcial",
-                    "Notas": {
-                        "condicion": [ "refVinculos:ref == idTema", "refVinculos:tabla == 'TemasMateria'" ],
-                        "orderBy": [ "nombre" ]
-                    },
-                    "claves": [ "nombre" ],
+                    "nombre": "Notas",
+                    "tablas": [
+                        {
+                            "tabla": "Notas",
+                            "condicion": [ "refVinculos:ref == idTema", "refVinculos:tabla == 'TemasMateria'" ],
+                            "orderBy": [ "nombre" ],
+                            "claves": [ "nombre" ]
+                        }
+                    ],
                     "elementos": {
                         "nombrePedido": "endpoint",
                         "bloqueElementos": "notas",
                         "cantidad": 15
                     }
                 }
-            },
+            ],
             "bloqueTemplate": "temaMateria"
         }
     ]

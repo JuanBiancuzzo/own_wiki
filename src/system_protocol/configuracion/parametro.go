@@ -20,7 +20,8 @@ type Informacion struct {
 }
 
 type HeaderParametro struct {
-	Tipo TipoParametro `json:"tipo"`
+	Tipo   TipoParametro `json:"tipo"`
+	Nombre string        `json:"nombre"`
 }
 
 type ParametroElementoUnico struct {
@@ -32,14 +33,15 @@ type ParametroElementoUnico struct {
 
 type ParametroElementosCompleto struct {
 	HeaderParametro
-	Tablas  map[string]InformacionTabla `json:"elementos"`
-	GroupBy []string                    `json:"groupBy"`
+	Tablas  []InformacionTabla
+	GroupBy []string `json:"groupBy"`
 }
 
 type InformacionTabla struct {
-	Condiciones  []string `json:"condicion"`
-	OrderBy      []string `json:"orderBy"`
-	ClavesUsadas []string `json:"claves"`
+	Tabla        string   `json:"tabla"`
+	Condiciones  []string `json:"condicion,omitempty"`
+	OrderBy      []string `json:"orderBy,omitempty"`
+	ClavesUsadas []string `json:"claves,omitempty"`
 }
 
 func (it InformacionTabla) CrearInformacionQuery() (d.InformacionQuery, error) {
@@ -70,9 +72,9 @@ type ParametroElementosParcial struct {
 }
 
 type InformacionParcial struct {
-	Nombre   string `json:"nombrePedido"`
-	Bloque   string `json:"bloquesElementos"`
-	Cantidad int    `json:"cantidad"`
+	Nombre   string `json:"nombrePedido,omitempty"`
+	Bloque   string `json:"bloquesElementos,omitempty"`
+	Cantidad int    `json:"cantidad,omitempty"`
 }
 
 func (p *Informacion) UnmarshalJSON(d []byte) error {

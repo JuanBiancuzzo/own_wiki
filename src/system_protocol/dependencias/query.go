@@ -175,6 +175,7 @@ func NewQueryMultiples(tablas map[*DescripcionTabla]InformacionQuery, groupBy []
 
 	for tabla := range tablas {
 		info := tablas[tabla]
+		fmt.Printf("\tProcesando tabla %s\n", tabla.Nombre)
 
 		claveSelect := make([]*HojaClave, len(info.ClavesUsadas))
 		claveWhere := make([]*HojaClave, len(info.Condiciones))

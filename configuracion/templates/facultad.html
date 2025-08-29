@@ -2,12 +2,12 @@
     <h1 style="display: flex;"> Facultad </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Root }}"> Own wiki </h4> 
+        <h4 hx-target="#body" hx-get="{{ PathViewURL "Root" }}"> Own wiki </h4> 
     </div>
     <hr style="margin-top: .5em;">
     <div style="display: grid;">
         {{ range .Carreras }}
-            <h3 hx-target="#centro" hx-get="{{ PathViewURL Carrera .id }}">
+            <h3 hx-target="#centro" hx-get="{{ PathViewURL "Carrera" .id }}">
                 {{ .nombre }}
             </h3>
         {{ end }}
@@ -18,28 +18,22 @@
     <h1 style="display: flex;"> {{ .Carrera.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Root }}"> Own wiki </h4> 
+        <h4 hx-target="#body" hx-get="{{ PathViewURL "Root" }}"> Own wiki </h4> 
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Facultad }}"> Facultad </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL "Facultad" }}"> Facultad </h4>
     </div>
     <hr style="margin-top: .5em;">
 
     <div id="elementos" style="display: grid;" hx-swap="beforeend">
-        {{ template bloqueMateria . }}
+        {{ template "bloqueMateria" . }}
     </div>
 {{ end }}
 
 {{ block "bloqueMateria" . }}
     {{ range  .Materias }}
-        {{ if .Tipo == "Materias" }}
-        <h3 hx-target="#centro" hx-get="{{ PathViewURL Materia .refCarrera .refMateria }}" style="background-color: blue;">
+        <h3 hx-target="#centro" hx-get="{{ PathViewURL "Materia" .refCarrera .refMateria }}" style="background-color: blue;">
             {{ .nombre }}
         </h3>
-        {{ else }}
-        <h3 hx-target="#centro" hx-get="{{ PathViewURL Materia .refCarrera .refMateria }}" style="background-color: green;">
-            {{ .nombre }}
-        </h3>
-        {{ end }}
     {{ end }}
     <div 
         hx-target="#elementos"
@@ -56,15 +50,15 @@
     <h1 style="display: flex;"> {{ .Materia.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Root }}"> Own wiki </h4> 
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL "Root" }}"> Own wiki </h4> 
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Facultad }}"> Facultad </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL "Facultad" }}"> Facultad </h4>
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Carrera $idCarrera }}"> {{ .Materia.refCarrera.nombre }} </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL "Carrera" $idCarrera }}"> {{ .Materia.refCarrera.nombre }} </h4>
     </div>
     <hr style="margin-top: .5em;">
     {{ range .Temas }}
-        <h3 hx-target="#centro" hx-get="{{ PathViewURL TemasMateria $idCarrera $idMateria .id }}">
+        <h3 hx-target="#centro" hx-get="{{ PathViewURL "TemasMateria" $idCarrera $idMateria .id }}">
             {{ .nombre }}
         </h3>
     {{ end }}
@@ -76,18 +70,18 @@
     <h1 style="display: flex;"> {{ .Tema.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Root }}"> Own wiki </h4> 
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL "Root" }}"> Own wiki </h4> 
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Facultad }}"> Facultad </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL "Facultad" }}"> Facultad </h4>
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Carrera $idCarrera }}"> {{ .Tema.refMateria.refCarrera.nombre }} </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL "Carrera" $idCarrera }}"> {{ .Tema.refMateria.refCarrera.nombre }} </h4>
             <p style="padding: 0 .5em 0 .5em;"> > </p>
-        <h4 hx-target="#centro" hx-get="{{ PathViewURL Materia $idCarrera $idMateria }}"> {{ .Tema.refMateria.nombre }} </h4>
+        <h4 hx-target="#centro" hx-get="{{ PathViewURL "Materia" $idCarrera $idMateria }}"> {{ .Tema.refMateria.nombre }} </h4>
     </div>
     <hr style="margin-top: .5em;">
     <hr>
     <div id="elementos" style="display: grid;" hx-swap="beforeend">
-        {{ template notas . }}
+        {{ template "notas" . }}
     </div>
 {{ end }}
 

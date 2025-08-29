@@ -9,23 +9,27 @@
         <link rel="icon" type="image/x-icon" href="/imagenes/icono.ico">
         <link rel="stylesheet" href="/css/index.css">
     </head>
-    <body>
+    <body id="body">
         <header id="header">
             <h3>Own wiki</h3>
         </header>
         <main id="main">
             <div class="sidebar contenido" id="left-sidebar"></div>
             <div class="contenido" id="centro" hx-swap="innerHTML">
-                <h1 style="display: flex;"> 
-                    <p> Elecciones </p>
-                </h1>
-                <hr>
-                <h3 hx-target="#centro" hx-get="{{ PathViewURL Facultad }}"> Facultad </h3>
-                <h3 hx-target="#centro" hx-get="{{ PathViewURL Cursos }}"> Cursos </h3>
-                <h3 hx-target="#centro" hx-get="{{ PathViewURL Colecciones }}"> Colecciones </h3>
+                {{ template "root" . }}
             </div>
             <div class="sidebar contenido" id="right-sidebar"></div>
         </main>
     </body>
     </html>
+{{ end }}
+
+{{ block "root" . }}
+    <h1 style="display: flex;"> 
+        <p> Elecciones </p>
+    </h1>
+    <hr>
+    <h3 hx-target="#centro" hx-get="{{ PathViewURL "Facultad" }}"> Facultad </h3>
+    <h3 hx-target="#centro" hx-get="{{ PathViewURL "Cursos" }}"> Cursos </h3>
+    <h3 hx-target="#centro" hx-get="{{ PathViewURL "Colecciones" }}"> Colecciones </h3>
 {{ end }}

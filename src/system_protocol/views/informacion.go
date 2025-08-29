@@ -138,6 +138,8 @@ func crearFuncionGenerador(query d.QueryDato, parametrosEsperados []string) (FnI
 			}
 		}
 
+		fmt.Printf("La query ejecuta es: %s\n", query.SentenciaQuery)
+
 		filas, err := bdd.MySQL.Query(query.SentenciaQuery, parametrosRequeridos...)
 		if err != nil {
 			return nil, err
@@ -178,6 +180,7 @@ func NewInformacionCompleta(querys map[string]d.QueryDato, parametrosEsperados [
 
 	contador := 0
 	for tabla := range querys {
+		fmt.Printf("para la tabla %s, se necesita hacer la query: %s", tabla, querys[tabla].SentenciaQuery)
 		tablas[contador] = tabla
 		posicionTabla[tabla] = contador
 		if generador, err := crearFuncionGenerador(querys[tabla], parametrosEsperados); err != nil {
