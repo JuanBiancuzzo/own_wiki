@@ -142,15 +142,10 @@ func crearInformacionElementoUnico(parametros []string, detalles ParametroElemen
 }
 
 func crearInformacionElementosCompleto(tablas InfoTablas, parametros []string, groupBy []string, descripciones map[string]*d.DescripcionTabla) (v.FnInformacion, error) {
-	fmt.Printf("Informacion completa: %+v\n", tablas)
 	if querys, err := d.NewQueryMultiples(tablas, groupBy, descripciones); err != nil {
 		return nil, err
 
 	} else {
-		for tabla := range querys {
-			fmt.Printf("Se tiene para la tabla %s, la query: %s\n", tabla, querys[tabla].SentenciaQuery)
-		}
-
 		return v.NewInformacionCompleta(querys, parametros)
 	}
 }

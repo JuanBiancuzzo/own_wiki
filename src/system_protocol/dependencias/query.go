@@ -91,7 +91,7 @@ func generarSetencia(nodo *NodoClave, profundidad int) string {
 
 	clavesWhere := make([]string, len(nodo.Where))
 	for i, clave := range nodo.Where {
-		clavesWhere[i] = fmt.Sprintf("%s_%s = ?", nombreTabla, clave.Nombre)
+		clavesWhere[i] = fmt.Sprintf("%s.%s = ?", nombreTabla, clave.Nombre)
 	}
 
 	sentenciaWhere := ""
@@ -142,12 +142,16 @@ func NewQuerySimple(tabla *DescripcionTabla, clavesUsadas []string, parametroId 
 		return QueryDato{}, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
 	}
 
-	return QueryDato{
-		SentenciaQuery: generarSetencia(&raiz, 0),
+	query := QueryDato{
+		SentenciaQuery: generarSetencia(raiz, 0),
 		ClaveSelect:    claveSelect,
 		ClaveWhere:     claveWhere,
 		Parametros:     []string{parametroId},
-	}, nil
+	}
+
+	fmt.Printf("\t[QuerySimple] Procesando tabla %s, con query: %s\n", tabla.Nombre, query.SentenciaQuery)
+
+	return query, nil
 }
 
 /*
@@ -175,7 +179,6 @@ func NewQueryMultiples(tablas map[*DescripcionTabla]InformacionQuery, groupBy []
 
 	for tabla := range tablas {
 		info := tablas[tabla]
-		fmt.Printf("\tProcesando tabla %s\n", tabla.Nombre)
 
 		claveSelect := make([]*HojaClave, len(info.ClavesUsadas))
 		claveWhere := make([]*HojaClave, len(info.Condiciones))
@@ -195,11 +198,13 @@ func NewQueryMultiples(tablas map[*DescripcionTabla]InformacionQuery, groupBy []
 		}
 
 		datosQuery[tabla.Nombre] = QueryDato{
-			SentenciaQuery: generarSetencia(&raiz, 0),
+			SentenciaQuery: generarSetencia(raiz, 0),
 			ClaveSelect:    claveSelect,
 			ClaveWhere:     claveWhere,
 			Parametros:     info.Parametros,
 		}
+
+		fmt.Printf("\t[QueryMultiple] Procesando tabla %s, con query: %s\n", tabla.Nombre, datosQuery[tabla.Nombre].SentenciaQuery)
 	}
 
 	return datosQuery, nil
