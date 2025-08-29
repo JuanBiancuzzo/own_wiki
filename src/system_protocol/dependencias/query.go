@@ -145,6 +145,10 @@ func NewQuerySimple(tabla *DescripcionTabla, clavesUsadas []string, parametroId 
 		}
 	}
 
+	if _, err = raiz.InsertarSelect("id", descripciones); err != nil {
+		return QueryDato{}, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
+	}
+
 	if _, err = raiz.InsertarWhere("id", descripciones); err != nil {
 		return QueryDato{}, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
 	}
@@ -192,6 +196,10 @@ func NewQueryMultiples(tablas map[*DescripcionTabla]InformacionQuery, groupBy []
 		}
 
 		for _, clave := range info.Condiciones {
+			if _, err = raiz.InsertarSelect(clave, descripciones); err != nil {
+				return datosQuery, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
+			}
+
 			if _, err = raiz.InsertarWhere(clave, descripciones); err != nil {
 				return datosQuery, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
 			}

@@ -24,11 +24,17 @@
     </div>
     <hr style="margin-top: .5em;">
 
-    <div id="elementos" style="display: grid;" hx-swap="beforeend">
+    <div id="elementos" style="display: grid;">
         {{ range  .Materias }}
-            <h3 hx-target="#centro" hx-get="{{ PathViewURL "Materia" .refCarrera.id .id }}" style="background-color: blue;">
-                {{ .nombre }}
-            </h3>
+            {{ if eq .Tabla "Materias" }}
+                <h3 hx-target="#centro" hx-get="{{ PathViewURL "Materia" .refCarrera.id .id }}" style="background-color: blue;">
+                    {{ .nombre }}
+                </h3>
+            {{ else }}
+                <h3 hx-target="#centro" hx-get="{{ PathViewURL "Materia" .refCarrera.id .refMateria.id }}" style="background-color: green;">
+                    {{ .nombre }}
+                </h3>
+            {{ end }}
         {{ end }}
     </div>
 {{ end }}
@@ -69,7 +75,7 @@
     </div>
     <hr style="margin-top: .5em;">
     <hr>
-    <div id="elementos" style="display: grid;" hx-swap="beforeend">
+    <div id="elementos" style="display: grid;">
         {{ template "notas" . }}
     </div>
 {{ end }}
@@ -78,11 +84,4 @@
     {{ range  .Notas }}
         <h3> {{ .nombre }} </h3>
     {{ end }}
-    <div 
-        hx-target="#elementos"
-        hx-trigger="revealed"
-        hx-get="{{ PedirElementos .endpoint }}"
-        hx-swap="delete">
-        Cargando...
-    </div>
 {{ end }}

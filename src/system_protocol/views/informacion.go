@@ -103,7 +103,7 @@ func NewInformacionFila(query d.QueryDato, parametrosEsperados []string) (FnInfo
 type FnInformacionIterador func(*b.Bdd, []string) (FnIteradorDato, error)
 type FnIteradorDato func(yield func(d.ConjuntoDato) bool)
 
-func crearFuncionGenerador(query d.QueryDato, parametrosEsperados []string) (FnInformacionIterador, error) {
+func crearFuncionGenerador(nombreTabla string, query d.QueryDato, parametrosEsperados []string) (FnInformacionIterador, error) {
 	datosReferencias := make([]any, len(query.ClaveSelect))
 	infoVariables := make([]d.InformacionClave, len(query.ClaveSelect))
 
@@ -122,6 +122,7 @@ func crearFuncionGenerador(query d.QueryDato, parametrosEsperados []string) (FnI
 	if err != nil {
 		return nil, err
 	}
+	resultado["Tabla"] = nombreTabla
 
 	indicesParametros := make([]int, len(query.Parametros))
 	variablesRequeridas := make([]d.InformacionClave, len(query.Parametros))
@@ -149,8 +150,6 @@ func crearFuncionGenerador(query d.QueryDato, parametrosEsperados []string) (FnI
 			}
 		}
 
-		fmt.Printf("Query: \n%s\n", query.SentenciaQuery)
-
 		filas, err := bdd.MySQL.Query(query.SentenciaQuery, parametrosRequeridos...)
 		if err != nil {
 			return nil, err
@@ -175,9 +174,8 @@ func crearFuncionGenerador(query d.QueryDato, parametrosEsperados []string) (FnI
 					}
 				}
 
-				fmt.Printf("Resultado: %+v\n", resultado)
-
 				if !yield(deepCopyDatos(resultado)) {
+					filas.Close()
 					return
 				}
 			}
@@ -195,7 +193,7 @@ func NewInformacionCompleta(querys map[string]d.QueryDato, parametrosEsperados [
 	for tabla := range querys {
 		tablas[contador] = tabla
 		posicionTabla[tabla] = contador
-		if generador, err := crearFuncionGenerador(querys[tabla], parametrosEsperados); err != nil {
+		if generador, err := crearFuncionGenerador(tabla, querys[tabla], parametrosEsperados); err != nil {
 			return nil, err
 
 		} else {
@@ -208,7 +206,7 @@ func NewInformacionCompleta(querys map[string]d.QueryDato, parametrosEsperados [
 	if len(querys) == 1 {
 		generador := generadorIteradores[0]
 		return func(bdd *b.Bdd, parametrosDados []string) (any, error) {
-			iterador, err := generador(bdd, parametrosEsperados)
+			iterador, err := generador(bdd, parametrosDados)
 			if err != nil {
 				return nil, err
 			}

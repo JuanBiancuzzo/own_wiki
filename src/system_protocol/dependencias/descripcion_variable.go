@@ -16,7 +16,11 @@ func (v DescripcionVariable) ValorPorRepresentacion(representacion string) (any,
 	case DescVariableSimple:
 		switch descripcion.Tipo {
 		case TVS_INT:
-			return strconv.Atoi(representacion)
+			if valor, err := strconv.Atoi(representacion); err != nil {
+				return 0, fmt.Errorf("la rep es: '%s' y se tuvo el error: %v", representacion, err)
+			} else {
+				return valor, nil
+			}
 		case TVS_BOOL:
 			switch strings.ToLower(strings.TrimSpace(representacion)) {
 			case "true":
