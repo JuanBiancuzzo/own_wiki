@@ -107,6 +107,7 @@ func crearFuncionGenerador(query d.QueryDato, parametrosEsperados []string) (FnI
 	datosReferencias := make([]any, len(query.ClaveSelect))
 	infoVariables := make([]d.InformacionClave, len(query.ClaveSelect))
 
+	fmt.Println("---")
 	for i, clave := range query.ClaveSelect {
 		infoVariables[i] = clave.ObtenerInfoVariable()
 		if referencia, err := infoVariables[i].Variable.ObtenerReferencia(); err != nil {
@@ -147,6 +148,8 @@ func crearFuncionGenerador(query d.QueryDato, parametrosEsperados []string) (FnI
 				parametrosRequeridos[i] = valor
 			}
 		}
+
+		fmt.Printf("Query: \n%s\n", query.SentenciaQuery)
 
 		filas, err := bdd.MySQL.Query(query.SentenciaQuery, parametrosRequeridos...)
 		if err != nil {
@@ -246,3 +249,15 @@ func NewInformacionParcial(querys map[string]d.QueryDato, parametrosEsperados []
 		ExtraEndpoint: make(map[string]Endpoint),
 	}, nil
 }
+
+/*
+SELECT Materias.id AS Materias_id, Materias.nombre AS Materias_nombre FROM Materias
+	INNER JOIN (
+		SELECT Carreras.id AS Carreras_id FROM Carreras WHERE Carreras.id = ?
+	) AS temp_0_0
+	ON Materias.refCarrera = temp_0_0.Carreras_id
+	INNER JOIN (
+		SELECT CuatrimestresCarrera.anio AS CuatrimestresCarrera_anio, CuatrimestresCarrera.cuatrimestre AS CuatrimestresCarrera_cuatrimestre FROM CuatrimestresCarrera
+	) AS temp_0_1
+	ON Materias.refCuatrimestre = temp_0_1.CuatrimestresCarrera_id
+*/

@@ -25,22 +25,11 @@
     <hr style="margin-top: .5em;">
 
     <div id="elementos" style="display: grid;" hx-swap="beforeend">
-        {{ template "bloqueMateria" . }}
-    </div>
-{{ end }}
-
-{{ block "bloqueMateria" . }}
-    {{ range  .Materias }}
-        <h3 hx-target="#centro" hx-get="{{ PathViewURL "Materia" .refCarrera .refMateria }}" style="background-color: blue;">
-            {{ .nombre }}
-        </h3>
-    {{ end }}
-    <div 
-        hx-target="#elementos"
-        hx-trigger="revealed"
-        hx-get="{{ PedirElementos .endpoint }}"
-        hx-swap="delete">
-        Cargando...
+        {{ range  .Materias }}
+            <h3 hx-target="#centro" hx-get="{{ PathViewURL "Materia" .refCarrera.id .id }}" style="background-color: blue;">
+                {{ .nombre }}
+            </h3>
+        {{ end }}
     </div>
 {{ end }}
 

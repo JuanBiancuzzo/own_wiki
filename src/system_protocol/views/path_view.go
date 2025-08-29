@@ -30,14 +30,14 @@ func (pv *PathView) CreateURLPathView(view string, valores ...any) string {
 	if claves, ok := pv.Views[view]; !ok {
 		return "ERROR - No existe view"
 
-	} else if len(claves) > len(valores) {
-		return "ERROR - No suficientes parametros"
+	} else if len(claves) != len(valores) {
+		return fmt.Sprintf("ERROR - No suficientes parametros, deberian ser %d y se dieron %d", len(claves), len(valores))
 
 	} else {
 		claveValor := make([]string, len(claves))
 		for i, clave := range claves {
 			valor := valores[i]
-			claveValor = append(claveValor, fmt.Sprintf("%s=%v", clave, valor))
+			claveValor[i] = fmt.Sprintf("%s=%v", clave, valor)
 		}
 
 		parametros := ""

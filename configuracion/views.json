@@ -44,7 +44,7 @@
                     "groupBy": [ "refPlan" ]
                 },
                 { 
-                    "tipo": "ElementosParcial", 
+                    "tipo": "ElementosCompleto", 
                     "nombre": "Materias",
                     "tablas": [
                         {
@@ -54,7 +54,7 @@
                                 "refCuatrimestre:anio=anio", 
                                 "refCuatrimestre:cuatrimestre=cuatrimestre" 
                             ],
-                            "claves": [ "id", "nombre", "refCarrera:id", "refCuatrimestre:anio", "refCuatrimestre:cuatrimestre" ]
+                            "claves": [ "id", "nombre", "refCarrera:id", "refCuatrimestre:id", "refCuatrimestre:anio", "refCuatrimestre:cuatrimestre" ]
                         },
                         {
                             "tabla": "MateriasEquivalentes",
@@ -63,14 +63,9 @@
                                 "refMateria:refCuatrimestre:anio=anio", 
                                 "refMateria:refCuatrimestre:cuatrimestre=cuatrimestre" 
                             ],
-                            "claves": [ "nombre", "refCarrera:id", "refMateria:id", "refMateria:refCuatrimestre:anio", "refMateria:refCuatrimestre:cuatrimestre" ]
+                            "claves": [ "nombre", "refCarrera:id", "refMateria:id", "refMateria:refCuatrimestre:id", "refMateria:refCuatrimestre:anio", "refMateria:refCuatrimestre:cuatrimestre" ]
                         }
-                    ],
-                    "elementos": {
-                        "nombrePedido": "endpoint",
-                        "bloquesElementos": "bloqueMateria",
-                        "cantidad": 5
-                    }
+                    ]
                 }
             ],
             "bloqueTemplate": "carrera"
@@ -111,23 +106,6 @@
                     "tabla": "TemasMateria",
                     "id": "idTema",
                     "claves": [ "nombre", "refMateria:id", "refMateria:nombre", "refMateria:refCarrera:id", "refMateria:refCarrera:nombre" ]
-                },
-                {
-                    "tipo": "ElementosParcial",
-                    "nombre": "Notas",
-                    "tablas": [
-                        {
-                            "tabla": "Notas",
-                            "condicion": [ "refVinculos.ref == idTema", "refVinculos.tabla == 'TemasMateria'" ],
-                            "orderBy": [ "nombre" ],
-                            "claves": [ "nombre" ]
-                        }
-                    ],
-                    "elementos": {
-                        "nombrePedido": "endpoint",
-                        "bloqueElementos": "notas",
-                        "cantidad": 15
-                    }
                 }
             ],
             "bloqueTemplate": "temaMateria"

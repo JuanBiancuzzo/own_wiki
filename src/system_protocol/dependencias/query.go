@@ -109,6 +109,8 @@ func generarSetencia(nodo *NodoClave, profundidad int) string {
 	}
 
 	sentenciasJoin := make([]string, len(nodo.Referencias))
+	nombresTemporales := make([]string, len(nodo.Referencias))
+
 	for i, referencia := range nodo.Referencias {
 		sentenciaInterna := generarSetencia(referencia, profundidad+1)
 
@@ -120,11 +122,13 @@ func generarSetencia(nodo *NodoClave, profundidad int) string {
 			"INNER JOIN (\n\t%s\n) AS %s ON %s = %s",
 			sentenciaInterna, nombreTemporal, claveReferencia, claveId,
 		)
+		nombresTemporales[i] = fmt.Sprintf("%s.*", nombreTemporal)
 	}
 
 	return fmt.Sprintf(
-		"SELECT %s FROM %s %s %s",
+		"SELECT %s, %s FROM %s %s %s",
 		sentenciaSelect,
+		strings.Join(nombresTemporales, ", "),
 		nombreTabla,
 		strings.Join(sentenciasJoin, "\n"),
 		sentenciaWhere,
@@ -132,31 +136,25 @@ func generarSetencia(nodo *NodoClave, profundidad int) string {
 }
 
 func NewQuerySimple(tabla *DescripcionTabla, clavesUsadas []string, parametroId string, descripciones map[string]*DescripcionTabla) (QueryDato, error) {
-	claveSelect := make([]*HojaClave, len(clavesUsadas))
-	claveWhere := []*HojaClave{nil}
 	var err error
 
 	raiz := NewRaizClave(tabla)
-	for i, clave := range clavesUsadas {
-		if claveSelect[i], err = raiz.InsertarSelect(clave, descripciones); err != nil {
+	for _, clave := range clavesUsadas {
+		if _, err = raiz.InsertarSelect(clave, descripciones); err != nil {
 			return QueryDato{}, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
 		}
 	}
 
-	if claveWhere[0], err = raiz.InsertarWhere("id", descripciones); err != nil {
+	if _, err = raiz.InsertarWhere("id", descripciones); err != nil {
 		return QueryDato{}, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
 	}
 
-	query := QueryDato{
+	return QueryDato{
 		SentenciaQuery: generarSetencia(raiz, 0),
-		ClaveSelect:    claveSelect,
-		ClaveWhere:     claveWhere,
+		ClaveSelect:    raiz.ObtenerClaveSelect(),
+		ClaveWhere:     raiz.ObtenerClaveWhere(),
 		Parametros:     []string{parametroId},
-	}
-
-	fmt.Printf("-----------------\n\t[QuerySimple] Procesando tabla %s, con query: %s\n-------------\n", tabla.Nombre, query.SentenciaQuery)
-
-	return query, nil
+	}, nil
 }
 
 /*
@@ -184,32 +182,27 @@ func NewQueryMultiples(tablas map[*DescripcionTabla]InformacionQuery, groupBy []
 
 	for tabla := range tablas {
 		info := tablas[tabla]
-
-		claveSelect := make([]*HojaClave, len(info.ClavesUsadas))
-		claveWhere := make([]*HojaClave, len(info.Condiciones))
 		var err error
 
 		raiz := NewRaizClave(tabla)
-		for i, clave := range info.ClavesUsadas {
-			if claveSelect[i], err = raiz.InsertarSelect(clave, descripciones); err != nil {
+		for _, clave := range info.ClavesUsadas {
+			if _, err = raiz.InsertarSelect(clave, descripciones); err != nil {
 				return datosQuery, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
 			}
 		}
 
-		for i, clave := range info.Condiciones {
-			if claveWhere[i], err = raiz.InsertarWhere(clave, descripciones); err != nil {
+		for _, clave := range info.Condiciones {
+			if _, err = raiz.InsertarWhere(clave, descripciones); err != nil {
 				return datosQuery, fmt.Errorf("no se pudo construir arbol de claves porque %v", err)
 			}
 		}
 
 		datosQuery[tabla.Nombre] = QueryDato{
 			SentenciaQuery: generarSetencia(raiz, 0),
-			ClaveSelect:    claveSelect,
-			ClaveWhere:     claveWhere,
+			ClaveSelect:    raiz.ObtenerClaveSelect(),
+			ClaveWhere:     raiz.ObtenerClaveWhere(),
 			Parametros:     info.Parametros,
 		}
-
-		fmt.Printf("-----------------\n\t[QueryMultiple] Procesando tabla %s, con query: %s\n-------------\n", tabla.Nombre, datosQuery[tabla.Nombre].SentenciaQuery)
 	}
 
 	return datosQuery, nil

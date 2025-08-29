@@ -29,7 +29,7 @@ type NodoClave struct {
 }
 
 type HojaClave struct {
-	Padre    NodoClave
+	Padre    *NodoClave
 	Nombre   string
 	Alias    string
 	Variable DescripcionVariable
@@ -140,6 +140,7 @@ func (nc *NodoClave) insertar(clave string, tipo tipoInsercion, tablas map[strin
 		// fmt.Printf("Insertando el nodo: '%s' con alias: '%s'\n", separacion[0], separacion[len(separacion)-1])
 
 		nodoInsertado := HojaClave{
+			Padre:    nc,
 			Nombre:   strings.TrimSpace(separacion[0]),
 			Alias:    strings.TrimSpace(separacion[len(separacion)-1]),
 			Variable: variable,
@@ -152,6 +153,32 @@ func (nc *NodoClave) insertar(clave string, tipo tipoInsercion, tablas map[strin
 		}
 		return &nodoInsertado, nil
 	}
+}
+
+func (nc NodoClave) ObtenerClaveSelect() []*HojaClave {
+	hojas := make([]*HojaClave, len(nc.Select))
+	for i, hoja := range nc.Select {
+		hojas[i] = &hoja
+	}
+
+	for _, referencia := range nc.Referencias {
+		hojas = append(hojas, referencia.ObtenerClaveSelect()...)
+	}
+
+	return hojas
+}
+
+func (nc NodoClave) ObtenerClaveWhere() []*HojaClave {
+	hojas := make([]*HojaClave, len(nc.Where))
+	for i, hoja := range nc.Where {
+		hojas[i] = &hoja
+	}
+
+	for _, referencia := range nc.Referencias {
+		hojas = append(hojas, referencia.ObtenerClaveWhere()...)
+	}
+
+	return hojas
 }
 
 func (nc NodoClave) ContieneClave(clave string, tipo tipoInsercion) (int, bool) {
@@ -178,7 +205,7 @@ func (nc NodoClave) ObtenerPath() []string {
 		return []string{}
 	}
 
-	return append(nc.Padre.ObtenerPath(), nc.Tabla.Nombre)
+	return append(nc.Padre.ObtenerPath(), nc.Nombre)
 }
 
 func (hc HojaClave) ObtenerInfoVariable() InformacionClave {
