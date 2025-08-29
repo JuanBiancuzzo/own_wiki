@@ -89,6 +89,11 @@ func generarSetencia(nodo *NodoClave, profundidad int) string {
 		clavesSelect[i] = fmt.Sprintf("%s.%s AS %s", nombreTabla, nombreClave, alias)
 	}
 
+	sentenciaSelect := strings.Join(clavesSelect, ", ")
+	if len(nodo.Select) == 0 {
+		sentenciaSelect = "*"
+	}
+
 	clavesWhere := make([]string, len(nodo.Where))
 	for i, clave := range nodo.Where {
 		clavesWhere[i] = fmt.Sprintf("%s.%s = ?", nombreTabla, clave.Nombre)
@@ -100,7 +105,7 @@ func generarSetencia(nodo *NodoClave, profundidad int) string {
 	}
 
 	if len(nodo.Referencias) == 0 {
-		return fmt.Sprintf("SELECT %s FROM %s %s", strings.Join(clavesSelect, ", "), nombreTabla, sentenciaWhere)
+		return fmt.Sprintf("SELECT %s FROM %s %s", sentenciaSelect, nombreTabla, sentenciaWhere)
 	}
 
 	sentenciasJoin := make([]string, len(nodo.Referencias))
@@ -112,14 +117,14 @@ func generarSetencia(nodo *NodoClave, profundidad int) string {
 		claveId := fmt.Sprintf("%s.%s_id", nombreTemporal, referencia.Tabla.Nombre)
 
 		sentenciasJoin[i] = fmt.Sprintf(
-			"INNER JOIN (\n\t%s\n) AS %s ON %s %s",
+			"INNER JOIN (\n\t%s\n) AS %s ON %s = %s",
 			sentenciaInterna, nombreTemporal, claveReferencia, claveId,
 		)
 	}
 
 	return fmt.Sprintf(
 		"SELECT %s FROM %s %s %s",
-		strings.Join(clavesSelect, ", "),
+		sentenciaSelect,
 		nombreTabla,
 		strings.Join(sentenciasJoin, "\n"),
 		sentenciaWhere,
@@ -149,7 +154,7 @@ func NewQuerySimple(tabla *DescripcionTabla, clavesUsadas []string, parametroId 
 		Parametros:     []string{parametroId},
 	}
 
-	fmt.Printf("\t[QuerySimple] Procesando tabla %s, con query: %s\n", tabla.Nombre, query.SentenciaQuery)
+	fmt.Printf("-----------------\n\t[QuerySimple] Procesando tabla %s, con query: %s\n-------------\n", tabla.Nombre, query.SentenciaQuery)
 
 	return query, nil
 }
@@ -204,7 +209,7 @@ func NewQueryMultiples(tablas map[*DescripcionTabla]InformacionQuery, groupBy []
 			Parametros:     info.Parametros,
 		}
 
-		fmt.Printf("\t[QueryMultiple] Procesando tabla %s, con query: %s\n", tabla.Nombre, datosQuery[tabla.Nombre].SentenciaQuery)
+		fmt.Printf("-----------------\n\t[QueryMultiple] Procesando tabla %s, con query: %s\n-------------\n", tabla.Nombre, datosQuery[tabla.Nombre].SentenciaQuery)
 	}
 
 	return datosQuery, nil

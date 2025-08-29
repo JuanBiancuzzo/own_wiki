@@ -57,7 +57,7 @@
                             "claves": [ "id", "nombre", "refCarrera:id", "refCuatrimestre:anio", "refCuatrimestre:cuatrimestre" ]
                         },
                         {
-                            "tabla": "MateriasEquivalente",
+                            "tabla": "MateriasEquivalentes",
                             "condicion": [ "refCarrera == idCarrera" ],
                             "orderBy": [ 
                                 "refMateria:refCuatrimestre:anio=anio", 
@@ -93,7 +93,8 @@
                         {
                             "tabla": "TemasMateria",
                             "condicion": [ "refMateria == idMateria" ],
-                            "orderBy": [ "capitulo", "parte" ]
+                            "orderBy": [ "capitulo", "parte" ],
+                            "claves": [ "id", "nombre", "capitulo", "parte" ]
                         }
                     ]
                 }
@@ -117,7 +118,7 @@
                     "tablas": [
                         {
                             "tabla": "Notas",
-                            "condicion": [ "refVinculos:ref == idTema", "refVinculos:tabla == 'TemasMateria'" ],
+                            "condicion": [ "refVinculos.ref == idTema", "refVinculos.tabla == 'TemasMateria'" ],
                             "orderBy": [ "nombre" ],
                             "claves": [ "nombre" ]
                         }

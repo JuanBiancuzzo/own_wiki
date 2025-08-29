@@ -50,12 +50,12 @@ func (it InformacionTabla) CrearInformacionQuery() (d.InformacionQuery, error) {
 
 	for i, expresion := range it.Condiciones {
 		separacion := strings.Split(expresion, "==")
-		if len(separacion) == 2 {
+		if len(separacion) != 2 {
 			return d.InformacionQuery{}, fmt.Errorf("la expresion no tiene sentido, fue %s", expresion)
 		}
 
-		condiciones[i] = separacion[0]
-		parametros[i] = separacion[1]
+		condiciones[i] = strings.TrimSpace(separacion[0])
+		parametros[i] = strings.TrimSpace(separacion[1])
 	}
 
 	return d.InformacionQuery{

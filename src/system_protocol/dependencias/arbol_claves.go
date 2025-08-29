@@ -58,24 +58,31 @@ func NewNodoClave(padre *NodoClave, tabla *DescripcionTabla, nombreClave string)
 }
 
 func (nc *NodoClave) InsertarWhere(clave string, tablas map[string]*DescripcionTabla) (*HojaClave, error) {
-	fmt.Printf("Insertando where clave: '%s'\n", clave)
-	return nc.insertar(clave, TI_WHERE, tablas)
+	// fmt.Printf("Insertando where clave: '%s'\n", strings.TrimSpace(clave))
+	return nc.insertar(strings.TrimSpace(clave), TI_WHERE, tablas)
 }
 
 func (nc *NodoClave) InsertarSelect(clave string, tablas map[string]*DescripcionTabla) (*HojaClave, error) {
-	fmt.Printf("Insertando select clave: '%s'\n", clave)
-	return nc.insertar(clave, TI_SELECT, tablas)
+	// fmt.Printf("Insertando select clave: '%s'\n", strings.TrimSpace(clave))
+	return nc.insertar(strings.TrimSpace(clave), TI_SELECT, tablas)
 }
 
 func (nc *NodoClave) insertar(clave string, tipo tipoInsercion, tablas map[string]*DescripcionTabla) (*HojaClave, error) {
 	indiceDivision := strings.Index(clave, ":")
 	primeraClave := clave
+	resto := ""
 	if indiceDivision > 0 {
-		primeraClave = clave[:indiceDivision]
+		primeraClave = strings.TrimSpace(clave[:indiceDivision])
+		resto = strings.TrimSpace(clave[indiceDivision+1:])
 	}
-	primeraClave = strings.TrimSpace(primeraClave)
 
-	fmt.Printf("Viendo la subclave: '%s'\n", primeraClave)
+	if strings.Contains(primeraClave, ".") {
+		separacion := strings.Split(primeraClave, ".")
+		primeraClave = separacion[0]
+		resto = separacion[1]
+	}
+
+	// fmt.Printf("Viendo la subclave: '%s'\n", primeraClave)
 
 	variable, ok := nc.Tabla.ObtenerVariable(primeraClave)
 	if !ok {
@@ -83,15 +90,15 @@ func (nc *NodoClave) insertar(clave string, tipo tipoInsercion, tablas map[strin
 	}
 
 	if info, ok := variable.Descripcion.(DescVariableReferencia); ok {
-		fmt.Printf("Procesando nodo: '%s'\n", primeraClave)
+		// fmt.Printf("Procesando nodo: '%s'\n", primeraClave)
 		if len(info.Tablas) > 1 {
 			return nil, fmt.Errorf("todavia no se puede referenciar multiples tablas")
 		}
 
 		var nodo *NodoClave = nil
 		for _, referencia := range nc.Referencias {
-			if referencia.Tabla.Nombre == primeraClave {
-				fmt.Println("Ya tenemos ese nodo")
+			if referencia.Nombre == primeraClave {
+				// fmt.Println("Ya tenemos ese nodo")
 				nodo = referencia
 				break
 			}
@@ -99,19 +106,23 @@ func (nc *NodoClave) insertar(clave string, tipo tipoInsercion, tablas map[strin
 
 		// usando unicamente el primero por ahora
 		if tabla, ok := tablas[info.Tablas[0]]; ok && nodo == nil {
-			fmt.Println("No lo tenemos, vamos a crear nodo")
-			nodo := NewNodoClave(nc, tabla, primeraClave)
+			// fmt.Println("No lo tenemos, vamos a crear nodo")
+			nodo = NewNodoClave(nc, tabla, primeraClave)
 			nc.Referencias = append(nc.Referencias, nodo)
 		}
 
-		fmt.Printf("Insertando: '%s'\n", clave[indiceDivision+1:])
-		return nodo.insertar(clave[indiceDivision+1:], tipo, tablas)
+		if indiceDivision < 0 {
+			resto = "id"
+		}
+
+		// fmt.Printf("Insertando: '%s'\n", claveInsertar)
+		return nodo.insertar(strings.TrimSpace(resto), tipo, tablas)
 
 	} else if _, ok := variable.Descripcion.(DescVariableArrayReferencia); ok {
 		return nil, fmt.Errorf("todavia no esta soportado las array referencia")
 
 	} else if indice, contiene := nc.ContieneClave(clave, tipo); contiene {
-		fmt.Printf("Ya se insertó (%s) la clave: '%s'\n", tipo, clave)
+		// fmt.Printf("Ya se insertó (%s) la clave: '%s'\n", tipo, clave)
 		switch tipo {
 		case TI_SELECT:
 			return &nc.Select[indice], nil
@@ -126,7 +137,7 @@ func (nc *NodoClave) insertar(clave string, tipo tipoInsercion, tablas map[strin
 		if len(separacion) > 2 {
 			return nil, fmt.Errorf("se tiene para la clave %s un error de formato, donde se espera que este dado clave=alias", clave)
 		}
-		fmt.Printf("Insertando el nodo: '%s' con alias: '%s'\n", separacion[0], separacion[len(separacion)-1])
+		// fmt.Printf("Insertando el nodo: '%s' con alias: '%s'\n", separacion[0], separacion[len(separacion)-1])
 
 		nodoInsertado := HojaClave{
 			Nombre:   strings.TrimSpace(separacion[0]),
