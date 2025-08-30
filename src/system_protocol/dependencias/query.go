@@ -19,63 +19,6 @@ type InformacionQuery struct {
 	ClavesUsadas []string
 }
 
-/*
-	"Carreras": {
-		"tipo": "ElementoUnico",
-		"tabla": "Carreras",
-		"id": "idCarrera",
-		"claves": [ "nombre" ]
-	}
-
-Resulta en la query
-
-	"SELECT nombre FROM Carreras WHERE id = ?"
-
-Para esto, usamos la variable de "nombre", y se tiene que buscar el indice del parametro "idCarrera" para
-pasarlo en el lugar de ?
-
-Otro ejemplo:
-
-	"Materia": {
-		"tipo": "ElementoUnico",
-		"tabla": "Materias",
-		"id": "idMateria",
-		"claves": [ "id", "nombre", "refCarrera:id", "refCarrera:nombre" ]
-	},
-
-Resulta en la query
-
-	"SELECT res.Materias_id, res.Materias_nombre, res.Carreras_id, res.Carreras_nombre FROM (
-		SELECT Materias.id AS Materias_id, Materias.nombre AS Materias_nombre, Carreras.id AS Carreras_id, Carreras.nombre AS Carreras_nombre
-		FROM Materias INNER JOIN Carreras ON Materias.refCarrera == Carreras.id
-	) AS res WHERE res.Materias_id = ?"
-
-Otro ejemplo:
-
-	"Tema": {
-	    "tipo": "ElementoUnico",
-	    "tabla": "TemasMateria",
-	    "id": "idTema",
-	    "claves": [ "nombre", "refMateria:id", "refMateria:nombre", "refMateria:refCarrera:id", "refMateria:refCarrera:nombre" ]
-	},
-
-# Resulta en la query
-
-	Todas las claves serian:
-		[ TemasMateria_id, TemasMateria_nombre, temp1_1.Materias_id, temp_1_1.Materias_nombre, temp_2_1.Carreras_id, temp_2_1.Carreras_nombre ]
-	por lo tanto se puede hacer un wrapper de esta sentencia, con todos los
-
-	SELECT TemasMateria.id AS TemasMateria_id, TemasMateria.nombre AS TemasMateria_nombre, temp1_1.* FROM TemasMateria
-	JOIN (
-		SELECT Materias.id AS Materias_id, Materias.nombre AS Materias_nombre, temp2_1.* FROM Materias
-		JOIN (
-			SELECT Carreras.id AS Carreras_id, Carreras.nombre AS Carreras_nombre FROM Carreras
-		)
-		AS temp2_1 ON Materias.refCarrera = temp2_1.Carreras_id
-	)
-	AS temp1_1 ON TemasMateria.refMateria = temp1_1.Materias_id
-	WHERE TemasMateria_id = ?;
-*/
 func generarSetencia(nodo *NodoClave, profundidad int) string {
 	nombreTabla := nodo.Tabla.Nombre
 	clavesSelect := make([]string, len(nodo.Select))
@@ -161,26 +104,6 @@ func NewQuerySimple(tabla *DescripcionTabla, clavesUsadas []string, parametroId 
 	}, nil
 }
 
-/*
-	type InformacionQuery struct {
-	    Condicion    string
-	    OrderBy      []string
-	    ClavesUsadas []string
-	}
-
-	"Materias": {
-	    "Materias": {
-	        "condicion": "refCarrera:id == idCarrera",
-	        "orderBy": [ "refCuatrimestre:anio=anio", "refCuatrimestre:cuatrimestre=cuatrimestre" ],
-	        "claves": [ "id", "nombre", "refCarrera:id", "refCuatrimestre:anio", "refCuatrimestre:cuatrimestre" ]
-	    },
-	    "MateriasEquivalente": {
-	        "condicion": "refCarrera:id == idCarrera",
-	        "orderBy": [ "refMateria:refCuatrimestre:anio=anio", "refMateria:refCuatrimestre:cuatrimestre=cuatrimestre" ],
-	        "claves": [ "nombre", "refCarrera:id", "refMateria:id", "refMateria:refCuatrimestre:anio", "refMateria:refCuatrimestre:cuatrimestre" ]
-	    }
-	}
-*/
 func NewQueryMultiples(tablas map[*DescripcionTabla]InformacionQuery, groupBy []string, descripciones map[string]*DescripcionTabla) (map[string]QueryDato, error) {
 	datosQuery := make(map[string]QueryDato)
 

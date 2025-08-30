@@ -50,22 +50,28 @@
                         {
                             "tabla": "Materias",
                             "condicion": [ "refCarrera == idCarrera" ],
-                            "orderBy": [ 
-                                "refCuatrimestre:anio=anio", 
-                                "refCuatrimestre:cuatrimestre=cuatrimestre" 
-                            ],
-                            "claves": [ "id", "nombre", "refCarrera:id", "refCuatrimestre:id", "refCuatrimestre:anio", "refCuatrimestre:cuatrimestre" ]
+                            "claves": [ 
+                                "id", "nombre", 
+                                "refCarrera:id", 
+                                "refCorrelativas:refCorrelativa:id", "refCorrelativas:refCorrelativa:nombre",
+                                "refCuatrimestre:id", 
+                                "refCuatrimestre:anio=anio", "refCuatrimestre:cuatrimestre=cuatrimestre" 
+                            ]
                         },
                         {
                             "tabla": "MateriasEquivalentes",
                             "condicion": [ "refCarrera == idCarrera" ],
-                            "orderBy": [ 
-                                "refMateria:refCuatrimestre:anio=anio", 
-                                "refMateria:refCuatrimestre:cuatrimestre=cuatrimestre" 
-                            ],
-                            "claves": [ "nombre", "refCarrera:id", "refMateria:id", "refMateria:refCuatrimestre:id", "refMateria:refCuatrimestre:anio", "refMateria:refCuatrimestre:cuatrimestre" ]
+                            "claves": [ 
+                                "nombre", 
+                                "refCarrera:id", 
+                                "refMateria:id", 
+                                "refCorrelativas:refCorrelativa:id", "refCorrelativas:refCorrelativa:nombre",
+                                "refMateria:refCuatrimestre:id", 
+                                "refMateria:refCuatrimestre:anio=anio", "refMateria:refCuatrimestre:cuatrimestre=cuatrimestre" 
+                            ]
                         }
-                    ]
+                    ], 
+                    "orderBy": [ "anio", "cuatrimestre" ]
                 }
             ],
             "bloqueTemplate": "carrera"
@@ -88,10 +94,10 @@
                         {
                             "tabla": "TemasMateria",
                             "condicion": [ "refMateria == idMateria" ],
-                            "orderBy": [ "capitulo", "parte" ],
                             "claves": [ "id", "nombre", "capitulo", "parte" ]
                         }
-                    ]
+                    ],
+                    "orderBy": [ "capitulo", "parte" ]
                 }
             ],
             "bloqueTemplate": "materia"
