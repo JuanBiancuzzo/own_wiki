@@ -9,27 +9,39 @@ import (
 type InfoViews struct {
 	PathCss      string
 	PathImagenes string
-	PathView     *PathView
 	Views        []View
+
+	PathEndpoint *PathEndpoint
+	PathView     *PathView
 }
 
-func NewInfoViews(views []View, pathCss, pathImagenes string) *InfoViews {
+func NewInfoViews(views []View, pathCss, pathImagenes string) (*InfoViews, error) {
+	pathEndpoint := NewPathEndpoint()
 	pathView := NewPathView()
 	for _, view := range views {
-		view.RegistrarEndpoints(pathView)
+		if err := pathView.AgregarView(view.Nombre); err != nil {
+			return nil, err
+		}
+
+		if err := view.RegistrarEndpoints(pathEndpoint); err != nil {
+			return nil, err
+		}
+
 	}
 
 	return &InfoViews{
 		Views:        views,
 		PathCss:      pathCss,
 		PathImagenes: pathImagenes,
+
+		PathEndpoint: pathEndpoint,
 		PathView:     pathView,
-	}
+	}, nil
 }
 
 func (t *InfoViews) RegistrarRenderer(e *echo.Echo, carpetaRoot string) error {
 	var err error
-	if e.Renderer, err = NewTemplate(t.Views, t.PathView); err != nil {
+	if e.Renderer, err = NewTemplate(t.Views, t.PathView, t.PathEndpoint); err != nil {
 		return err
 	}
 	return nil

@@ -25,10 +25,13 @@ func NewView(esInicio bool, nombre, bloque string, endpoints map[string]Endpoint
 	}
 }
 
-func (v View) RegistrarEndpoints(pathView *PathView) {
+func (v View) RegistrarEndpoints(pathView *PathEndpoint) error {
 	for ruta := range v.Endpoints {
-		pathView.AgregarView(ruta, v.Endpoints[ruta].Parametros)
+		if err := pathView.AgregarEndpoint(ruta, v.Endpoints[ruta].Parametros); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 func (v View) GenerarEndpoints(e *echo.Echo, bdd *b.Bdd) {

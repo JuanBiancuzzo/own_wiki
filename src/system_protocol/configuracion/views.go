@@ -174,7 +174,7 @@ func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (*v.I
 		views[i] = v.NewView(viewInfo.esInicio, viewInfo.Nombre, viewInfo.BloqueTemplate, endpoints, pathsTemplate)
 	}
 
-	return v.NewInfoViews(views, informacionViews.PathCss, informacionViews.PathImagenes), nil
+	return v.NewInfoViews(views, informacionViews.PathCss, informacionViews.PathImagenes)
 }
 
 func crearInformacionElementoUnico(parametros []string, detalles ParametroElementoUnico, descripciones map[string]*d.DescripcionTabla) (v.FnInformacion, error) {

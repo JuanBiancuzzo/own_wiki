@@ -1,0 +1,50 @@
+package views
+
+import (
+	"fmt"
+	"strings"
+)
+
+type claves []string
+
+type PathEndpoint struct {
+	Endpoints map[string]claves
+}
+
+func NewPathEndpoint() *PathEndpoint {
+	return &PathEndpoint{
+		Endpoints: make(map[string]claves),
+	}
+}
+
+func (pe *PathEndpoint) AgregarEndpoint(endpoint string, claves []string) error {
+	if _, ok := pe.Endpoints[endpoint]; ok {
+		return fmt.Errorf("ya se cargo ese parametro")
+	}
+
+	pe.Endpoints[endpoint] = claves
+	return nil
+}
+
+func (pe *PathEndpoint) CreateURLPathEndpoint(endpoint string, valores ...any) string {
+	if claves, ok := pe.Endpoints[endpoint]; !ok {
+		return "ERROR - No existe view"
+
+	} else if len(claves) != len(valores) {
+		return fmt.Sprintf("ERROR - No suficientes parametros, deberian ser %d y se dieron %d", len(claves), len(valores))
+
+	} else {
+		claveValor := make([]string, len(claves))
+		for i, clave := range claves {
+			valor := valores[i]
+			claveValor[i] = fmt.Sprintf("%s=%v", clave, valor)
+		}
+
+		parametros := ""
+		if len(claveValor) > 0 {
+			parametros = fmt.Sprintf("?%s", strings.Join(claveValor, "&"))
+		}
+
+		return fmt.Sprintf("/%s%s", endpoint, parametros)
+	}
+}
