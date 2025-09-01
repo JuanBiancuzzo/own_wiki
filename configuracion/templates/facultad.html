@@ -1,4 +1,23 @@
 {{ block "facultad" . }}
+    <header id="header">
+        <h3>Own wiki</h3>
+    </header>
+    <main id="main">
+        <div class="sidebar contenido" id="left-sidebar"></div>
+        <div class="contenido" id="centro" hx-swap="innerHTML">
+            <div 
+                hx-target="#contenido"
+                hx-trigger="revealed"
+                hx-get="{{ EndpointURL "Facultad/Carreras" }}"
+                hx-swap="delete">
+                Cargando...
+            </div>
+        </div>
+        <div class="sidebar contenido" id="right-sidebar"></div>
+    </main>
+{{ end }}
+
+{{ block "carreras" . }}
     <h1 style="display: flex;"> Facultad </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
@@ -91,12 +110,8 @@
     <hr style="margin-top: .5em;">
     <hr>
     <div id="elementos" style="display: grid;">
-        {{ template "notas" . }}
+        {{ range  .Notas }}
+            <h3> {{ .nombre }} </h3>
+        {{ end }}
     </div>
-{{ end }}
-
-{{ block "notas" . }}
-    {{ range  .Notas }}
-        <h3> {{ .nombre }} </h3>
-    {{ end }}
 {{ end }}

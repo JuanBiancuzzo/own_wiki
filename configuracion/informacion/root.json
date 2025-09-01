@@ -1,0 +1,6 @@
+{
+    "nombre": "Root",
+    "templates": [ "./root.html" ],
+    "bloqueTemplate": "index",
+    "endpoints": []
+}

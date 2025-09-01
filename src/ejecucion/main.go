@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	t "own_wiki/ejecucion/web_view"
 	b "own_wiki/system_protocol/bass_de_datos"
 	c "own_wiki/system_protocol/configuracion"
 	v "own_wiki/system_protocol/views"
@@ -27,11 +26,8 @@ func ObtenerViews(dirConfiguracion string, bdd *b.Bdd) (*v.InfoViews, error) {
 	} else if descripcionTablas, err := c.DescribirTablas(string(bytes)); err != nil {
 		return nil, err
 
-	} else if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "views.json")); err != nil {
-		return nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
-
 	} else {
-		return c.CrearInfoViews(string(bytes), bdd, descripcionTablas)
+		return c.CrearInfoViews(dirConfiguracion, descripcionTablas)
 	}
 }
 
@@ -61,9 +57,7 @@ func Visualizar(carpetaConfiguracion string, canalMensajes chan string) {
 		canalMensajes <- fmt.Sprintf("No se pudo cargar las views, con error: %v", err)
 
 	} else {
-		carpetaTemplates := fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathTemplates)
-
-		if e.Renderer, err = t.NewTemplate(carpetaTemplates, infoViews.PathView); err != nil {
+		if err = infoViews.RegistrarRenderer(e, carpetaConfiguracion); err != nil {
 			canalMensajes <- fmt.Sprintf("No se pudo crear el renderer, con error: %v", err)
 			return
 		}
@@ -72,7 +66,7 @@ func Visualizar(carpetaConfiguracion string, canalMensajes chan string) {
 		e.Static("/imagenes", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathImagenes))
 		e.Static("/css", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathCss))
 
-		infoViews.GenerarEndpoints(e)
+		infoViews.GenerarEndpoints(e, bdd)
 		e.Logger.Fatal(e.Start(":42069"))
 	}
 }
