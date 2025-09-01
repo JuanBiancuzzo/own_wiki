@@ -1,23 +1,4 @@
 {{ block "facultad" . }}
-    <header id="header">
-        <h3>Own wiki</h3>
-    </header>
-    <main id="main">
-        <div class="sidebar contenido" id="left-sidebar"></div>
-        <div class="contenido" id="centro" hx-swap="innerHTML">
-            <div 
-                hx-target="#contenido"
-                hx-trigger="revealed"
-                hx-get="{{ EndpointURL 'Facultad/Carreras' }}"
-                hx-swap="delete">
-                Cargando...
-            </div>
-        </div>
-        <div class="sidebar contenido" id="right-sidebar"></div>
-    </main>
-{{ end }}
-
-{{ block "carreras" . }}
     <h1 style="display: flex;"> Facultad </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
@@ -33,7 +14,7 @@
     </div>
 {{ end }}
 
-{{ block "materias" . }}
+{{ block "carrera" . }}
     <h1 style="display: flex;"> {{ .Carrera.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
@@ -73,7 +54,7 @@
     </div>
 {{ end }}
 
-{{ block "temas" . }}
+{{ block "materia" . }}
     {{ $idCarrera := .Materia.refCarrera.id }}
     {{ $idMateria := .Materia.id }}
     <h1 style="display: flex;"> {{ .Materia.nombre }} </h1>
@@ -93,7 +74,7 @@
     {{ end }}
 {{ end }}
 
-{{ block "notas" . }}
+{{ block "temaMateria" . }}
     {{ $idCarrera := .Tema.refMateria.refCarrera.id }}
     {{ $idMateria := .Tema.refMateria.id }}
     <h1 style="display: flex;"> {{ .Tema.nombre }} </h1>
