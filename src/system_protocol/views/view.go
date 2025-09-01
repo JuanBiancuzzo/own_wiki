@@ -3,37 +3,40 @@ package views
 import (
 	"fmt"
 	b "own_wiki/system_protocol/bass_de_datos"
-	d "own_wiki/system_protocol/dependencias"
 
 	"github.com/labstack/echo/v4"
 )
 
-func NewView(bdd *b.Bdd, bloque string, clavesNecesarias []string, informaciones map[string]FnInformacion) Endpoint {
-	nombreVariables := []string{}
-	arrayInformacion := []FnInformacion{}
-	for nombreValor := range informaciones {
-		nombreVariables = append(nombreVariables, nombreValor)
-		arrayInformacion = append(arrayInformacion, informaciones[nombreValor])
+type View struct {
+	Nombre        string
+	Bloque        string
+	Endpoints     map[string]Endpoint
+	PathTemplates []string
+}
+
+func NewView(nombre, bloque string, endpoints map[string]Endpoint, templates []string) View {
+	return View{
+		Nombre:        nombre,
+		Bloque:        bloque,
+		Endpoints:     endpoints,
+		PathTemplates: templates,
 	}
+}
 
-	return func(ec echo.Context) error {
-		valores := make([]string, len(clavesNecesarias))
-		for i, requisito := range clavesNecesarias {
-			valores[i] = ec.QueryParam(requisito)
-		}
+func (v View) RegistrarEndpoints(pathView *PathView) {
+	for ruta := range v.Endpoints {
+		pathView.AgregarView(ruta, v.Endpoints[ruta].Parametros)
+	}
+}
 
-		data := make(d.ConjuntoDato)
-		for i, nombreValor := range nombreVariables {
-			informacion := arrayInformacion[i]
-			if valor, err := informacion(bdd, valores); err != nil {
-				fmt.Printf("Error la informacion %s con error: %v\n", nombreValor, err)
-				return err
+func (v View) GenerarEndpoints(e *echo.Echo, bdd *b.Bdd) {
+	handler := echo.HandlerFunc(func(ec echo.Context) error {
+		return ec.Render(200, v.Bloque, nil)
+	})
+	e.GET(fmt.Sprintf("/%s", v.Nombre), handler)
 
-			} else {
-				data[nombreValor] = valor
-			}
-		}
-
-		return ec.Render(200, bloque, data)
+	for ruta := range v.Endpoints {
+		handler = echo.HandlerFunc(v.Endpoints[ruta].GenerarEndpoint(bdd, v.Nombre))
+		e.GET(fmt.Sprintf("/%s", v.Nombre), handler)
 	}
 }

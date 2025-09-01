@@ -1,9 +1,7 @@
 {
-    "view": {
-        "nombre": "Facultad",
-        "templates": [ "./facultad.html" ],
-        "bloqueTemplate": "facultad"
-    },
+    "nombre": "Facultad",
+    "templates": [ "./facultad.html" ],
+    "bloqueTemplate": "facultad",
     "endpoints": [
         {
             "nombre": "Carreras",
@@ -35,9 +33,12 @@
                 {
                     "tipo": "ElementosCompleto",
                     "nombre": "Planes",
-                    "Materias": {
-                        "claves": [ "refPlan:nombre" ]
-                    },
+                    "tablas": [
+                        {
+                            "tabla": "Materias",
+                            "claves": [ "refPlan:nombre" ]
+                        }
+                    ],
                     "groupBy": [ "refPlan" ]
                 },
                 { 

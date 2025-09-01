@@ -1,39 +1,91 @@
 package configuracion
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	b "own_wiki/system_protocol/bass_de_datos"
+	"os"
 	d "own_wiki/system_protocol/dependencias"
 	v "own_wiki/system_protocol/views"
 	"slices"
-	"strings"
 )
 
 type InformacionViews struct {
-	Inicio        string `json:"inicio"`
-	PathTemplates string `json:"templates"`
-	PathCss       string `json:"css"`
-	PathImagenes  string `json:"imagenes"`
-	Views         []View `json:"views"`
+	Inicio             string     `json:"inicio"`
+	PathCss            string     `json:"css"`
+	PathImagenes       string     `json:"imagenes"`
+	PathViews          []string   `json:"views"`
+	EndpointsGenerales []Endpoint `json:"endpointsGenerales"`
+}
+
+type View struct {
+	Nombre         string     `json:"nombre"`
+	Templates      []string   `json:"templates"`
+	BloqueTemplate string     `json:"bloqueTemplate"`
+	Endpoints      []Endpoint `json:"endpoints"`
+
+	esInicio bool
 }
 
 type InfoTablas map[*d.DescripcionTabla]d.InformacionQuery
 
-type View struct {
-	Nombre      string        `json:"nombre"`
-	Template    string        `json:"bloqueTemplate"`
-	Parametros  []string      `json:"parametros,omitempty"`
-	Informacion []Informacion `json:"informacion,omitempty"`
+type Endpoint struct {
+	Nombre         string        `json:"nombre"`
+	BloqueTemplate string        `json:"bloqueTemplate"`
+	Parametros     []string      `json:"parametros,omitempty"`
+	Informacion    []Informacion `json:"informacion,omitempty"`
 }
 
-func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla) (*v.InfoViews, error) {
-	decodificador := json.NewDecoder(strings.NewReader(archivoJson))
-	pathView := v.NewPathView()
+func leerView(pathView string) (View, error) {
+	if bytesView, err := os.ReadFile(pathView); err != nil {
+		return View{}, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
 
-	var info InformacionViews
-	if err := decodificador.Decode(&info); err != nil {
-		return nil, fmt.Errorf("error al codificar tablas, con err: %v", err)
+	} else {
+		var view View
+		decodificador := json.NewDecoder(bytes.NewReader(bytesView))
+
+		if err := decodificador.Decode(&view); err != nil {
+			return view, fmt.Errorf("error al codificar tablas, con err: %v", err)
+		}
+
+		return view, nil
+	}
+}
+
+func CrearInfoViews(pathJson string, tablas []d.DescripcionTabla) (*v.InfoViews, error) {
+	var informacionViews InformacionViews
+	var err error
+
+	if bytesJson, err := os.ReadFile(pathJson); err != nil {
+		return nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
+
+	} else {
+		decodificador := json.NewDecoder(bytes.NewReader(bytesJson))
+		if err := decodificador.Decode(&informacionViews); err != nil {
+			return nil, fmt.Errorf("error al codificar tablas, con err: %v", err)
+		}
+	}
+
+	cantidadViews := len(informacionViews.PathViews)
+	if cantidadViews == 0 {
+		return nil, fmt.Errorf("no se ingresaron views para el proyecto, recordar poner el array de 'views'")
+	}
+
+	hayInicio := false
+	viewsInfo := make([]View, cantidadViews)
+	for i := 0; i < cantidadViews; i++ {
+		if viewsInfo[i], err = leerView(informacionViews.PathViews[i]); err != nil {
+			return nil, err
+		}
+
+		if viewsInfo[i].Nombre == informacionViews.Inicio {
+			hayInicio = true
+			viewsInfo[i].esInicio = true
+		}
+	}
+
+	if !hayInicio {
+		return nil, fmt.Errorf("no se ingresó una view la cual corresponda ser el inicio")
 	}
 
 	tablasPorNombre := make(map[string]*d.DescripcionTabla)
@@ -41,86 +93,79 @@ func CrearInfoViews(archivoJson string, bdd *b.Bdd, tablas []d.DescripcionTabla)
 		tablasPorNombre[tabla.Nombre] = &tabla
 	}
 
-	endpoints := make(map[string]v.Endpoint)
-	hayInicio := false
+	views := make([]v.View, len(viewsInfo))
+	for i, viewInfo := range viewsInfo {
+		endpoints := make(map[string]v.Endpoint)
 
-	for _, infoView := range info.Views {
-		informaciones := make(map[string]v.FnInformacion)
-		pathView.AgregarView(infoView.Nombre, infoView.Parametros)
+		for _, infoEndpoint := range viewInfo.Endpoints {
+			informaciones := make(map[string]v.FnInformacion)
 
-		for _, variable := range infoView.Informacion {
-			switch detalles := variable.Detalles.(type) {
-			case ParametroElementoUnico:
-				if informacion, err := crearInformacionElementoUnico(infoView.Parametros, detalles, tablasPorNombre); err != nil {
-					return nil, err
-
-				} else {
-					informaciones[detalles.Nombre] = informacion
-				}
-
-			case ParametroElementosCompleto:
-				tablas := make(InfoTablas)
-
-				for _, infoTabla := range detalles.Tablas {
-					if tabla, ok := tablasPorNombre[infoTabla.Tabla]; !ok {
-						return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", infoTabla.Tabla)
-
-					} else if queryDato, err := infoTabla.CrearInformacionQuery(); err != nil {
-						return nil, fmt.Errorf("hubo un error al obtener los detalles de la query, con error: %v", err)
+			for _, variable := range infoEndpoint.Informacion {
+				switch detalles := variable.Detalles.(type) {
+				case ParametroElementoUnico:
+					if informacion, err := crearInformacionElementoUnico(infoEndpoint.Parametros, detalles, tablasPorNombre); err != nil {
+						return nil, err
 
 					} else {
-						tablas[tabla] = queryDato
+						informaciones[detalles.Nombre] = informacion
 					}
-				}
 
-				if informacion, err := crearInformacionElementosCompleto(tablas, infoView.Parametros, detalles.GroupBy, tablasPorNombre); err != nil {
-					return nil, err
+				case ParametroElementosCompleto:
+					tablas := make(InfoTablas)
 
-				} else {
-					informaciones[detalles.Nombre] = informacion
-				}
+					for _, infoTabla := range detalles.Tablas {
+						if tabla, ok := tablasPorNombre[infoTabla.Tabla]; !ok {
+							return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", infoTabla.Tabla)
 
-			case ParametroElementosParcial:
-				tablas := make(InfoTablas)
+						} else if queryDato, err := infoTabla.CrearInformacionQuery(); err != nil {
+							return nil, fmt.Errorf("hubo un error al obtener los detalles de la query, con error: %v", err)
 
-				for _, infoTabla := range detalles.Tablas {
-					if tabla, ok := tablasPorNombre[infoTabla.Tabla]; !ok {
-						return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", infoTabla.Tabla)
+						} else {
+							tablas[tabla] = queryDato
+						}
+					}
 
-					} else if queryDato, err := infoTabla.CrearInformacionQuery(); err != nil {
-						return nil, fmt.Errorf("hubo un error al obtener los detalles de la query, con error: %v", err)
+					if informacion, err := crearInformacionElementosCompleto(tablas, infoEndpoint.Parametros, detalles.GroupBy, tablasPorNombre); err != nil {
+						return nil, err
 
 					} else {
-						tablas[tabla] = queryDato
+						informaciones[detalles.Nombre] = informacion
 					}
-				}
 
-				if respuesta, err := crearInformacionElementosParcial(tablas, infoView.Parametros, detalles.GroupBy, tablasPorNombre); err != nil {
-					return nil, err
+				case ParametroElementosParcial:
+					tablas := make(InfoTablas)
 
-				} else {
-					informaciones[detalles.Nombre] = respuesta.Informacion
-					for ruta := range respuesta.ExtraEndpoint {
-						endpoints[ruta] = respuesta.ExtraEndpoint[ruta]
+					for _, infoTabla := range detalles.Tablas {
+						if tabla, ok := tablasPorNombre[infoTabla.Tabla]; !ok {
+							return nil, fmt.Errorf("no existe la tabla %s como una tabla registrada", infoTabla.Tabla)
+
+						} else if queryDato, err := infoTabla.CrearInformacionQuery(); err != nil {
+							return nil, fmt.Errorf("hubo un error al obtener los detalles de la query, con error: %v", err)
+
+						} else {
+							tablas[tabla] = queryDato
+						}
+					}
+
+					if respuesta, err := crearInformacionElementosParcial(tablas, infoEndpoint.Parametros, detalles.GroupBy, tablasPorNombre); err != nil {
+						return nil, err
+
+					} else {
+						informaciones[detalles.Nombre] = respuesta.Informacion
+						for ruta := range respuesta.ExtraEndpoint {
+							endpoints[ruta] = respuesta.ExtraEndpoint[ruta]
+						}
 					}
 				}
 			}
+
+			endpoints[infoEndpoint.Nombre] = v.NewEndpoint(infoEndpoint.BloqueTemplate, infoEndpoint.Parametros, informaciones)
 		}
 
-		ruta := infoView.Nombre
-		endpoints[ruta] = v.NewView(bdd, infoView.Template, infoView.Parametros, informaciones)
-		if ruta == info.Inicio {
-			hayInicio = true
-			endpoints[""] = v.NewView(bdd, infoView.Template, infoView.Parametros, informaciones)
-		}
-
+		views[i] = v.NewView(viewInfo.Nombre, viewInfo.BloqueTemplate, endpoints, viewInfo.Templates)
 	}
 
-	if !hayInicio {
-		return nil, fmt.Errorf("no hay punto de inicio")
-	}
-
-	return v.NewInfoViews(endpoints, info.PathTemplates, info.PathCss, info.PathImagenes, pathView), nil
+	return v.NewInfoViews(views, informacionViews.PathCss, informacionViews.PathImagenes), nil
 }
 
 func crearInformacionElementoUnico(parametros []string, detalles ParametroElementoUnico, descripciones map[string]*d.DescripcionTabla) (v.FnInformacion, error) {
