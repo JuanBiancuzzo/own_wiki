@@ -33,7 +33,7 @@
     </div>
 {{ end }}
 
-{{ block "materias" . }}
+{{ block "carrera" . }}
     <h1 style="display: flex;"> {{ .Carrera.nombre }} </h1>
     <hr style="margin-bottom: .5em;">
     <div style="display: flex; flex-direction: row; padding-left: .5em;">
@@ -73,7 +73,7 @@
     </div>
 {{ end }}
 
-{{ block "temas" . }}
+{{ block "materia" . }}
     {{ $idCarrera := .Materia.refCarrera.id }}
     {{ $idMateria := .Materia.id }}
     <h1 style="display: flex;"> {{ .Materia.nombre }} </h1>
@@ -93,7 +93,7 @@
     {{ end }}
 {{ end }}
 
-{{ block "notas" . }}
+{{ block "temaMateria" . }}
     {{ $idCarrera := .Tema.refMateria.refCarrera.id }}
     {{ $idMateria := .Tema.refMateria.id }}
     <h1 style="display: flex;"> {{ .Tema.nombre }} </h1>

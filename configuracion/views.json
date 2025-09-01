@@ -1,7 +1,8 @@
 {
     "inicio": "Root",
-    "css": "./extra/css",
-    "imagenes": "./extra/imagenes",
+    "templates": "./templates",
+    "css": "./css",
+    "imagenes": "./imagenes",
     "views": [
         "informacion/root",
         "informacion/facultad/views"
