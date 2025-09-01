@@ -8,6 +8,7 @@ import (
 	d "own_wiki/system_protocol/dependencias"
 	v "own_wiki/system_protocol/views"
 	"slices"
+	"strings"
 )
 
 type InformacionViews struct {
@@ -25,6 +26,7 @@ type View struct {
 	Endpoints      []Endpoint `json:"endpoints"`
 
 	esInicio bool
+	pathView string
 }
 
 type InfoTablas map[*d.DescripcionTabla]d.InformacionQuery
@@ -42,6 +44,9 @@ func leerView(pathView string) (View, error) {
 
 	} else {
 		var view View
+		carpetas := strings.Split(pathView, "/")
+		view.pathView = strings.Join(carpetas[:len(carpetas)-1], "/")
+
 		decodificador := json.NewDecoder(bytes.NewReader(bytesView))
 
 		if err := decodificador.Decode(&view); err != nil {
@@ -52,11 +57,11 @@ func leerView(pathView string) (View, error) {
 	}
 }
 
-func CrearInfoViews(pathJson string, tablas []d.DescripcionTabla) (*v.InfoViews, error) {
+func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (*v.InfoViews, error) {
 	var informacionViews InformacionViews
 	var err error
 
-	if bytesJson, err := os.ReadFile(pathJson); err != nil {
+	if bytesJson, err := os.ReadFile(fmt.Sprintf("%s/%s", pathConfiguracion, "views.json")); err != nil {
 		return nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
 
 	} else {
@@ -73,8 +78,8 @@ func CrearInfoViews(pathJson string, tablas []d.DescripcionTabla) (*v.InfoViews,
 
 	hayInicio := false
 	viewsInfo := make([]View, cantidadViews)
-	for i := 0; i < cantidadViews; i++ {
-		if viewsInfo[i], err = leerView(informacionViews.PathViews[i]); err != nil {
+	for i := range cantidadViews {
+		if viewsInfo[i], err = leerView(fmt.Sprintf("%s/%s.json", pathConfiguracion, informacionViews.PathViews[i])); err != nil {
 			return nil, err
 		}
 
@@ -162,7 +167,11 @@ func CrearInfoViews(pathJson string, tablas []d.DescripcionTabla) (*v.InfoViews,
 			endpoints[infoEndpoint.Nombre] = v.NewEndpoint(infoEndpoint.BloqueTemplate, infoEndpoint.Parametros, informaciones)
 		}
 
-		views[i] = v.NewView(viewInfo.Nombre, viewInfo.BloqueTemplate, endpoints, viewInfo.Templates)
+		pathsTemplate := make([]string, len(viewInfo.Templates))
+		for i, pathTemplate := range viewInfo.Templates {
+			pathsTemplate[i] = fmt.Sprintf("%s/%s", viewInfo.pathView, pathTemplate)
+		}
+		views[i] = v.NewView(viewInfo.esInicio, viewInfo.Nombre, viewInfo.BloqueTemplate, endpoints, pathsTemplate)
 	}
 
 	return v.NewInfoViews(views, informacionViews.PathCss, informacionViews.PathImagenes), nil

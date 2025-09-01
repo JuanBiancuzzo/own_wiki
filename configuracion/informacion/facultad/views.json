@@ -50,10 +50,7 @@
                             "condicion": [ "refCarrera == idCarrera" ],
                             "claves": [ 
                                 "id", "nombre", 
-                                "refCarrera:id", 
-                                "refCorrelativas:refCorrelativa:id", "refCorrelativas:refCorrelativa:nombre",
-                                "refCuatrimestre:id", 
-                                "refCuatrimestre:anio=anio", "refCuatrimestre:cuatrimestre=cuatrimestre" 
+                                "refCarrera:id"
                             ]
                         },
                         {
@@ -62,10 +59,7 @@
                             "claves": [ 
                                 "nombre", 
                                 "refCarrera:id", 
-                                "refMateria:id", 
-                                "refCorrelativas:refCorrelativa:id", "refCorrelativas:refCorrelativa:nombre",
-                                "refMateria:refCuatrimestre:id", 
-                                "refMateria:refCuatrimestre:anio=anio", "refMateria:refCuatrimestre:cuatrimestre=cuatrimestre" 
+                                "refMateria:id"
                             ]
                         }
                     ], 

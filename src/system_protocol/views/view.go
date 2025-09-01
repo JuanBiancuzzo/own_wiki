@@ -8,14 +8,16 @@ import (
 )
 
 type View struct {
+	EsInicio      bool
 	Nombre        string
 	Bloque        string
 	Endpoints     map[string]Endpoint
 	PathTemplates []string
 }
 
-func NewView(nombre, bloque string, endpoints map[string]Endpoint, templates []string) View {
+func NewView(esInicio bool, nombre, bloque string, endpoints map[string]Endpoint, templates []string) View {
 	return View{
+		EsInicio:      esInicio,
 		Nombre:        nombre,
 		Bloque:        bloque,
 		Endpoints:     endpoints,
@@ -31,12 +33,15 @@ func (v View) RegistrarEndpoints(pathView *PathView) {
 
 func (v View) GenerarEndpoints(e *echo.Echo, bdd *b.Bdd) {
 	handler := echo.HandlerFunc(func(ec echo.Context) error {
-		return ec.Render(200, v.Bloque, nil)
+		return ec.Render(200, fmt.Sprintf("%s/%s", v.Nombre, v.Bloque), nil)
 	})
 	e.GET(fmt.Sprintf("/%s", v.Nombre), handler)
+	if v.EsInicio {
+		e.GET("/", handler)
+	}
 
 	for ruta := range v.Endpoints {
 		handler = echo.HandlerFunc(v.Endpoints[ruta].GenerarEndpoint(bdd, v.Nombre))
-		e.GET(fmt.Sprintf("/%s", v.Nombre), handler)
+		e.GET(fmt.Sprintf("/%s/%s", v.Nombre, ruta), handler)
 	}
 }

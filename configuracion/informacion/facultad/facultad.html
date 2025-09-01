@@ -8,7 +8,7 @@
             <div 
                 hx-target="#contenido"
                 hx-trigger="revealed"
-                hx-get="{{ EndpointURL 'Facultad/Carreras' }}"
+                hx-get="{{ EndpointURL "Facultad/Carreras" }}"
                 hx-swap="delete">
                 Cargando...
             </div>
@@ -110,12 +110,8 @@
     <hr style="margin-top: .5em;">
     <hr>
     <div id="elementos" style="display: grid;">
-        {{ template "notas" . }}
+        {{ range  .Notas }}
+            <h3> {{ .nombre }} </h3>
+        {{ end }}
     </div>
-{{ end }}
-
-{{ block "notas" . }}
-    {{ range  .Notas }}
-        <h3> {{ .nombre }} </h3>
-    {{ end }}
 {{ end }}

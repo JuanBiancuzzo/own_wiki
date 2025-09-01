@@ -27,7 +27,7 @@ func ObtenerViews(dirConfiguracion string, bdd *b.Bdd) (*v.InfoViews, error) {
 		return nil, err
 
 	} else {
-		return c.CrearInfoViews(fmt.Sprintf("%s/%s", dirConfiguracion, "views.json"), descripcionTablas)
+		return c.CrearInfoViews(dirConfiguracion, descripcionTablas)
 	}
 }
 

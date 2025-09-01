@@ -48,6 +48,7 @@ func NewTemplate(views []View, pathView *PathView) (*Templates, error) {
 	templ := template.New("").Funcs(template.FuncMap{
 		"PathViewURL":    pathView.CreateURLPathView,
 		"PedirElementos": CreateURLPedido,
+		"EndpointURL":    func(_ ...any) string { return "[[ERROR]]" },
 	})
 
 	templates := make(map[string]*template.Template)
