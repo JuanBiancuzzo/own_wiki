@@ -150,7 +150,7 @@ func crearFuncionGenerador(nombreTabla string, query d.QueryDato, parametrosEspe
 			}
 		}
 
-		filas, err := bdd.Query(query.SentenciaQuery, parametrosRequeridos...)
+		filas, err := bdd.Query(nombreTabla, query.SentenciaQuery, parametrosRequeridos...)
 		if err != nil {
 			return nil, err
 		}

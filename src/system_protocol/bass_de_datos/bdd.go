@@ -7,56 +7,84 @@ import (
 
 const NOMBRE_BDD = "baseDeDatos.db"
 const MAX_CONN = 20
+const TABLA_GENERAL = "General"
 
 type Bdd struct {
-	conexiones []*conexion
+	archivoBdd string
+	conexiones map[string]*conexion
 	contador   int
 }
 
 func NewBdd(carpetaOutput string, canalMensajes chan string) (*Bdd, error) {
 	archivoBdd := fmt.Sprintf("%s/%s", carpetaOutput, NOMBRE_BDD)
-	conexiones := make([]*conexion, MAX_CONN)
-	var err error
+	conexiones := make(map[string]*conexion)
 
-	for i := range MAX_CONN {
-		if conexiones[i], err = newConexion(archivoBdd); err != nil {
-			return nil, fmt.Errorf("en la conexion n°%d se tuvo: %v", i+1, err)
-		}
+	if conexionGeneral, err := newConexion(archivoBdd); err != nil {
+		return nil, err
+
+	} else {
+		canalMensajes <- "Se conecto correctamente a SQLite"
+		conexiones[TABLA_GENERAL] = conexionGeneral
+
+		return &Bdd{
+			archivoBdd: archivoBdd,
+			conexiones: conexiones,
+			contador:   0,
+		}, nil
 	}
 
-	canalMensajes <- "Se conecto correctamente a SQLite"
-
-	return &Bdd{
-		conexiones: conexiones,
-		contador:   0,
-	}, nil
 }
 
-func (bdd *Bdd) conexion() *conexion {
-	conexion := bdd.conexiones[bdd.contador]
-	bdd.contador = (bdd.contador + 1) % MAX_CONN
-	return conexion
+func (bdd *Bdd) conexion(tabla string) (*conexion, bool) {
+	conn, ok := bdd.conexiones[tabla]
+	return conn, ok
 }
 
 func (bdd *Bdd) Close() {
-	for _, conexion := range bdd.conexiones {
-		conexion.sql.Close()
+	for tabla := range bdd.conexiones {
+		bdd.conexiones[tabla].sql.Close()
 	}
 }
 
-func (bdd *Bdd) CrearTabla(query string, datos ...any) error {
-	_, err := bdd.Exec(query, datos...)
-	return err
+func (bdd *Bdd) CrearTabla(nombreTabla, query string, datos ...any) error {
+	if conn, ok := bdd.conexion(TABLA_GENERAL); !ok {
+		return fmt.Errorf("no se creo la conexion general")
+
+	} else if _, err := conn.Exec(query, datos...); err != nil {
+		return err
+
+	} else {
+		bdd.CrearConexionATabla(nombreTabla)
+		return nil
+	}
 }
 
 func (bdd *Bdd) EliminarTabla(nombreTabla string) error {
-	_, err := bdd.Exec(fmt.Sprintf("DROP TABLE %s", nombreTabla))
-	return err
+	if conn, ok := bdd.conexion(TABLA_GENERAL); !ok {
+		return fmt.Errorf("no se creo la conexion general")
+	} else {
+		_, err := conn.Exec(fmt.Sprintf("DROP TABLE %s", nombreTabla))
+		return err
+	}
 }
 
-func (bdd *Bdd) Existe(query string, datos ...any) (bool, error) {
+func (bdd *Bdd) CrearConexionATabla(tabla string) error {
+	if _, ok := bdd.conexiones[tabla]; ok {
+		return fmt.Errorf("ya existe la conexion a esa tabla")
+	}
+
+	if conexionATabla, err := newConexion(bdd.archivoBdd); err != nil {
+		return err
+
+	} else {
+		bdd.conexiones[tabla] = conexionATabla
+		return nil
+	}
+}
+
+func (bdd *Bdd) Existe(tabla, query string, datos ...any) (bool, error) {
 	lectura := make([]any, len(datos))
-	fila := bdd.QueryRow(query, datos...)
+	fila := bdd.QueryRow(tabla, query, datos...)
 
 	if err := fila.Scan(lectura...); err != nil {
 		return false, nil
@@ -65,9 +93,12 @@ func (bdd *Bdd) Existe(query string, datos ...any) (bool, error) {
 	return true, nil
 }
 
-func (bdd *Bdd) Obtener(query string, datos ...any) (int64, error) {
+func (bdd *Bdd) Obtener(tabla, query string, datos ...any) (int64, error) {
 	var id int64
-	fila := bdd.QueryRow(query, datos...)
+	fila := bdd.QueryRow(tabla, query, datos...)
+	if fila == nil {
+		return id, fmt.Errorf("error al obtener query con tabla '%s'", tabla)
+	}
 
 	if err := fila.Scan(&id); err != nil {
 		return id, fmt.Errorf("error al intentar query la bdd, con error: %v", err)
@@ -76,8 +107,8 @@ func (bdd *Bdd) Obtener(query string, datos ...any) (int64, error) {
 	return id, nil
 }
 
-func (bdd *Bdd) Insertar(query string, datos ...any) (int64, error) {
-	if filaAfectada, err := bdd.Exec(query, datos...); err != nil {
+func (bdd *Bdd) Insertar(tabla, query string, datos ...any) (int64, error) {
+	if filaAfectada, err := bdd.Exec(tabla, query, datos...); err != nil {
 		return 0, fmt.Errorf("error al insertar con query, con error: %v", err)
 
 	} else if id, err := filaAfectada.LastInsertId(); err != nil {
@@ -88,21 +119,37 @@ func (bdd *Bdd) Insertar(query string, datos ...any) (int64, error) {
 	}
 }
 
-func (bdd *Bdd) ObtenerOInsertar(queryObtener, queryInsertar string, datos ...any) (int64, error) {
-	if id, err := bdd.Obtener(queryObtener, datos...); err == nil {
+func (bdd *Bdd) ObtenerOInsertar(tabla, queryObtener, queryInsertar string, datos ...any) (int64, error) {
+	if id, err := bdd.Obtener(tabla, queryObtener, datos...); err == nil {
 		return id, nil
 	}
-	return bdd.Insertar(queryInsertar, datos...)
+	return bdd.Insertar(tabla, queryInsertar, datos...)
 }
 
-func (bdd *Bdd) Exec(query string, datos ...any) (sql.Result, error) {
-	return bdd.conexion().Exec(query, datos...)
+func (bdd *Bdd) Exec(tabla string, query string, datos ...any) (sql.Result, error) {
+	if conexionTabla, ok := bdd.conexion(tabla); !ok {
+		var res sql.Result
+		return res, fmt.Errorf("no hay tabla %s", tabla)
+
+	} else {
+		return conexionTabla.Exec(query, datos...)
+	}
 }
 
-func (bdd *Bdd) QueryRow(query string, datos ...any) *sql.Row {
-	return bdd.conexion().QueryRow(query, datos...)
+func (bdd *Bdd) QueryRow(tabla string, query string, datos ...any) *sql.Row {
+	if conexionTabla, ok := bdd.conexion(tabla); !ok {
+		return nil
+
+	} else {
+		return conexionTabla.QueryRow(query, datos...)
+	}
 }
 
-func (bdd *Bdd) Query(query string, datos ...any) (filasSQL, error) {
-	return bdd.conexion().Query(query, datos...)
+func (bdd *Bdd) Query(tabla string, query string, datos ...any) (filasSQL, error) {
+	if conexionTabla, ok := bdd.conexion(tabla); !ok {
+		return filasSQL{}, fmt.Errorf("no hay tabla %s", tabla)
+
+	} else {
+		return conexionTabla.Query(query, datos...)
+	}
 }

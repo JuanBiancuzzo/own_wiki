@@ -32,21 +32,22 @@ func ContadorArchivos(canalAgregar, canalSacar, canalDone chan bool, canalMensaj
 	procesados := 0
 	seguir := true
 
-	mensaje := "Archivos: %04d/%04d"
+	fmt.Printf("\033[s")
+	mensaje := "\033[uArchivos: %04d/%04d\n"
 
 	for seguir {
 		select {
 		case _, ok := <-canalAgregar:
 			if !ok {
-				mensaje = "Archivos: \033[36m%04d/%04d\033[39m"
+				mensaje = "\033[uArchivos: \033[36m%04d/%04d\033[39m\n"
 				continue
 			}
 			total++
-			canalMensajes <- fmt.Sprintf(mensaje, procesados, total)
+			fmt.Printf(mensaje, procesados, total)
 
 		case <-canalSacar:
 			procesados++
-			canalMensajes <- fmt.Sprintf(mensaje, procesados, total)
+			fmt.Printf(mensaje, procesados, total)
 
 		case <-canalDone:
 			seguir = false

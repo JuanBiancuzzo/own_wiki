@@ -9,11 +9,14 @@ import (
 	u "own_wiki/system_protocol/utilidades"
 )
 
+const AUX_DEPENDIBLES = "aux_dependibles"
 const TABLA_DEPENDIBLES = `CREATE TABLE IF NOT EXISTS aux_dependibles (
 	nombreTabla TEXT CHECK( LENGTH(nombreTabla) <= %d ) NOT NULL,
 	hashDatos   BIGINT,
 	idDatos     INT
 );`
+
+const AUX_INCOMPLETOS = "aux_incompletos"
 const TABLA_INCOMPLETOS = `CREATE TABLE IF NOT EXISTS aux_incompletos (
 	tablaDependiente 	TEXT CHECK( LENGTH(tablaDependiente) <= %d ) NOT NULL,
 	idDependiente   	INT,
@@ -92,10 +95,10 @@ func (td *TrackerDependencias) CargarTabla(descripcion Tabla) {
 }
 
 func (td *TrackerDependencias) EmpezarProcesoInsertarDatos(canalMensajes chan string) error {
-	if err := td.BasesDeDatos.CrearTabla(fmt.Sprintf(TABLA_DEPENDIBLES, td.maximoNombreTabla)); err != nil {
+	if err := td.BasesDeDatos.CrearTabla(AUX_DEPENDIBLES, fmt.Sprintf(TABLA_DEPENDIBLES, td.maximoNombreTabla)); err != nil {
 		return fmt.Errorf("creando tabla dependibles (\n%s\n), se tuvo el error: %v", fmt.Sprintf(TABLA_DEPENDIBLES, td.maximoNombreTabla), err)
 
-	} else if err := td.BasesDeDatos.CrearTabla(fmt.Sprintf(TABLA_INCOMPLETOS, td.maximoNombreTabla, td.maximoNombreTabla)); err != nil {
+	} else if err := td.BasesDeDatos.CrearTabla(AUX_INCOMPLETOS, fmt.Sprintf(TABLA_INCOMPLETOS, td.maximoNombreTabla, td.maximoNombreTabla)); err != nil {
 		return fmt.Errorf("creando tabla incompletos (\n%s\n), se tuvo el error: %v", fmt.Sprintf(TABLA_INCOMPLETOS, td.maximoNombreTabla, td.maximoNombreTabla), err)
 
 	} else if tablasOrdenadas, err := crearTablas(td.tablasProcesar); err != nil {
@@ -133,10 +136,10 @@ func (td *TrackerDependencias) TerminarProcesoInsertarDatos() error {
 		}
 	}
 
-	if err := td.BasesDeDatos.EliminarTabla("aux_dependibles"); err != nil {
+	if err := td.BasesDeDatos.EliminarTabla(AUX_DEPENDIBLES); err != nil {
 		return fmt.Errorf("error al eliminar tabla auxiliar dependibles, con error: %v", err)
 
-	} else if err = td.BasesDeDatos.EliminarTabla("aux_incompletos"); err != nil {
+	} else if err = td.BasesDeDatos.EliminarTabla(AUX_INCOMPLETOS); err != nil {
 		return fmt.Errorf("error al eliminar tabla auxiliar incompletos, con error: %v", err)
 	}
 
@@ -189,14 +192,14 @@ func (td *TrackerDependencias) procesoDependiente(tabla Tabla, idInsertado int64
 		if id, err := td.BasesDeDatos.Obtener(QUERY_TABLA_DEPENDIENTES, fKey.TablaDestino, fKey.HashDatosDestino); err == nil {
 			// Si fueron insertados, por lo que actualizamos la tabla
 			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tabla.NombreTabla, fKey.Clave, id, idInsertado)
-			if _, err = td.BasesDeDatos.Exec(query); err != nil {
+			if _, err = td.BasesDeDatos.Exec(tabla.NombreTabla, query); err != nil {
 				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tabla.NombreTabla, err)
 			}
 
 		} else {
 			// Como no fue insertada, tenemos que guardar la información para que se carge correctamente la dependencia
 			datos := []any{tabla.NombreTabla, idInsertado, fKey.Clave, fKey.TablaDestino, fKey.HashDatosDestino}
-			if _, err := td.BasesDeDatos.Insertar(INSERTAR_TABLA_INCOMPLETOS, datos...); err != nil {
+			if _, err := td.BasesDeDatos.Insertar(AUX_INCOMPLETOS, INSERTAR_TABLA_INCOMPLETOS, datos...); err != nil {
 				return fmt.Errorf("error al insertar en la tabla auxiliar de incompletos, con error: %v", err)
 			}
 		}
@@ -212,11 +215,11 @@ type updateDependible struct {
 }
 
 func (td *TrackerDependencias) procesoDependible(tabla Tabla, idInsertado int64, hashDatos IntFK) error {
-	if _, err := td.BasesDeDatos.Insertar(INSERTAR_TABLA_DEPENDIENTES, tabla.NombreTabla, idInsertado, hashDatos); err != nil {
+	if _, err := td.BasesDeDatos.Insertar(AUX_DEPENDIBLES, INSERTAR_TABLA_DEPENDIENTES, tabla.NombreTabla, idInsertado, hashDatos); err != nil {
 		return fmt.Errorf("error al insertar en dependientes: %s, con error: %v", tabla.NombreTabla, err)
 	}
 
-	if filas, err := td.BasesDeDatos.Query(QUERY_TABLA_INCOMPLETOS, tabla.NombreTabla, hashDatos); err != nil {
+	if filas, err := td.BasesDeDatos.Query(AUX_INCOMPLETOS, QUERY_TABLA_INCOMPLETOS, tabla.NombreTabla, hashDatos); err != nil {
 		return fmt.Errorf("error al query cuales son los elementos incompletos con tabla: %s, con error: %v", tabla.NombreTabla, err)
 
 	} else {
@@ -235,13 +238,13 @@ func (td *TrackerDependencias) procesoDependible(tabla Tabla, idInsertado int64,
 
 		for _, update := range updates {
 			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", update.tablaDependiente, update.key, idInsertado, update.idDependiente)
-			if _, err = td.BasesDeDatos.Exec(query); err != nil {
+			if _, err = td.BasesDeDatos.Exec(update.tablaDependiente, query); err != nil {
 				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tabla.NombreTabla, err)
 			}
 		}
 
 		if len(updates) > 0 {
-			if _, err = td.BasesDeDatos.Exec(ELIMINAR_TABLA_INCOMPLETOS, tabla.NombreTabla, hashDatos); err != nil {
+			if _, err = td.BasesDeDatos.Exec(AUX_INCOMPLETOS, ELIMINAR_TABLA_INCOMPLETOS, tabla.NombreTabla, hashDatos); err != nil {
 				return fmt.Errorf("error al eliminar %d en tabla %s, con error %v", idInsertado, tabla.NombreTabla, err)
 			}
 		}
@@ -257,7 +260,7 @@ type updateTodos struct {
 
 func (td *TrackerDependencias) procesoUltimasActualizaciones() error {
 	// Hacer un inner join pora obtener ya de por si los id, sin tener que buscarlos
-	if filas, err := td.BasesDeDatos.Query(QUERY_TODO_INCOMPLETOS); err != nil {
+	if filas, err := td.BasesDeDatos.Query(AUX_INCOMPLETOS, QUERY_TODO_INCOMPLETOS); err != nil {
 		return fmt.Errorf("error al query de todos los elementos de incompletos, con error: %v", err)
 
 	} else {
@@ -275,12 +278,12 @@ func (td *TrackerDependencias) procesoUltimasActualizaciones() error {
 
 		for _, u := range updates {
 			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", u.tablaDependiente, u.key, u.idInsertado, u.idDependiente)
-			if _, err = td.BasesDeDatos.Exec(query); err != nil {
+			if _, err = td.BasesDeDatos.Exec(u.tablaDependiente, query); err != nil {
 				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", u.idInsertado, u.tablaDestino, err)
 			}
 		}
 
-		if _, err = td.BasesDeDatos.Exec(ELIMINAR_TODO_INCOMPLETOS); err != nil {
+		if _, err = td.BasesDeDatos.Exec(AUX_INCOMPLETOS, ELIMINAR_TODO_INCOMPLETOS); err != nil {
 			return fmt.Errorf("error al eliminar el resto de la tabla de incompletos, con error %v", err)
 		}
 

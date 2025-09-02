@@ -114,7 +114,7 @@ func generarExiste(nombreTabla string, variables []Variable) FnExiste {
 			}
 		}
 
-		_, err := bdd.Obtener(query, datos...)
+		_, err := bdd.Obtener(nombreTabla, query, datos...)
 		return err == nil, nil
 	}
 }
@@ -186,7 +186,7 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 			}
 		}
 
-		id, err := bdd.Insertar(insertarQuery, datos...)
+		id, err := bdd.Insertar(nombreTabla, insertarQuery, datos...)
 		if err != nil {
 			return 0, err
 		}
@@ -370,7 +370,7 @@ func generarCrearTabla(nombreTabla string, variables []Variable) FnTabla {
 	)
 
 	return func(bdd *b.Bdd) error {
-		if err := bdd.CrearTabla(tabla); err != nil {
+		if err := bdd.CrearTabla(nombreTabla, tabla); err != nil {
 			return fmt.Errorf("no se pudo crear la tabla \n%s\n, con error: %v", tabla, err)
 		}
 		return nil
