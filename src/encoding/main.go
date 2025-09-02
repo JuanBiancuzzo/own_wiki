@@ -102,15 +102,7 @@ func Encodear(dirInput, dirConfiguracion string, canalMensajes chan string) {
 	}
 	defer b.CerrarBddRelacional(bddRelacional)
 
-	bddNoSQL, err := b.EstablecerConexionNoSQL(canalMensajes)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
-		return
-	}
-	defer b.CerrarBddNoSQL(bddNoSQL)
-	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
-
-	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional, bddNoSQL))
+	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional))
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo crear el tracker, se tuvo el error: %v", err)
 		return

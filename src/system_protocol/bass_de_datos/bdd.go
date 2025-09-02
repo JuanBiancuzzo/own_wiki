@@ -3,19 +3,15 @@ package bass_de_datos
 import (
 	"database/sql"
 	"fmt"
-
-	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type Bdd struct {
-	MySQL   *sql.DB
-	MongoDB *mongo.Database
+	MySQL *sql.DB
 }
 
-func NewBdd(mySQL *sql.DB, mongoDB *mongo.Database) *Bdd {
+func NewBdd(mySQL *sql.DB) *Bdd {
 	return &Bdd{
-		MySQL:   mySQL,
-		MongoDB: mongoDB,
+		MySQL: mySQL,
 	}
 }
 

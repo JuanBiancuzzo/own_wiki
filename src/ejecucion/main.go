@@ -47,14 +47,7 @@ func Visualizar(carpetaConfiguracion string, canalMensajes chan string) {
 	}
 	defer bddRelacional.Close()
 
-	bddNoSQL, err := b.EstablecerConexionNoSQL(canalMensajes)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
-		return
-	}
-	defer b.CerrarBddNoSQL(bddNoSQL)
-
-	bdd := b.NewBdd(bddRelacional, bddNoSQL)
+	bdd := b.NewBdd(bddRelacional)
 	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
 	if infoViews, err := ObtenerViews(carpetaConfiguracion, bdd); err != nil {
