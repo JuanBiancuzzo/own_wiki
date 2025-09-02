@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"fmt"
 	"slices"
-	"strings"
 	"sync"
 
 	b "own_wiki/system_protocol/bass_de_datos"
@@ -12,15 +11,15 @@ import (
 )
 
 const TABLA_DEPENDIBLES = `CREATE TABLE IF NOT EXISTS aux_dependibles (
-	nombreTabla ENUM(%s) NOT NULL,
+	nombreTabla TEXT CHECK( LENGTH(nombreTabla) <= %d ) NOT NULL,
 	hashDatos   BIGINT,
 	idDatos     INT
 );`
 const TABLA_INCOMPLETOS = `CREATE TABLE IF NOT EXISTS aux_incompletos (
-	tablaDependiente 	ENUM(%s) NOT NULL,
+	tablaDependiente 	TEXT CHECK( LENGTH(tablaDependiente) <= %d ) NOT NULL,
 	idDependiente   	INT,
 	keyAlId 			VARCHAR(255),
-	tablaDestino 		ENUM(%s) NOT NULL,
+	tablaDestino 		TEXT CHECK( LENGTH(tablaDestino) <= %d ) NOT NULL,
 	hashDatosDestino   	BIGINT
 );`
 
@@ -47,10 +46,10 @@ type TrackerDependencias struct {
 	RegistrarTablas map[string]Tabla
 	Hash            *Hash
 
-	tablasProcesar  *u.Cola[Tabla]
-	lockIncompletos *sync.Mutex
-	lockTablas      map[string]*sync.Mutex
-	nombreTablas    []string
+	tablasProcesar    *u.Cola[Tabla]
+	lockIncompletos   *sync.Mutex
+	lockTablas        map[string]*sync.Mutex
+	maximoNombreTabla int
 }
 
 func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
@@ -60,10 +59,10 @@ func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
 		RegistrarTablas: make(map[string]Tabla),
 		Hash:            NewHash(),
 
-		tablasProcesar:  u.NewCola[Tabla](),
-		lockIncompletos: &lock,
-		lockTablas:      make(map[string]*sync.Mutex),
-		nombreTablas:    []string{},
+		tablasProcesar:    u.NewCola[Tabla](),
+		lockIncompletos:   &lock,
+		lockTablas:        make(map[string]*sync.Mutex),
+		maximoNombreTabla: 0,
 	}, nil
 }
 
@@ -90,7 +89,7 @@ func crearTablas(tablasProcesar *u.Cola[Tabla]) ([]Tabla, error) {
 }
 
 func (td *TrackerDependencias) CargarTabla(descripcion Tabla) {
-	td.nombreTablas = append(td.nombreTablas, fmt.Sprintf("\"%s\"", descripcion.NombreTabla))
+	td.maximoNombreTabla = max(td.maximoNombreTabla, len(descripcion.NombreTabla))
 
 	td.RegistrarTablas[descripcion.NombreTabla] = descripcion
 	var lock sync.Mutex
@@ -102,16 +101,14 @@ func (td *TrackerDependencias) CargarTabla(descripcion Tabla) {
 }
 
 func (td *TrackerDependencias) EmpezarProcesoInsertarDatos(canalMensajes chan string) error {
-	enumTablas := strings.Join(td.nombreTablas, ", ")
+	if err := td.BasesDeDatos.CrearTabla(fmt.Sprintf(TABLA_DEPENDIBLES, td.maximoNombreTabla)); err != nil {
+		return fmt.Errorf("creando tabla dependibles (\n%s\n), se tuvo el error: %v", fmt.Sprintf(TABLA_DEPENDIBLES, td.maximoNombreTabla), err)
 
-	if err := td.BasesDeDatos.CrearTabla(fmt.Sprintf(TABLA_DEPENDIBLES, enumTablas)); err != nil {
-		return err
-
-	} else if err := td.BasesDeDatos.CrearTabla(fmt.Sprintf(TABLA_INCOMPLETOS, enumTablas, enumTablas)); err != nil {
-		return err
+	} else if err := td.BasesDeDatos.CrearTabla(fmt.Sprintf(TABLA_INCOMPLETOS, td.maximoNombreTabla, td.maximoNombreTabla)); err != nil {
+		return fmt.Errorf("creando tabla incompletos (\n%s\n), se tuvo el error: %v", fmt.Sprintf(TABLA_INCOMPLETOS, td.maximoNombreTabla, td.maximoNombreTabla), err)
 
 	} else if tablasOrdenadas, err := crearTablas(td.tablasProcesar); err != nil {
-		return err
+		return fmt.Errorf("creando tabla generales, se tuvo el error: %v", err)
 
 	} else {
 		for _, tabla := range slices.Backward(tablasOrdenadas) {
