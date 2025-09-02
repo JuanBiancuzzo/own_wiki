@@ -4,20 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
-func EstablecerConexionRelacional(canalMensajes chan string) (*sql.DB, error) {
-	dbUser := os.Getenv("MYSQL_USER")
-	dbPass := os.Getenv("MYSQL_PASSWORD")
-	dbHost := os.Getenv("MYSQL_HOST")
-	dbPort := os.Getenv("MYSQL_PORT")
-	dbName := os.Getenv("MYSQL_DB_NAME")
-
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
-
-	bdd, err := sql.Open("mysql", dsn)
+func EstablecerConexionRelacional(carpetaOutput string, canalMensajes chan string) (*sql.DB, error) {
+	bdd, err := sql.Open("sqlite3", fmt.Sprintf("%s/baseDeDatos.db", carpetaOutput))
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to DB: %v", err)
 	}
@@ -26,9 +19,9 @@ func EstablecerConexionRelacional(canalMensajes chan string) (*sql.DB, error) {
 	defer cancel()
 
 	if err = bdd.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("no se pudo pinear el servidor de MySQL, con error: %v", err)
+		return nil, fmt.Errorf("no se pudo pinear el servidor de SQLite, con error: %v", err)
 	}
-	canalMensajes <- "Se conecto correctamente a MySQL"
+	canalMensajes <- "Se conecto correctamente a SQLite"
 
 	return bdd, nil
 }

@@ -92,10 +92,10 @@ func CargarTablas(dirConfiguracion string, tracker *d.TrackerDependencias) error
 	}
 }
 
-func Encodear(dirInput, dirConfiguracion string, canalMensajes chan string) {
+func Encodear(dirInput, dirOutput, dirConfiguracion string, canalMensajes chan string) {
 	_ = godotenv.Load()
 
-	bddRelacional, err := b.EstablecerConexionRelacional(canalMensajes)
+	bddRelacional, err := b.EstablecerConexionRelacional(dirOutput, canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
@@ -149,6 +149,7 @@ func main() {
 
 	var carpetaDatos string
 	var carpetaConfiguracion string
+	var carpetaOutput string
 
 	argumentoProcesar := 1
 	for argumentoProcesar+1 < len(os.Args) {
@@ -159,23 +160,33 @@ func main() {
 		case "-c":
 			argumentoProcesar++
 			carpetaConfiguracion = os.Args[argumentoProcesar]
+		case "-o":
+			argumentoProcesar++
+			carpetaOutput = os.Args[argumentoProcesar]
 		default:
 			canalMensajes <- fmt.Sprintf("el argumento %s no pudo ser identificado", os.Args[argumentoProcesar])
 		}
 		argumentoProcesar++
 	}
 
-	if carpetaDatos != "" && carpetaConfiguracion != "" {
-		Encodear(carpetaDatos, carpetaConfiguracion, canalMensajes)
-
-	} else if carpetaDatos == "" && carpetaConfiguracion == "" {
-		canalMensajes <- "Necesitas pasar el directorio de datos (con la flag -d) y directorio de configuracion (con la flag -c)"
-
-	} else if carpetaDatos == "" {
+	configuracionValida := true
+	if carpetaDatos == "" {
 		canalMensajes <- "Necesitas pasar el directorio de datos (con la flag -d)"
+		configuracionValida = false
+	}
 
-	} else {
+	if carpetaConfiguracion == "" {
 		canalMensajes <- "Necesitas pasar el directorio de configuracion (con la flag -c)"
+		configuracionValida = false
+	}
+
+	if carpetaOutput == "" {
+		canalMensajes <- "Necesitas pasar el directorio de output (con la flag -o)"
+		configuracionValida = false
+	}
+
+	if configuracionValida {
+		Encodear(carpetaDatos, carpetaOutput, carpetaConfiguracion, canalMensajes)
 	}
 
 	close(canalMensajes)

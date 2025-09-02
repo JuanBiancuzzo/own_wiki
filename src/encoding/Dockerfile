@@ -7,9 +7,6 @@ WORKDIR /app
 COPY src/go.mod src/go.sum ./
 RUN go mod download
 
-# Copy variables
-COPY .env .env
-
 # Copy source code
 COPY src/encoding encoding/.
 COPY src/system_protocol system_protocol/.
