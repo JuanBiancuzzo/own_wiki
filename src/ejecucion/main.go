@@ -39,15 +39,14 @@ func Visualizar(carpetaOutput, carpetaConfiguracion string, canalMensajes chan s
 	e := echo.New()
 	e.Use(middleware.Logger())
 
-	bddRelacional, err := b.EstablecerConexionRelacional(carpetaOutput, canalMensajes)
+	bdd, err := b.NewBdd(carpetaOutput, canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
 
 	}
-	defer bddRelacional.Close()
+	defer bdd.Close()
 
-	bdd := b.NewBdd(bddRelacional)
 	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
 	if infoViews, err := ObtenerViews(carpetaConfiguracion, bdd); err != nil {

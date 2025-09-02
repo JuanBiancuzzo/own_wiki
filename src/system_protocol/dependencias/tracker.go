@@ -9,12 +9,12 @@ import (
 	u "own_wiki/system_protocol/utilidades"
 )
 
-const TABLA_DEPENDIBLES = `CREATE TEMPORARY TABLE IF NOT EXISTS aux_dependibles (
+const TABLA_DEPENDIBLES = `CREATE TABLE IF NOT EXISTS aux_dependibles (
 	nombreTabla TEXT CHECK( LENGTH(nombreTabla) <= %d ) NOT NULL,
 	hashDatos   BIGINT,
 	idDatos     INT
 );`
-const TABLA_INCOMPLETOS = `CREATE TEMPORARY TABLE IF NOT EXISTS aux_incompletos (
+const TABLA_INCOMPLETOS = `CREATE TABLE IF NOT EXISTS aux_incompletos (
 	tablaDependiente 	TEXT CHECK( LENGTH(tablaDependiente) <= %d ) NOT NULL,
 	idDependiente   	INT,
 	keyAlId 			VARCHAR(255),

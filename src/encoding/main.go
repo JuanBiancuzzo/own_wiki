@@ -133,14 +133,14 @@ func CargarTablas(dirConfiguracion string, tracker *d.TrackerDependencias) error
 func Encodear(dirInput, dirOutput, dirConfiguracion string, canalMensajes chan string) {
 	_ = godotenv.Load()
 
-	bddRelacional, err := b.EstablecerConexionRelacional(dirOutput, canalMensajes)
+	bdd, err := b.NewBdd(dirOutput, canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
 	}
-	defer b.CerrarBddRelacional(bddRelacional)
+	defer bdd.Close()
 
-	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional))
+	tracker, err := d.NewTrackerDependencias(bdd)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo crear el tracker, se tuvo el error: %v", err)
 		return
