@@ -77,7 +77,7 @@ func NewInformacionFila(query d.QueryDato, parametrosEsperados []string) (FnInfo
 	}
 
 	return func(bdd *b.Bdd, parametrosDados []string) (any, error) {
-		fila := bdd.MySQL.QueryRow(query.SentenciaQuery, parametrosDados[indiceIdNecesario])
+		fila := bdd.QueryRow(query.SentenciaQuery, parametrosDados[indiceIdNecesario])
 
 		if err := fila.Scan(datosReferencias...); err != nil {
 			return nil, fmt.Errorf("en lectura de una fila, con la query %s, se tuvo el error: %v", query.SentenciaQuery, err)
@@ -150,7 +150,7 @@ func crearFuncionGenerador(nombreTabla string, query d.QueryDato, parametrosEspe
 			}
 		}
 
-		filas, err := bdd.MySQL.Query(query.SentenciaQuery, parametrosRequeridos...)
+		filas, err := bdd.Query(query.SentenciaQuery, parametrosRequeridos...)
 		if err != nil {
 			return nil, err
 		}
