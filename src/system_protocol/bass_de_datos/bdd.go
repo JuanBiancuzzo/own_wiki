@@ -104,6 +104,7 @@ func (f filasSQL) Scan(datos ...any) error {
 }
 
 func (f filasSQL) Close() {
+	f.filas.Close()
 	f.lock.RUnlock()
 }
 
