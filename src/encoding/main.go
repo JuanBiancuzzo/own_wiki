@@ -27,22 +27,53 @@ const CANTIDAD_WORKERS = 15
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
+func ContadorArchivos(canalAgregar, canalSacar, canalDone chan bool, canalMensajes chan string) {
+	total := 0
+	procesados := 0
+	seguir := true
+
+	for seguir {
+		select {
+		case <-canalAgregar:
+			total++
+			canalMensajes <- fmt.Sprintf("Archivos: %04d/%04d", procesados, total)
+
+		case <-canalSacar:
+			procesados++
+			canalMensajes <- fmt.Sprintf("Archivos: %04d/%04d", procesados, total)
+
+		case <-canalDone:
+			seguir = false
+		}
+	}
+}
+
 func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalMensajes chan string) error {
 	var waitArchivos sync.WaitGroup
 
 	canalInput := make(chan string, CANTIDAD_WORKERS)
 	waitArchivos.Add(1)
 
+	canalAgregar := make(chan bool, CANTIDAD_WORKERS)
+	canalSacar := make(chan bool, CANTIDAD_WORKERS)
+	canalDone := make(chan bool)
+	go ContadorArchivos(canalAgregar, canalSacar, canalDone, canalMensajes)
+
 	terminar := func(motivo string) {
 		canalMensajes <- "Esperando a que termine por: " + motivo
 		close(canalInput)
+		close(canalAgregar)
 		waitArchivos.Wait()
+		close(canalSacar)
+		canalDone <- true
+		close(canalDone)
 	}
 
 	procesarArchivo := func(path string) {
 		if err := procesar.CargarArchivo(dirOrigen, path, tracker, canalMensajes); err != nil {
 			canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo en el path: '%s', con error: %v", path, err)
 		}
+		canalSacar <- true
 	}
 	go u.DividirTrabajo(canalInput, CANTIDAD_WORKERS, procesarArchivo, &waitArchivos)
 
@@ -68,6 +99,7 @@ func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalM
 				colaDirectorios.Encolar(archivoPath)
 
 			} else if !archivo.IsDir() {
+				canalAgregar <- true
 				canalInput <- archivoPath
 			}
 		}
