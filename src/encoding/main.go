@@ -32,18 +32,23 @@ func ContadorArchivos(canalSacar, canalDone chan bool, cantidadArchivos int, can
 	procesados := 0
 	porcentajePrevio := 0
 
+	canalMensajes <- fmt.Sprintf("Progreso: [%s] 0000/%04d", strings.Repeat(" ", 100), cantidadArchivos)
+
 	for seguir {
 		select {
 		case <-canalSacar:
 			procesados++
-			porcentaje := 100 * int(cantidadArchivos/procesados)
+			porcentaje := int((100 * procesados) / cantidadArchivos)
 
-			if porcentaje != porcentajePrevio {
+			if procesados%10 == 0 {
 				canalMensajes <- fmt.Sprintf(
 					"Progreso: [%s%s] %04d/%04d",
-					strings.Repeat("-", porcentaje), strings.Repeat("-", 100-porcentaje),
+					strings.Repeat("|", porcentaje), strings.Repeat(" ", 100-porcentaje),
 					procesados, cantidadArchivos,
 				)
+			}
+
+			if porcentaje != porcentajePrevio {
 				porcentajePrevio = porcentaje
 			}
 
