@@ -66,9 +66,11 @@ func (c *conexion) QueryRow(query string, datos ...any) *sql.Row {
 }
 
 type filasSQL struct {
-	filas    *sql.Rows
-	lock     *sync.RWMutex
-	devolver func()
+	filas *sql.Rows
+	lock  *sync.RWMutex
+
+	pool chan *conexion
+	conn *conexion
 }
 
 func (f filasSQL) Next() bool {
@@ -82,7 +84,7 @@ func (f filasSQL) Scan(datos ...any) error {
 func (f filasSQL) Close() {
 	f.filas.Close()
 	f.lock.RUnlock()
-	f.devolver()
+	f.pool <- f.conn
 }
 
 func (c *conexion) Query(query string, datos ...any) (filasSQL, error) {
@@ -90,8 +92,9 @@ func (c *conexion) Query(query string, datos ...any) (filasSQL, error) {
 	filas, err := c.sql.Query(query, datos...)
 
 	return filasSQL{
-		filas:    filas,
-		lock:     c.lock,
-		devolver: func() { c.pool <- c },
+		filas: filas,
+		lock:  c.lock,
+		pool:  c.pool,
+		conn:  c,
 	}, err
 }

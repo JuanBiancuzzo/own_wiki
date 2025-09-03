@@ -370,7 +370,7 @@ func generarCrearTabla(nombreTabla string, variables []Variable) FnTabla {
 	)
 
 	return func(bdd *b.Bdd) error {
-		if err := bdd.CrearTabla(nombreTabla, tabla); err != nil {
+		if err := bdd.CrearTabla(tabla); err != nil {
 			return fmt.Errorf("no se pudo crear la tabla \n%s\n, con error: %v", tabla, err)
 		}
 		return nil

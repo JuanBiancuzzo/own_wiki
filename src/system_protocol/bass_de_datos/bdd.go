@@ -129,8 +129,6 @@ func (bdd *Bdd) Query(query string, datos ...any) (filasSQL, error) {
 		return filasSQL{}, nil
 
 	} else {
-		filas, err := conn.Query(query, datos...)
-		conn.Devolver()
-		return filas, err
+		return conn.Query(query, datos...)
 	}
 }
