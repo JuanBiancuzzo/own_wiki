@@ -113,14 +113,12 @@ func (bdd *Bdd) Exec(query string, datos ...any) (sql.Result, error) {
 	}
 }
 
-func (bdd *Bdd) QueryRow(query string, datos ...any) *sql.Row {
+func (bdd *Bdd) QueryRow(query string, datos ...any) *filaSQL {
 	if conn, err := bdd.pool.Conexion(); err != nil {
 		return nil
 
 	} else {
-		fila := conn.QueryRow(query, datos...)
-		conn.Devolver()
-		return fila
+		return conn.QueryRow(query, datos...)
 	}
 }
 
