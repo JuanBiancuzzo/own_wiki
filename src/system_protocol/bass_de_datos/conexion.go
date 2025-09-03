@@ -33,20 +33,33 @@ func newConexion(archivoBdd string, pool chan *conexion) (*conexion, error) {
 	}, nil
 }
 
-func (c *conexion) Devolver() {
-	if c.pool == nil {
-		return
-	}
-
-	c.pool <- c
-}
-
 func (c *conexion) Close() {
 	c.sql.Close()
 }
 
-func (c *conexion) Exec(query string, datos ...any) (sql.Result, error) {
-	return c.sql.Exec(query, datos...)
+type resultadoSQL struct {
+	LastInsertId func() (int64, error)
+	RowsAffected func() (int64, error)
+}
+
+func newResultado(resultado sql.Result) resultadoSQL {
+	lastInsertedId, errInsert := resultado.LastInsertId()
+	rowsAffected, errAffected := resultado.RowsAffected()
+	return resultadoSQL{
+		LastInsertId: func() (int64, error) { return lastInsertedId, errInsert },
+		RowsAffected: func() (int64, error) { return rowsAffected, errAffected },
+	}
+}
+
+func (c *conexion) Exec(query string, datos ...any) (resultadoSQL, error) {
+	resultado, err := c.sql.Exec(query, datos...)
+	if err != nil {
+		c.pool <- c
+		return resultadoSQL{}, err
+	}
+	nuevoResultado := newResultado(resultado)
+	c.pool <- c
+	return nuevoResultado, nil
 }
 
 type filaSQL struct {
@@ -93,6 +106,7 @@ func (f filasSQL) Close() {
 func (c *conexion) Query(query string, datos ...any) (filasSQL, error) {
 	filas, err := c.sql.Query(query, datos...)
 	if err != nil {
+		c.pool <- c
 		return filasSQL{}, err
 	}
 

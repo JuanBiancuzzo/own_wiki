@@ -1,6 +1,8 @@
 package bass_de_datos
 
-const MAX_CONEXIONES = 100
+import "fmt"
+
+const MAX_CONEXIONES = 50
 const CONEXIONES_INICIALES = 5
 
 type poolConexiones struct {
@@ -33,12 +35,14 @@ func (pc *poolConexiones) Conexion() (*conexion, error) {
 
 	default:
 		if pc.cantidadConexiones >= MAX_CONEXIONES {
+			fmt.Println("A Esperar que una conexion se libere")
 			return <-pc.conexiones, nil
 		}
 
 		if conn, err := newConexion(pc.archivo, pc.conexiones); err != nil {
 			return nil, err
 		} else {
+			fmt.Println("Creando nueva conexionnnn")
 			pc.cantidadConexiones++
 			return conn, nil
 		}

@@ -162,10 +162,10 @@ func (td *TrackerDependencias) TerminarProcesoInsertarDatos() error {
 }
 
 func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados ConjuntoDato) error {
-	if _, ok := td.RegistrarTablas[nombreTabla]; !ok {
+	tabla, ok := td.RegistrarTablas[nombreTabla]
+	if !ok {
 		return fmt.Errorf("de alguna forma estas cargando en una tabla no registrada")
 	}
-	tabla := td.RegistrarTablas[nombreTabla]
 
 	lock := td.locksTablas[nombreTabla]
 	if existe, err := tabla.Existe(td.BasesDeDatos, datosIngresados, lock); err != nil {
@@ -187,7 +187,7 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados Conjun
 		}
 
 		if err := td.procesoDependiente(tabla, id, fKeys); err != nil {
-			return fmt.Errorf("error al verificar o actualizar el elemnto en la tabla tabla %s, con id: %d, con error: %v", tabla.NombreTabla, id, err)
+			return fmt.Errorf("error al verificar o actualizar el elemnto en la tabla %s, con id: %d, con error: %v", tabla.NombreTabla, id, err)
 		}
 	}
 
@@ -203,6 +203,8 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados Conjun
 }
 
 func (td *TrackerDependencias) procesoDependiente(tabla Tabla, idInsertado int64, fKeys []ForeignKey) error {
+	lock := td.locksTablas[tabla.NombreTabla]
+
 	for _, fKey := range fKeys {
 		// Vemos si ya fue insertado la dependencia
 		td.lockDependibles.RLock()
@@ -210,15 +212,16 @@ func (td *TrackerDependencias) procesoDependiente(tabla Tabla, idInsertado int64
 			td.lockDependibles.RUnlock()
 			// Si fueron insertados, por lo que actualizamos la tabla
 			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tabla.NombreTabla, fKey.Clave, id, idInsertado)
-			td.locksTablas[tabla.NombreTabla].Lock()
+			lock.Lock()
 			if _, err = td.BasesDeDatos.Exec(query); err != nil {
-				td.locksTablas[tabla.NombreTabla].Unlock()
-				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tabla.NombreTabla, err)
+				lock.Unlock()
+				return fmt.Errorf("error al actualizar %d en tabla %s (proceso dependiente), con error %v", idInsertado, tabla.NombreTabla, err)
 			}
-			td.locksTablas[tabla.NombreTabla].Unlock()
+			lock.Unlock()
 
 		} else {
 			td.lockDependibles.RUnlock()
+
 			// Como no fue insertada, tenemos que guardar la información para que se carge correctamente la dependencia
 			datos := []any{tabla.NombreTabla, idInsertado, fKey.Clave, fKey.TablaDestino, fKey.HashDatosDestino}
 			td.lockIncompletos.Lock()

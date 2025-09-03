@@ -1,7 +1,6 @@
 package bass_de_datos
 
 import (
-	"database/sql"
 	"fmt"
 )
 
@@ -41,7 +40,6 @@ func (bdd *Bdd) CrearTabla(query string, datos ...any) error {
 
 	} else {
 		_, err := conn.Exec(query, datos...)
-		conn.Devolver()
 		return err
 	}
 }
@@ -52,7 +50,6 @@ func (bdd *Bdd) EliminarTabla(nombreTabla string) error {
 
 	} else {
 		_, err := conn.Exec(fmt.Sprintf("DROP TABLE %s", nombreTabla))
-		conn.Devolver()
 		return err
 	}
 }
@@ -84,7 +81,7 @@ func (bdd *Bdd) Obtener(query string, datos ...any) (int64, error) {
 
 func (bdd *Bdd) Insertar(query string, datos ...any) (int64, error) {
 	if filaAfectada, err := bdd.Exec(query, datos...); err != nil {
-		return 0, fmt.Errorf("error al insertar con query, con error: %v", err)
+		return 0, fmt.Errorf("error al insertar con query (ejecutando exec), con error: %v", err)
 
 	} else if id, err := filaAfectada.LastInsertId(); err != nil {
 		return 0, fmt.Errorf("error al obtener id from query, con error: %v", err)
@@ -101,15 +98,12 @@ func (bdd *Bdd) ObtenerOInsertar(queryObtener, queryInsertar string, datos ...an
 	return bdd.Insertar(queryInsertar, datos...)
 }
 
-func (bdd *Bdd) Exec(query string, datos ...any) (sql.Result, error) {
+func (bdd *Bdd) Exec(query string, datos ...any) (resultadoSQL, error) {
 	if conn, err := bdd.pool.Conexion(); err != nil {
-		var resultado sql.Result
-		return resultado, err
+		return resultadoSQL{}, err
 
 	} else {
-		resultado, err := conn.Exec(query, datos...)
-		conn.Devolver()
-		return resultado, err
+		return conn.Exec(query, datos...)
 	}
 }
 
