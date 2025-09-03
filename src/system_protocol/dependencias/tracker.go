@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"slices"
+	"sync"
 
 	b "own_wiki/system_protocol/bass_de_datos"
 	u "own_wiki/system_protocol/utilidades"
@@ -50,9 +51,13 @@ type TrackerDependencias struct {
 
 	tablasProcesar    *u.Cola[Tabla]
 	maximoNombreTabla int
+
+	locksTablas     map[string]*sync.RWMutex
+	lockIncompletos *sync.RWMutex
 }
 
 func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
+	var lockIncompletos sync.RWMutex
 	return &TrackerDependencias{
 		BasesDeDatos:    bdd,
 		RegistrarTablas: make(map[string]Tabla),
@@ -60,6 +65,9 @@ func NewTrackerDependencias(bdd *b.Bdd) (*TrackerDependencias, error) {
 
 		tablasProcesar:    u.NewCola[Tabla](),
 		maximoNombreTabla: 0,
+
+		locksTablas:     make(map[string]*sync.RWMutex),
+		lockIncompletos: &lockIncompletos,
 	}, nil
 }
 
@@ -89,6 +97,9 @@ func (td *TrackerDependencias) CargarTabla(descripcion Tabla) {
 	td.maximoNombreTabla = max(td.maximoNombreTabla, len(descripcion.NombreTabla))
 
 	td.RegistrarTablas[descripcion.NombreTabla] = descripcion
+	var lock sync.RWMutex
+	td.locksTablas[descripcion.NombreTabla] = &lock
+
 	if !EsTipoDependible(descripcion.TipoTabla) {
 		td.tablasProcesar.Encolar(descripcion)
 	}
@@ -152,13 +163,14 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados Conjun
 	}
 	tabla := td.RegistrarTablas[nombreTabla]
 
-	if existe, err := tabla.Existe(td.BasesDeDatos, datosIngresados); err != nil {
+	lock := td.locksTablas[nombreTabla]
+	if existe, err := tabla.Existe(td.BasesDeDatos, datosIngresados, lock); err != nil {
 		return err
 
 	} else if existe {
 		return nil
 	}
-	id, err := tabla.Insertar(td.BasesDeDatos, datosIngresados)
+	id, err := tabla.Insertar(td.BasesDeDatos, datosIngresados, lock)
 
 	if err != nil {
 		return err
@@ -189,19 +201,28 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados Conjun
 func (td *TrackerDependencias) procesoDependiente(tabla Tabla, idInsertado int64, fKeys []ForeignKey) error {
 	for _, fKey := range fKeys {
 		// Vemos si ya fue insertado la dependencia
+		td.lockIncompletos.RLock()
 		if id, err := td.BasesDeDatos.Obtener(QUERY_TABLA_DEPENDIENTES, fKey.TablaDestino, fKey.HashDatosDestino); err == nil {
+			td.lockIncompletos.RUnlock()
 			// Si fueron insertados, por lo que actualizamos la tabla
 			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tabla.NombreTabla, fKey.Clave, id, idInsertado)
+			td.locksTablas[tabla.NombreTabla].Lock()
 			if _, err = td.BasesDeDatos.Exec(query); err != nil {
+				td.locksTablas[tabla.NombreTabla].Unlock()
 				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tabla.NombreTabla, err)
 			}
+			td.locksTablas[tabla.NombreTabla].Unlock()
 
 		} else {
+			td.lockIncompletos.RUnlock()
 			// Como no fue insertada, tenemos que guardar la información para que se carge correctamente la dependencia
 			datos := []any{tabla.NombreTabla, idInsertado, fKey.Clave, fKey.TablaDestino, fKey.HashDatosDestino}
+			td.lockIncompletos.Lock()
 			if _, err := td.BasesDeDatos.Insertar(INSERTAR_TABLA_INCOMPLETOS, datos...); err != nil {
+				td.lockIncompletos.Unlock()
 				return fmt.Errorf("error al insertar en la tabla auxiliar de incompletos, con error: %v", err)
 			}
+			td.lockIncompletos.Unlock()
 		}
 	}
 
@@ -215,14 +236,20 @@ type updateDependible struct {
 }
 
 func (td *TrackerDependencias) procesoDependible(tabla Tabla, idInsertado int64, hashDatos IntFK) error {
+	td.lockIncompletos.Lock()
 	if _, err := td.BasesDeDatos.Insertar(INSERTAR_TABLA_DEPENDIENTES, tabla.NombreTabla, idInsertado, hashDatos); err != nil {
+		td.lockIncompletos.Unlock()
 		return fmt.Errorf("error al insertar en dependientes: %s, con error: %v", tabla.NombreTabla, err)
 	}
+	td.lockIncompletos.Unlock()
 
+	td.lockIncompletos.RLock()
 	if filas, err := td.BasesDeDatos.Query(QUERY_TABLA_INCOMPLETOS, tabla.NombreTabla, hashDatos); err != nil {
+		td.lockIncompletos.RUnlock()
 		return fmt.Errorf("error al query cuales son los elementos incompletos con tabla: %s, con error: %v", tabla.NombreTabla, err)
 
 	} else {
+		td.lockIncompletos.RUnlock()
 
 		updates := []updateDependible{}
 		for filas.Next() {
@@ -238,15 +265,21 @@ func (td *TrackerDependencias) procesoDependible(tabla Tabla, idInsertado int64,
 
 		for _, update := range updates {
 			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", update.tablaDependiente, update.key, idInsertado, update.idDependiente)
+			td.locksTablas[update.tablaDependiente].Lock()
 			if _, err = td.BasesDeDatos.Exec(query); err != nil {
+				td.locksTablas[update.tablaDependiente].Unlock()
 				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tabla.NombreTabla, err)
 			}
+			td.locksTablas[update.tablaDependiente].Unlock()
 		}
 
 		if len(updates) > 0 {
+			td.lockIncompletos.Lock()
 			if _, err = td.BasesDeDatos.Exec(ELIMINAR_TABLA_INCOMPLETOS, tabla.NombreTabla, hashDatos); err != nil {
+				td.lockIncompletos.Unlock()
 				return fmt.Errorf("error al eliminar %d en tabla %s, con error %v", idInsertado, tabla.NombreTabla, err)
 			}
+			td.lockIncompletos.Unlock()
 		}
 
 		return nil

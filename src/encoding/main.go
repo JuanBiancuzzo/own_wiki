@@ -27,32 +27,60 @@ const CANTIDAD_WORKERS = 15
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
-func ContadorArchivos(canalAgregar, canalSacar, canalDone chan bool, canalMensajes chan string) {
-	total := 0
-	procesados := 0
+func ContadorArchivos(canalSacar, canalDone chan bool, cantidadArchivos int, canalMensajes chan string) {
 	seguir := true
-
-	fmt.Printf("\033[s")
-	mensaje := "\033[uArchivos: %04d/%04d\n"
+	procesados := 0
+	porcentajePrevio := 0
 
 	for seguir {
 		select {
-		case _, ok := <-canalAgregar:
-			if !ok {
-				mensaje = "\033[uArchivos: \033[36m%04d/%04d\033[39m\n"
-				continue
-			}
-			total++
-			fmt.Printf(mensaje, procesados, total)
-
 		case <-canalSacar:
 			procesados++
-			fmt.Printf(mensaje, procesados, total)
+			porcentaje := 100 * int(cantidadArchivos/procesados)
+
+			if porcentaje != porcentajePrevio {
+				canalMensajes <- fmt.Sprintf(
+					"Progreso: [%s%s] %04d/%04d",
+					strings.Repeat("-", porcentaje), strings.Repeat("-", 100-porcentaje),
+					procesados, cantidadArchivos,
+				)
+				porcentajePrevio = porcentaje
+			}
 
 		case <-canalDone:
 			seguir = false
 		}
 	}
+}
+
+func ContarArchivos(dirOrigen string) (int, error) {
+	colaDirectorios := u.NewCola[string]()
+	colaDirectorios.Encolar("")
+	cantidadArchivos := 0
+
+	for directorioPath := range colaDirectorios.DesencolarIterativamente {
+		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", dirOrigen, directorioPath))
+		if err != nil {
+			return 0, fmt.Errorf("se tuvo un error al leer el directorio '%s' dando el error: %v", fmt.Sprintf("%s/%s", dirOrigen, directorioPath), err)
+		}
+
+		for _, archivo := range archivos {
+			nombreArchivo := archivo.Name()
+			archivoPath := nombreArchivo
+			if directorioPath != "" {
+				archivoPath = fmt.Sprintf("%s/%s", directorioPath, archivoPath)
+			}
+
+			if archivo.IsDir() && !slices.Contains(DIRECTORIOS_IGNORAR, nombreArchivo) {
+				colaDirectorios.Encolar(archivoPath)
+
+			} else if !archivo.IsDir() {
+				cantidadArchivos++
+			}
+		}
+	}
+
+	return cantidadArchivos, nil
 }
 
 func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalMensajes chan string) error {
@@ -61,15 +89,18 @@ func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalM
 	canalInput := make(chan string, CANTIDAD_WORKERS)
 	waitArchivos.Add(1)
 
-	canalAgregar := make(chan bool, CANTIDAD_WORKERS)
+	cantidadArchivos, err := ContarArchivos(dirOrigen)
+	if err != nil {
+		return err
+	}
+
 	canalSacar := make(chan bool, CANTIDAD_WORKERS)
 	canalDone := make(chan bool)
-	go ContadorArchivos(canalAgregar, canalSacar, canalDone, canalMensajes)
+	go ContadorArchivos(canalSacar, canalDone, cantidadArchivos, canalMensajes)
 
 	terminar := func(motivo string) {
 		canalMensajes <- "Esperando a que termine por: " + motivo
 		close(canalInput)
-		close(canalAgregar)
 		waitArchivos.Wait()
 		close(canalSacar)
 		canalDone <- true
@@ -106,7 +137,6 @@ func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalM
 				colaDirectorios.Encolar(archivoPath)
 
 			} else if !archivo.IsDir() {
-				canalAgregar <- true
 				canalInput <- archivoPath
 			}
 		}

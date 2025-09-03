@@ -1,6 +1,6 @@
 package bass_de_datos
 
-const MAX_CONEXIONES = 50
+const MAX_CONEXIONES = 100
 const CONEXIONES_INICIALES = 5
 
 type poolConexiones struct {
