@@ -3,14 +3,19 @@ package utilidades
 import "sync"
 
 type Worker[R any] struct {
+	Id              int
 	CanalInput      chan R
+	CanalLibre      chan int
 	FuncionEjecutar func(R)
 	WaitGroupt      *sync.WaitGroup
 }
 
-func NewWorker[R any](canalInput chan R, funcionEjecutar func(R), wg *sync.WaitGroup) *Worker[R] {
+func NewWorker[R any](id int, canalInput chan R, canalLibre chan int, funcionEjecutar func(R), wg *sync.WaitGroup) *Worker[R] {
+	canalLibre <- id
 	return &Worker[R]{
+		Id:              id,
 		CanalInput:      canalInput,
+		CanalLibre:      canalLibre,
 		FuncionEjecutar: funcionEjecutar,
 		WaitGroupt:      wg,
 	}
@@ -19,6 +24,7 @@ func NewWorker[R any](canalInput chan R, funcionEjecutar func(R), wg *sync.WaitG
 func (w *Worker[R]) Ejecutar() {
 	for dato := range w.CanalInput {
 		w.FuncionEjecutar(dato)
+		w.CanalLibre <- w.Id
 	}
 	w.WaitGroupt.Done()
 }
@@ -27,17 +33,17 @@ func DividirTrabajo[R any](canalInput chan R, cantidadWorkers int, funcionEjecut
 	canalesInput := make([]chan R, cantidadWorkers)
 	var waitWorkers sync.WaitGroup
 
+	canalLibre := make(chan int, cantidadWorkers)
 	waitWorkers.Add(cantidadWorkers)
 	for i := range cantidadWorkers {
 		canalesInput[i] = make(chan R, 5)
-		worker := NewWorker(canalesInput[i], funcionEjecutar, &waitWorkers)
+		worker := NewWorker(i, canalesInput[i], canalLibre, funcionEjecutar, &waitWorkers)
 		go worker.Ejecutar()
 	}
 
-	contador := 0
 	for input := range canalInput {
-		canalesInput[contador] <- input
-		contador = (contador + 1) % cantidadWorkers
+		idWorker := <-canalLibre
+		canalesInput[idWorker] <- input
 	}
 
 	for i := range cantidadWorkers {
