@@ -1,62 +1,66 @@
 package bass_de_datos
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"os"
+	"time"
+
+	"github.com/joho/godotenv"
 )
 
 const NOMBRE_BDD = "baseDeDatos.db"
 
 type Bdd struct {
-	archivoBdd string
-	pool       *poolConexiones
-	contador   int
+	conn *sql.DB
 }
 
 func NewBdd(carpetaOutput string, canalMensajes chan string) (*Bdd, error) {
-	archivoBdd := fmt.Sprintf("%s/%s", carpetaOutput, NOMBRE_BDD)
+	_ = godotenv.Load()
 
-	if pool, err := newPoolConexiones(archivoBdd); err != nil {
-		return nil, err
+	dbUser := os.Getenv("MYSQL_USER")
+	dbPass := os.Getenv("MYSQL_PASSWORD")
+	dbHost := os.Getenv("MYSQL_HOST")
+	dbPort := os.Getenv("MYSQL_PORT")
+	dbName := os.Getenv("MYSQL_DB_NAME")
 
-	} else {
-		canalMensajes <- "Se conecto correctamente a SQLite"
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
 
-		return &Bdd{
-			archivoBdd: archivoBdd,
-			pool:       pool,
-			contador:   0,
-		}, nil
+	bdd, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("error connecting to DB: %v", err)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	if err = bdd.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("no se pudo pinear el servidor de MySQL, con error: %v", err)
+	}
+
+	return &Bdd{
+		conn: bdd,
+	}, nil
 }
 
 func (bdd *Bdd) Close() {
-	bdd.pool.Close()
+	bdd.conn.Close()
 }
 
 func (bdd *Bdd) CrearTabla(query string, datos ...any) error {
-	if conn, err := bdd.pool.Conexion(); err != nil {
-		return err
-
-	} else {
-		_, err := conn.Exec(query, datos...)
-		return err
-	}
+	_, err := bdd.conn.Exec(query, datos...)
+	return err
 }
 
 func (bdd *Bdd) EliminarTabla(nombreTabla string) error {
-	if conn, err := bdd.pool.Conexion(); err != nil {
-		return err
-
-	} else {
-		_, err := conn.Exec(fmt.Sprintf("DROP TABLE %s", nombreTabla))
-		return err
-	}
+	_, err := bdd.conn.Exec(fmt.Sprintf("DROP TABLE %s", nombreTabla))
+	return err
 }
 
 func (bdd *Bdd) Existe(query string, datos ...any) (bool, error) {
 	lectura := make([]any, len(datos))
-	fila := bdd.QueryRow(query, datos...)
+	fila := bdd.conn.QueryRow(query, datos...)
 
 	if err := fila.Scan(lectura...); err != nil {
 		return false, nil
@@ -67,7 +71,7 @@ func (bdd *Bdd) Existe(query string, datos ...any) (bool, error) {
 
 func (bdd *Bdd) Obtener(query string, datos ...any) (int64, error) {
 	var id int64
-	fila := bdd.QueryRow(query, datos...)
+	fila := bdd.conn.QueryRow(query, datos...)
 	if fila == nil {
 		return id, fmt.Errorf("error al obtener query")
 	}
@@ -80,7 +84,7 @@ func (bdd *Bdd) Obtener(query string, datos ...any) (int64, error) {
 }
 
 func (bdd *Bdd) Insertar(query string, datos ...any) (int64, error) {
-	if filaAfectada, err := bdd.Exec(query, datos...); err != nil {
+	if filaAfectada, err := bdd.conn.Exec(query, datos...); err != nil {
 		return 0, fmt.Errorf("error al insertar con query (ejecutando exec), con error: %v", err)
 
 	} else if id, err := filaAfectada.LastInsertId(); err != nil {
@@ -91,29 +95,14 @@ func (bdd *Bdd) Insertar(query string, datos ...any) (int64, error) {
 	}
 }
 
-func (bdd *Bdd) Exec(query string, datos ...any) (resultadoSQL, error) {
-	if conn, err := bdd.pool.Conexion(); err != nil {
-		return resultadoSQL{}, err
-
-	} else {
-		return conn.Exec(query, datos...)
-	}
+func (bdd *Bdd) Exec(query string, datos ...any) (sql.Result, error) {
+	return bdd.conn.Exec(query, datos...)
 }
 
-func (bdd *Bdd) QueryRow(query string, datos ...any) *filaSQL {
-	if conn, err := bdd.pool.Conexion(); err != nil {
-		return nil
-
-	} else {
-		return conn.QueryRow(query, datos...)
-	}
+func (bdd *Bdd) QueryRow(query string, datos ...any) *sql.Row {
+	return bdd.conn.QueryRow(query, datos...)
 }
 
-func (bdd *Bdd) Query(query string, datos ...any) (filasSQL, error) {
-	if conn, err := bdd.pool.Conexion(); err != nil {
-		return filasSQL{}, nil
-
-	} else {
-		return conn.Query(query, datos...)
-	}
+func (bdd *Bdd) Query(query string, datos ...any) (*sql.Rows, error) {
+	return bdd.conn.Query(query, datos...)
 }

@@ -23,7 +23,7 @@ import (
 // mdp "github.com/gomarkdown/markdown/parser"
 // tp "github.com/BurntSushi/toml"
 
-const CANTIDAD_WORKERS = 1
+const CANTIDAD_WORKERS = 15
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
@@ -97,6 +97,7 @@ func ContarArchivos(dirOrigen string) (int, error) {
 
 func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalMensajes chan string) error {
 	var waitArchivos sync.WaitGroup
+	canalMensajes <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", dirOrigen)
 
 	canalInput := make(chan string, CANTIDAD_WORKERS)
 	waitArchivos.Add(1)
@@ -106,7 +107,7 @@ func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalM
 		return err
 	}
 
-	canalSacar := make(chan bool, CANTIDAD_WORKERS)
+	canalSacar := make(chan bool, 20*CANTIDAD_WORKERS)
 	canalDone := make(chan bool)
 	go ContadorArchivos(canalSacar, canalDone, cantidadArchivos, canalMensajes)
 
@@ -129,7 +130,6 @@ func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalM
 
 	colaDirectorios := u.NewCola[string]()
 	colaDirectorios.Encolar("")
-	canalMensajes <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", dirOrigen)
 
 	for directorioPath := range colaDirectorios.DesencolarIterativamente {
 		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", dirOrigen, directorioPath))
