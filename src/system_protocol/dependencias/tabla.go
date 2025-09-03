@@ -114,7 +114,7 @@ func generarExiste(nombreTabla string, variables []Variable) FnExiste {
 			}
 		}
 
-		_, err := bdd.Obtener(nombreTabla, query, datos...)
+		_, err := bdd.Obtener(query, datos...)
 		return err == nil, nil
 	}
 }
@@ -186,7 +186,7 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 			}
 		}
 
-		id, err := bdd.Insertar(nombreTabla, insertarQuery, datos...)
+		id, err := bdd.Insertar(insertarQuery, datos...)
 		if err != nil {
 			return 0, err
 		}
