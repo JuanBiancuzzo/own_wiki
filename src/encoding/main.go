@@ -23,47 +23,9 @@ import (
 // mdp "github.com/gomarkdown/markdown/parser"
 // tp "github.com/BurntSushi/toml"
 
-const CANTIDAD_WORKERS = 15
+const CANTIDAD_WORKERS = 20
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
-
-func ContadorArchivos(canalSacar, canalDone chan bool, cantidadArchivos int, canalMensajes chan string) {
-	seguir := true
-	procesados := 0
-	porcentajePrevio := 0
-
-	crearMensaje := func(porcentaje int) string {
-		return fmt.Sprintf(
-			"Progreso: [%s%s] %d%s %04d/%04d",
-			strings.Repeat("|", porcentaje), strings.Repeat(" ", 100-porcentaje),
-			porcentaje, "%",
-			procesados, cantidadArchivos,
-		)
-	}
-
-	canalMensajes <- crearMensaje(0)
-
-	for seguir {
-		select {
-		case <-canalSacar:
-			procesados++
-			porcentaje := int((100 * procesados) / cantidadArchivos)
-
-			if procesados%10 == 0 {
-				canalMensajes <- crearMensaje(porcentaje)
-			}
-
-			if porcentaje != porcentajePrevio {
-				porcentajePrevio = porcentaje
-			}
-
-		case <-canalDone:
-			seguir = false
-		}
-	}
-
-	canalMensajes <- crearMensaje(100)
-}
 
 func ContarArchivos(dirOrigen string) (int, error) {
 	colaDirectorios := u.NewCola[string]()
@@ -95,6 +57,80 @@ func ContarArchivos(dirOrigen string) (int, error) {
 	return cantidadArchivos, nil
 }
 
+func MensajeProcesados(procesados, cantidadArchivos int) string {
+	porcentaje := int((100 * procesados) / cantidadArchivos)
+	return fmt.Sprintf(
+		"Progreso: [%s%s] %d%s %04d/%04d",
+		strings.Repeat("|", porcentaje), strings.Repeat(" ", 100-porcentaje),
+		porcentaje, "%",
+		procesados, cantidadArchivos,
+	)
+}
+
+func ContadorArchivos(dirOrigen string, canalSacar, canalDone chan bool, canalMensajes chan string) {
+	type contador struct {
+		cantidad int
+		err      error
+	}
+
+	canalCantidad := make(chan contador)
+	go func(dirOrigen string, canalCantidad chan contador) {
+		cantidadArchivos, err := ContarArchivos(dirOrigen)
+		canalCantidad <- contador{
+			cantidad: cantidadArchivos,
+			err:      err,
+		}
+	}(dirOrigen, canalCantidad)
+
+	seguir := true
+	procesados := 0
+	cantidadArchivos := 0
+
+	for seguir {
+		select {
+		case <-canalSacar:
+			procesados++
+
+		case contador := <-canalCantidad:
+			if contador.err != nil {
+				canalMensajes <- fmt.Sprintf("No se puede hacer el conteo, se obtuvo el error: %v", contador.err)
+				return
+			}
+			cantidadArchivos = contador.cantidad
+			seguir = false
+
+		case <-canalDone:
+			canalMensajes <- MensajeProcesados(procesados, procesados)
+			return
+		}
+	}
+
+	canalMensajes <- MensajeProcesados(procesados, cantidadArchivos)
+
+	seguir = true
+	porcentajePrevio := 0
+	for seguir {
+		select {
+		case <-canalSacar:
+			procesados++
+			porcentaje := int((100 * procesados) / cantidadArchivos)
+
+			if procesados%10 == 0 {
+				canalMensajes <- MensajeProcesados(procesados, cantidadArchivos)
+			}
+
+			if porcentaje != porcentajePrevio {
+				porcentajePrevio = porcentaje
+			}
+
+		case <-canalDone:
+			seguir = false
+		}
+	}
+
+	canalMensajes <- MensajeProcesados(procesados, cantidadArchivos)
+}
+
 func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalMensajes chan string) error {
 	var waitArchivos sync.WaitGroup
 	canalMensajes <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", dirOrigen)
@@ -102,14 +138,9 @@ func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalM
 	canalInput := make(chan string, CANTIDAD_WORKERS)
 	waitArchivos.Add(1)
 
-	cantidadArchivos, err := ContarArchivos(dirOrigen)
-	if err != nil {
-		return err
-	}
-
 	canalSacar := make(chan bool, 20*CANTIDAD_WORKERS)
 	canalDone := make(chan bool)
-	go ContadorArchivos(canalSacar, canalDone, cantidadArchivos, canalMensajes)
+	go ContadorArchivos(dirOrigen, canalSacar, canalDone, canalMensajes)
 
 	terminar := func(motivo string) {
 		canalMensajes <- "Esperando a que termine por: " + motivo
