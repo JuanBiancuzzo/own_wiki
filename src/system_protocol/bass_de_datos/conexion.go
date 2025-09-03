@@ -27,6 +27,8 @@ func newConexion(archivoBdd string, pool chan *conexion) (*conexion, error) {
 		return nil, fmt.Errorf("no se pudo pinear el servidor de SQLite, con error: %v", err)
 	}
 
+	bdd.SetMaxOpenConns(1)
+
 	return &conexion{
 		sql:  bdd,
 		pool: pool,
@@ -52,7 +54,7 @@ func newResultado(resultado sql.Result) resultadoSQL {
 }
 
 func (c *conexion) Exec(query string, datos ...any) (resultadoSQL, error) {
-	resultado, err := c.sql.Exec(query, datos...)
+	resultado, err := c.sql.Exec(fmt.Sprintf("PRAGMA busy_timeout=10000;\n%s;", query), datos...)
 	if err != nil {
 		c.pool <- c
 		return resultadoSQL{}, err

@@ -23,7 +23,7 @@ import (
 // mdp "github.com/gomarkdown/markdown/parser"
 // tp "github.com/BurntSushi/toml"
 
-const CANTIDAD_WORKERS = 15
+const CANTIDAD_WORKERS = 1
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 

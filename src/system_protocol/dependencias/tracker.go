@@ -174,10 +174,10 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados Conjun
 	} else if existe {
 		return nil
 	}
-	id, err := tabla.Insertar(td.BasesDeDatos, datosIngresados, lock)
 
+	id, err := tabla.Insertar(td.BasesDeDatos, datosIngresados, lock)
 	if err != nil {
-		return err
+		return fmt.Errorf("error insertando en cargar del tracker, con error: %v", err)
 	}
 
 	if EsTipoDependiente(tabla.TipoTabla) {
@@ -258,29 +258,29 @@ func (td *TrackerDependencias) procesoDependible(tabla Tabla, idInsertado int64,
 	} else {
 		td.lockIncompletos.RUnlock()
 
-		updates := []updateDependible{}
+		hayUpdates := false
 		for filas.Next() {
+			hayUpdates = true
+
 			var update updateDependible
 			if err = filas.Scan(&update.tablaDependiente, &update.idDependiente, &update.key); err != nil {
 				filas.Close()
 				return fmt.Errorf("error al obtener datos de una query de incompletos, con error: %v", err)
 			}
-			updates = append(updates, update)
+
+			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", update.tablaDependiente, update.key, idInsertado, update.idDependiente)
+			lock := td.locksTablas[update.tablaDependiente]
+			lock.Lock()
+			if _, err = td.BasesDeDatos.Exec(query); err != nil {
+				lock.Unlock()
+				return fmt.Errorf("error al actualizar %d en tabla %s (proceso Dependible distinto), con error %v", idInsertado, tabla.NombreTabla, err)
+			}
+			lock.Unlock()
 
 		}
 		filas.Close()
 
-		for _, update := range updates {
-			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", update.tablaDependiente, update.key, idInsertado, update.idDependiente)
-			td.locksTablas[update.tablaDependiente].Lock()
-			if _, err = td.BasesDeDatos.Exec(query); err != nil {
-				td.locksTablas[update.tablaDependiente].Unlock()
-				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tabla.NombreTabla, err)
-			}
-			td.locksTablas[update.tablaDependiente].Unlock()
-		}
-
-		if len(updates) > 0 {
+		if hayUpdates {
 			td.lockIncompletos.Lock()
 			if _, err = td.BasesDeDatos.Exec(ELIMINAR_TABLA_INCOMPLETOS, tabla.NombreTabla, hashDatos); err != nil {
 				td.lockIncompletos.Unlock()

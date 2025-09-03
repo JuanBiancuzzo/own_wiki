@@ -91,13 +91,6 @@ func (bdd *Bdd) Insertar(query string, datos ...any) (int64, error) {
 	}
 }
 
-func (bdd *Bdd) ObtenerOInsertar(queryObtener, queryInsertar string, datos ...any) (int64, error) {
-	if id, err := bdd.Obtener(queryObtener, datos...); err == nil {
-		return id, nil
-	}
-	return bdd.Insertar(queryInsertar, datos...)
-}
-
 func (bdd *Bdd) Exec(query string, datos ...any) (resultadoSQL, error) {
 	if conn, err := bdd.pool.Conexion(); err != nil {
 		return resultadoSQL{}, err
