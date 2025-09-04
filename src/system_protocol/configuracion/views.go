@@ -12,11 +12,16 @@ import (
 )
 
 type InformacionViews struct {
-	Inicio             string     `json:"inicio"`
-	PathCss            string     `json:"css"`
-	PathImagenes       string     `json:"imagenes"`
-	PathViews          []string   `json:"views"`
-	EndpointsGenerales []Endpoint `json:"endpointsGenerales"`
+	Inicio             InformacionInicio `json:"inicio"`
+	PathCss            string            `json:"css"`
+	PathImagenes       string            `json:"imagenes"`
+	PathViews          []string          `json:"views"`
+	EndpointsGenerales []Endpoint        `json:"endpointsGenerales"`
+}
+
+type InformacionInicio struct {
+	View           string `json:"view"`
+	BloqueTemplate string `json:"bloqueTemplate"`
 }
 
 type View struct {
@@ -25,7 +30,7 @@ type View struct {
 	BloqueTemplate string     `json:"bloqueTemplate"`
 	Endpoints      []Endpoint `json:"endpoints"`
 
-	esInicio bool
+	esInicio *InformacionInicio
 	pathView string
 }
 
@@ -83,9 +88,9 @@ func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (*v.I
 			return nil, err
 		}
 
-		if viewsInfo[i].Nombre == informacionViews.Inicio {
+		if viewsInfo[i].Nombre == informacionViews.Inicio.View {
 			hayInicio = true
-			viewsInfo[i].esInicio = true
+			viewsInfo[i].esInicio = &informacionViews.Inicio
 		}
 	}
 
@@ -171,7 +176,14 @@ func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (*v.I
 		for i, pathTemplate := range viewInfo.Templates {
 			pathsTemplate[i] = fmt.Sprintf("%s/%s", viewInfo.pathView, pathTemplate)
 		}
-		views[i] = v.NewView(viewInfo.esInicio, viewInfo.Nombre, viewInfo.BloqueTemplate, endpoints, pathsTemplate)
+
+		esInicio := viewInfo.esInicio != nil
+		bloqueIncio := ""
+		if esInicio {
+			bloqueIncio = viewInfo.esInicio.BloqueTemplate
+		}
+
+		views[i] = v.NewView(esInicio, bloqueIncio, viewInfo.Nombre, viewInfo.BloqueTemplate, endpoints, pathsTemplate)
 	}
 
 	return v.NewInfoViews(views, informacionViews.PathCss, informacionViews.PathImagenes)

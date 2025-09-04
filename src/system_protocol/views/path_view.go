@@ -29,5 +29,5 @@ func (pv *PathView) CreateURLPathView(view string) string {
 		return "ERROR - No existe view"
 	}
 
-	return fmt.Sprintf("/%s", view)
+	return fmt.Sprintf("/%s?redirect=true", view)
 }

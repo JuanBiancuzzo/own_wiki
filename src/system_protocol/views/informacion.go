@@ -107,7 +107,6 @@ func crearFuncionGenerador(nombreTabla string, query d.QueryDato, parametrosEspe
 	datosReferencias := make([]any, len(query.ClaveSelect))
 	infoVariables := make([]d.InformacionClave, len(query.ClaveSelect))
 
-	fmt.Println("---")
 	for i, clave := range query.ClaveSelect {
 		infoVariables[i] = clave.ObtenerInfoVariable()
 		if referencia, err := infoVariables[i].Variable.ObtenerReferencia(); err != nil {
