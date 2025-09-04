@@ -190,7 +190,7 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 		}
 
 		lock.Lock()
-		id, err := bdd.Insertar(insertarQuery, datos...)
+		id, err := bdd.InsertarId(insertarQuery, datos...)
 		lock.Unlock()
 		if err != nil {
 			return 0, err
