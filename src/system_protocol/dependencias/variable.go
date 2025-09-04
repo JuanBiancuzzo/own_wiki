@@ -2,7 +2,6 @@ package dependencias
 
 import (
 	"fmt"
-	"strings"
 )
 
 type InformacionVariable any
@@ -21,17 +20,18 @@ func (v Variable) ObtenerParametroSQL() []string {
 	case VariableString:
 		parametros = []string{fmt.Sprintf("%s %s", v.Clave, informacion.TipoSQL())}
 	case VariableEnum:
-		parametros = []string{fmt.Sprintf("%s %s", v.Clave, informacion.TipoSQL())}
+		parametros = []string{fmt.Sprintf("%s %s", v.Clave, informacion.TipoSQL(v.Clave))}
 
 	case VariableReferencia:
 		cantidad := min(2, len(informacion.Tablas))
 		parametros = make([]string, cantidad)
 		if len(informacion.Tablas) > 1 {
-			valoresRep := make([]string, len(informacion.Tablas))
-			for i, tabla := range informacion.Tablas {
-				valoresRep[i] = fmt.Sprintf("\"%s\"", tabla.NombreTabla)
+			maximoLargo := 0
+			for _, tabla := range informacion.Tablas {
+				maximoLargo = max(maximoLargo, len(tabla.NombreTabla))
 			}
-			parametros[0] = fmt.Sprintf("tipo%s ENUM(%s)", v.Clave, strings.Join(valoresRep, ", "))
+			nombreVariable := fmt.Sprintf("tipo%s", v.Clave)
+			parametros[0] = fmt.Sprintf("%s TEXT CHECK( LENGTH(%s) <= %d )", nombreVariable, nombreVariable, maximoLargo)
 		}
 
 		parametros[cantidad-1] = fmt.Sprintf("%s INT", v.Clave)
@@ -131,7 +131,7 @@ func NewVariableString(representativo bool, clave string, largo uint, necesario 
 }
 
 func (vs VariableString) TipoSQL() string {
-	return fmt.Sprintf("VARCHAR(%d) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", vs.Largo)
+	return fmt.Sprintf("VARCHAR(%d)", vs.Largo)
 }
 
 type VariableEnum struct {
@@ -151,12 +151,12 @@ func NewVariableEnum(representativo bool, clave string, valores []string, necesa
 	}
 }
 
-func (ve VariableEnum) TipoSQL() string {
-	valoresRep := []string{}
+func (ve VariableEnum) TipoSQL(clave string) string {
+	maximoLargo := 0
 	for _, valor := range ve.Valores {
-		valoresRep = append(valoresRep, fmt.Sprintf("\"%s\"", valor))
+		maximoLargo = max(maximoLargo, len(valor))
 	}
-	return fmt.Sprintf("ENUM(%s)", strings.Join(valoresRep, ", "))
+	return fmt.Sprintf("TEXT CHECK( LENGTH(%s) <= %d )", clave, maximoLargo)
 }
 
 type VariableReferencia struct {

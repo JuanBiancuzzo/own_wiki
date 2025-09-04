@@ -31,26 +31,18 @@ func ObtenerViews(dirConfiguracion string, bdd *b.Bdd) (*v.InfoViews, error) {
 	}
 }
 
-func Visualizar(carpetaConfiguracion string, canalMensajes chan string) {
+func Visualizar(carpetaOutput, carpetaConfiguracion string, canalMensajes chan string) {
 	e := echo.New()
 	e.Use(middleware.Logger())
 
-	bddRelacional, err := b.EstablecerConexionRelacional(canalMensajes)
+	bdd, err := b.NewBdd(carpetaOutput, canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
 
 	}
-	defer bddRelacional.Close()
+	defer bdd.Close()
 
-	bddNoSQL, err := b.EstablecerConexionNoSQL(canalMensajes)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
-		return
-	}
-	defer b.CerrarBddNoSQL(bddNoSQL)
-
-	bdd := b.NewBdd(bddRelacional, bddNoSQL)
 	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
 	if infoViews, err := ObtenerViews(carpetaConfiguracion, bdd); err != nil {
@@ -85,6 +77,7 @@ func main() {
 	}(canalMensajes, &waitMensajes)
 
 	var carpetaConfiguracion string
+	var carpetaOutput string
 
 	argumentoProcesar := 1
 	for argumentoProcesar+1 < len(os.Args) {
@@ -92,16 +85,28 @@ func main() {
 		case "-c":
 			argumentoProcesar++
 			carpetaConfiguracion = os.Args[argumentoProcesar]
+		case "-o":
+			argumentoProcesar++
+			carpetaOutput = os.Args[argumentoProcesar]
 		default:
 			canalMensajes <- fmt.Sprintf("el argumento %s no pudo ser identificado", os.Args[argumentoProcesar])
 		}
 		argumentoProcesar++
 	}
 
-	if carpetaConfiguracion != "" {
-		Visualizar(carpetaConfiguracion, canalMensajes)
-	} else {
+	configuracionValida := true
+	if carpetaConfiguracion == "" {
 		canalMensajes <- "Necesitas pasar el directorio de configuracion (con la flag -c)"
+		configuracionValida = false
+	}
+
+	if carpetaOutput == "" {
+		canalMensajes <- "Necesitas pasar el directorio de output (con la flag -o)"
+		configuracionValida = false
+	}
+
+	if configuracionValida {
+		Visualizar(carpetaOutput, carpetaConfiguracion, canalMensajes)
 	}
 
 	close(canalMensajes)

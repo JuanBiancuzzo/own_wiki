@@ -1,3 +1,4 @@
-.env
 volumenes/
 src/**/tmp/
+configuracion/
+.env

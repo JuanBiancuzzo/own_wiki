@@ -102,11 +102,9 @@ func generarExiste(nombreTabla string, variables []Variable) FnExiste {
 	largoDatos := len(claves)
 
 	return func(bdd *b.Bdd, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) {
-		lock.Lock()
 		datos := make([]any, largoDatos)
 		for _, clave := range claves {
 			if dato, ok := datosIngresados[clave]; !ok {
-				lock.Unlock()
 				return false, fmt.Errorf("el usuario no ingreso el dato para %s", clave)
 
 			} else if relacion, ok := dato.(RelacionTabla); ok {
@@ -117,6 +115,7 @@ func generarExiste(nombreTabla string, variables []Variable) FnExiste {
 			}
 		}
 
+		lock.Lock()
 		_, err := bdd.Obtener(query, datos...)
 		lock.Unlock()
 		return err == nil, nil
@@ -191,7 +190,7 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 		}
 
 		lock.Lock()
-		id, err := bdd.Insertar(insertarQuery, datos...)
+		id, err := bdd.InsertarId(insertarQuery, datos...)
 		lock.Unlock()
 		if err != nil {
 			return 0, err

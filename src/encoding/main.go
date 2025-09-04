@@ -23,32 +23,144 @@ import (
 // mdp "github.com/gomarkdown/markdown/parser"
 // tp "github.com/BurntSushi/toml"
 
-const CANTIDAD_WORKERS = 15
+const CANTIDAD_WORKERS = 20
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
+func ContarArchivos(dirOrigen string) (int, error) {
+	colaDirectorios := u.NewCola[string]()
+	colaDirectorios.Encolar("")
+	cantidadArchivos := 0
+
+	for directorioPath := range colaDirectorios.DesencolarIterativamente {
+		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", dirOrigen, directorioPath))
+		if err != nil {
+			return 0, fmt.Errorf("se tuvo un error al leer el directorio '%s' dando el error: %v", fmt.Sprintf("%s/%s", dirOrigen, directorioPath), err)
+		}
+
+		for _, archivo := range archivos {
+			nombreArchivo := archivo.Name()
+			archivoPath := nombreArchivo
+			if directorioPath != "" {
+				archivoPath = fmt.Sprintf("%s/%s", directorioPath, archivoPath)
+			}
+
+			if archivo.IsDir() && !slices.Contains(DIRECTORIOS_IGNORAR, nombreArchivo) {
+				colaDirectorios.Encolar(archivoPath)
+
+			} else if !archivo.IsDir() {
+				cantidadArchivos++
+			}
+		}
+	}
+
+	return cantidadArchivos, nil
+}
+
+func MensajeProcesados(procesados, cantidadArchivos int) string {
+	porcentaje := int((100 * procesados) / cantidadArchivos)
+	return fmt.Sprintf(
+		"Progreso: [%s%s] %d%s %04d/%04d",
+		strings.Repeat("|", porcentaje), strings.Repeat(" ", 100-porcentaje),
+		porcentaje, "%",
+		procesados, cantidadArchivos,
+	)
+}
+
+func ContadorArchivos(dirOrigen string, canalSacar, canalDone chan bool, canalMensajes chan string) {
+	type contador struct {
+		cantidad int
+		err      error
+	}
+
+	canalCantidad := make(chan contador)
+	go func(dirOrigen string, canalCantidad chan contador) {
+		cantidadArchivos, err := ContarArchivos(dirOrigen)
+		canalCantidad <- contador{
+			cantidad: cantidadArchivos,
+			err:      err,
+		}
+	}(dirOrigen, canalCantidad)
+
+	seguir := true
+	procesados := 0
+	cantidadArchivos := 0
+
+	for seguir {
+		select {
+		case <-canalSacar:
+			procesados++
+
+		case contador := <-canalCantidad:
+			if contador.err != nil {
+				canalMensajes <- fmt.Sprintf("No se puede hacer el conteo, se obtuvo el error: %v", contador.err)
+				return
+			}
+			cantidadArchivos = contador.cantidad
+			seguir = false
+
+		case <-canalDone:
+			canalMensajes <- MensajeProcesados(procesados, procesados)
+			return
+		}
+	}
+
+	canalMensajes <- MensajeProcesados(procesados, cantidadArchivos)
+
+	seguir = true
+	porcentajePrevio := 0
+	for seguir {
+		select {
+		case <-canalSacar:
+			procesados++
+			porcentaje := int((100 * procesados) / cantidadArchivos)
+
+			if procesados%10 == 0 {
+				canalMensajes <- MensajeProcesados(procesados, cantidadArchivos)
+			}
+
+			if porcentaje != porcentajePrevio {
+				porcentajePrevio = porcentaje
+			}
+
+		case <-canalDone:
+			seguir = false
+		}
+	}
+
+	canalMensajes <- MensajeProcesados(procesados, cantidadArchivos)
+}
+
 func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalMensajes chan string) error {
 	var waitArchivos sync.WaitGroup
+	canalMensajes <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", dirOrigen)
 
 	canalInput := make(chan string, CANTIDAD_WORKERS)
 	waitArchivos.Add(1)
+
+	canalSacar := make(chan bool, 20*CANTIDAD_WORKERS)
+	canalDone := make(chan bool)
+	go ContadorArchivos(dirOrigen, canalSacar, canalDone, canalMensajes)
 
 	terminar := func(motivo string) {
 		canalMensajes <- "Esperando a que termine por: " + motivo
 		close(canalInput)
 		waitArchivos.Wait()
+		close(canalSacar)
+		canalDone <- true
+		close(canalDone)
 	}
 
 	procesarArchivo := func(path string) {
 		if err := procesar.CargarArchivo(dirOrigen, path, tracker, canalMensajes); err != nil {
 			canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo en el path: '%s', con error: %v", path, err)
 		}
+		canalSacar <- true
 	}
 	go u.DividirTrabajo(canalInput, CANTIDAD_WORKERS, procesarArchivo, &waitArchivos)
 
 	colaDirectorios := u.NewCola[string]()
 	colaDirectorios.Encolar("")
-	canalMensajes <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", dirOrigen)
 
 	for directorioPath := range colaDirectorios.DesencolarIterativamente {
 		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", dirOrigen, directorioPath))
@@ -92,25 +204,17 @@ func CargarTablas(dirConfiguracion string, tracker *d.TrackerDependencias) error
 	}
 }
 
-func Encodear(dirInput, dirConfiguracion string, canalMensajes chan string) {
+func Encodear(dirInput, dirOutput, dirConfiguracion string, canalMensajes chan string) {
 	_ = godotenv.Load()
 
-	bddRelacional, err := b.EstablecerConexionRelacional(canalMensajes)
+	bdd, err := b.NewBdd(dirOutput, canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
 	}
-	defer b.CerrarBddRelacional(bddRelacional)
+	defer bdd.Close()
 
-	bddNoSQL, err := b.EstablecerConexionNoSQL(canalMensajes)
-	if err != nil {
-		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
-		return
-	}
-	defer b.CerrarBddNoSQL(bddNoSQL)
-	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
-
-	tracker, err := d.NewTrackerDependencias(b.NewBdd(bddRelacional, bddNoSQL))
+	tracker, err := d.NewTrackerDependencias(bdd)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo crear el tracker, se tuvo el error: %v", err)
 		return
@@ -157,6 +261,7 @@ func main() {
 
 	var carpetaDatos string
 	var carpetaConfiguracion string
+	var carpetaOutput string
 
 	argumentoProcesar := 1
 	for argumentoProcesar+1 < len(os.Args) {
@@ -167,23 +272,33 @@ func main() {
 		case "-c":
 			argumentoProcesar++
 			carpetaConfiguracion = os.Args[argumentoProcesar]
+		case "-o":
+			argumentoProcesar++
+			carpetaOutput = os.Args[argumentoProcesar]
 		default:
 			canalMensajes <- fmt.Sprintf("el argumento %s no pudo ser identificado", os.Args[argumentoProcesar])
 		}
 		argumentoProcesar++
 	}
 
-	if carpetaDatos != "" && carpetaConfiguracion != "" {
-		Encodear(carpetaDatos, carpetaConfiguracion, canalMensajes)
-
-	} else if carpetaDatos == "" && carpetaConfiguracion == "" {
-		canalMensajes <- "Necesitas pasar el directorio de datos (con la flag -d) y directorio de configuracion (con la flag -c)"
-
-	} else if carpetaDatos == "" {
+	configuracionValida := true
+	if carpetaDatos == "" {
 		canalMensajes <- "Necesitas pasar el directorio de datos (con la flag -d)"
+		configuracionValida = false
+	}
 
-	} else {
+	if carpetaConfiguracion == "" {
 		canalMensajes <- "Necesitas pasar el directorio de configuracion (con la flag -c)"
+		configuracionValida = false
+	}
+
+	if carpetaOutput == "" {
+		canalMensajes <- "Necesitas pasar el directorio de output (con la flag -o)"
+		configuracionValida = false
+	}
+
+	if configuracionValida {
+		Encodear(carpetaDatos, carpetaOutput, carpetaConfiguracion, canalMensajes)
 	}
 
 	close(canalMensajes)

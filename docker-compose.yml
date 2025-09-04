@@ -22,27 +22,6 @@ services:
       - my-db-mysql:/var/lib/mysql
     networks:
       - appnet
-  
-  db_nosql:
-    image: mongo:8.0
-    container_name: mongo_db
-    restart: always
-    healthcheck:
-      test: ["CMD","mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 1s
-      timeout: 2s
-      start_period: 3s
-      retries: 5
-
-    environment:
-      MONGO_INITDB_ROOT_USER: ${MONGO_ROOT_USER}
-      MONGO_INITDB_ROOT_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-    ports:
-      - "27017:27017"
-    volumes:
-      - my-db-mongo:/data/db
-    networks:
-      - appnet
 
   app_encoder:
     build: 
@@ -52,8 +31,6 @@ services:
     depends_on:
       db_relacional:
         condition: service_healthy
-      # db_nosql:
-        # condition: service_healthy
     tty: true
     environment:
       # Necesario para mysql
@@ -62,19 +39,14 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_PORT: ${MYSQL_PORT}
       MYSQL_HOST: ${MYSQL_HOST}
-      # Necesario para mongodb
-      MONGO_USER: ${MONGO_USER}
-      MONGO_PASSWORD: ${MONGO_PASSWORD}
-      MONGO_PORT: ${MONGO_PORT}
-      MONGO_DB_NAME: ${MONGO_DB_NAME}
-      MONGO_HOST: ${MONGO_HOST}
     volumes:
       - ../../Ashurbanipal:/var/datos
+      - ./output:/var/output
       - ./configuracion:/var/configuracion
       # - ./volumenes/treesitter_bindings:/var/lib/treesitter_bindings
     networks:
       - appnet
-    command: ["./own_wiki", "-d", "/var/datos", "-c", "/var/configuracion"] 
+    command: ["./own_wiki", "-d", "/var/datos", "-c", "/var/configuracion", "-o", "/var/output"] 
 
   app_process:
     build: 
@@ -87,23 +59,11 @@ services:
       app_encoder:
         condition: service_completed_successfully
     tty: true
-    environment:
-      # Necesario para mysql
-      MYSQL_DB_NAME: ${MYSQL_DB_NAME}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_PORT: ${MYSQL_PORT}
-      MYSQL_HOST: ${MYSQL_HOST}
-      # Necesario para mongodb
-      MONGO_USER: ${MONGO_USER}
-      MONGO_PASSWORD: ${MONGO_PASSWORD}
-      MONGO_PORT: ${MONGO_PORT}
-      MONGO_DB_NAME: ${MONGO_DB_NAME}
-      MONGO_HOST: ${MONGO_HOST}
     ports:
       - "42069:42069"
     volumes:
       - ./src:/app
+      - ./output:/var/output
       - ./configuracion:/var/configuracion
     networks:
       - appnet
@@ -111,7 +71,6 @@ services:
 
 volumes:
   my-db-mysql: 
-  my-db-mongo: 
 
 networks:
   appnet:
