@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"own_wiki/encoding/procesar"
-	b "own_wiki/system_protocol/bass_de_datos"
+	b "own_wiki/system_protocol/base_de_datos"
 	c "own_wiki/system_protocol/configuracion"
 	d "own_wiki/system_protocol/dependencias"
 	u "own_wiki/system_protocol/utilidades"

@@ -6,7 +6,7 @@ import (
 	"slices"
 	"sync"
 
-	b "own_wiki/system_protocol/bass_de_datos"
+	b "own_wiki/system_protocol/base_de_datos"
 	u "own_wiki/system_protocol/utilidades"
 )
 

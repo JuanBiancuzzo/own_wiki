@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
-	b "own_wiki/system_protocol/bass_de_datos"
+	b "own_wiki/system_protocol/base_de_datos"
 	c "own_wiki/system_protocol/configuracion"
 	v "own_wiki/system_protocol/views"
 	"strings"

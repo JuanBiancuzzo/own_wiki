@@ -1,4 +1,4 @@
-package bass_de_datos
+package base_de_datos
 
 import (
 	"context"
