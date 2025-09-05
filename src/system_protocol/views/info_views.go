@@ -26,7 +26,6 @@ func NewInfoViews(views []View, pathCss, pathImagenes string) (*InfoViews, error
 		if err := view.RegistrarEndpoints(pathEndpoint); err != nil {
 			return nil, err
 		}
-
 	}
 
 	return &InfoViews{

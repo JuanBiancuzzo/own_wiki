@@ -59,6 +59,13 @@ services:
       app_encoder:
         condition: service_completed_successfully
     tty: true
+    environment:
+      # Necesario para mysql
+      MYSQL_DB_NAME: ${MYSQL_DB_NAME}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_HOST: ${MYSQL_HOST}
     ports:
       - "42069:42069"
     volumes:

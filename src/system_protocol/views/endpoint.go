@@ -9,17 +9,16 @@ import (
 )
 
 type Endpoint struct {
-	Bloque           string
-	Parametros       []string
-	ClavesNecesarias []string
-	Informaciones    map[string]FnInformacion
+	Bloque        string
+	Parametros    []string
+	Informaciones map[string]FnInformacion
 }
 
-func NewEndpoint(bloque string, clavesNecesarias []string, informaciones map[string]FnInformacion) Endpoint {
+func NewEndpoint(bloque string, parametros []string, informaciones map[string]FnInformacion) Endpoint {
 	return Endpoint{
-		Bloque:           bloque,
-		ClavesNecesarias: clavesNecesarias,
-		Informaciones:    informaciones,
+		Bloque:        bloque,
+		Parametros:    parametros,
+		Informaciones: informaciones,
 	}
 }
 
@@ -35,8 +34,8 @@ func (e Endpoint) GenerarEndpoint(bdd *b.Bdd, viewNombre string) func(ec echo.Co
 	bloque := fmt.Sprintf("%s/%s", viewNombre, e.Bloque)
 
 	return func(ec echo.Context) error {
-		valores := make([]string, len(e.ClavesNecesarias))
-		for i, requisito := range e.ClavesNecesarias {
+		valores := make([]string, len(e.Parametros))
+		for i, requisito := range e.Parametros {
 			valores[i] = ec.QueryParam(requisito)
 		}
 

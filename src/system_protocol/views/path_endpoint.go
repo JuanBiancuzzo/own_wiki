@@ -22,16 +22,17 @@ func (pe *PathEndpoint) AgregarEndpoint(endpoint string, claves []string) error 
 		return fmt.Errorf("ya se cargo ese parametro")
 	}
 
+	fmt.Printf("Registrando endpoint: /%s, con parametros: %v\n", endpoint, claves)
 	pe.Endpoints[endpoint] = claves
 	return nil
 }
 
 func (pe *PathEndpoint) CreateURLPathEndpoint(endpoint string, valores ...any) string {
 	if claves, ok := pe.Endpoints[endpoint]; !ok {
-		return "ERROR - No existe view"
+		return fmt.Sprintf("ERROR - No existe endpoint '%s'", endpoint)
 
 	} else if len(claves) != len(valores) {
-		return fmt.Sprintf("ERROR - No suficientes parametros, deberian ser %d y se dieron %d", len(claves), len(valores))
+		return fmt.Sprintf("ERROR - No suficientes parametros para '%s', deberian ser %d y se dieron %d", endpoint, len(claves), len(valores))
 
 	} else {
 		claveValor := make([]string, len(claves))

@@ -21,7 +21,7 @@ type InformacionViews struct {
 
 type InformacionInicio struct {
 	View           string `json:"view"`
-	BloqueTemplate string `json:"bloqueTemplate"`
+	BloqueTemplate string `json:"bloqueInicial"`
 }
 
 type View struct {
@@ -39,8 +39,8 @@ type InfoTablas map[*d.DescripcionTabla]d.InformacionQuery
 type Endpoint struct {
 	Nombre         string        `json:"nombre"`
 	BloqueTemplate string        `json:"bloqueTemplate"`
-	Parametros     []string      `json:"parametros,omitempty"`
-	Informacion    []Informacion `json:"informacion,omitempty"`
+	Parametros     []string      `json:"parametros"`
+	Informacion    []Informacion `json:"informacion"`
 }
 
 func leerView(pathView string) (View, error) {

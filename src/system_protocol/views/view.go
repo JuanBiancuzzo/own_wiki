@@ -30,8 +30,9 @@ func NewView(esInicio bool, bloqueInicio, nombre, bloque string, endpoints map[s
 }
 
 func (v View) RegistrarEndpoints(pathView *PathEndpoint) error {
-	for ruta := range v.Endpoints {
-		if err := pathView.AgregarEndpoint(ruta, v.Endpoints[ruta].Parametros); err != nil {
+	for rutaParcial := range v.Endpoints {
+		ruta := fmt.Sprintf("%s/%s", v.Nombre, rutaParcial)
+		if err := pathView.AgregarEndpoint(ruta, v.Endpoints[rutaParcial].Parametros); err != nil {
 			return err
 		}
 	}
