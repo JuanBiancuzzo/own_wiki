@@ -10,6 +10,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/mattn/go-sqlite3 v1.14.32
+
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/gomarkdown/markdown v0.0.0-20250810172220-2e2c11897d1a

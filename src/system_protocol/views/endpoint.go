@@ -51,6 +51,11 @@ func (e Endpoint) GenerarEndpoint(bdd *b.Bdd, viewNombre string) func(ec echo.Co
 			}
 		}
 
+		if err := bdd.Checkpoint(); err != nil {
+			fmt.Printf("Error al hacer checkpoint con error: %v\n", err)
+			return err
+		}
+
 		return ec.Render(200, bloque, data)
 	}
 }

@@ -4,10 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/joho/godotenv"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const NOMBRE_BDD = "baseDeDatos.db"
@@ -17,17 +16,7 @@ type Bdd struct {
 }
 
 func NewBdd(carpetaOutput string, canalMensajes chan string) (*Bdd, error) {
-	_ = godotenv.Load()
-
-	dbUser := os.Getenv("MYSQL_USER")
-	dbPass := os.Getenv("MYSQL_PASSWORD")
-	dbHost := os.Getenv("MYSQL_HOST")
-	dbPort := os.Getenv("MYSQL_PORT")
-	dbName := os.Getenv("MYSQL_DB_NAME")
-
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
-
-	conn, err := sql.Open("mysql", dsn)
+	conn, err := sql.Open("sqlite3", fmt.Sprintf("%s/%s?_journal_mode=WAL", carpetaOutput, NOMBRE_BDD))
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to DB: %v", err)
 	}
@@ -36,7 +25,7 @@ func NewBdd(carpetaOutput string, canalMensajes chan string) (*Bdd, error) {
 	defer cancel()
 
 	if err = conn.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("no se pudo pinear el servidor de MySQL, con error: %v", err)
+		return nil, fmt.Errorf("no se pudo pinear el servidor de SQLite, con error: %v", err)
 	}
 
 	return &Bdd{
@@ -44,7 +33,15 @@ func NewBdd(carpetaOutput string, canalMensajes chan string) (*Bdd, error) {
 	}, nil
 }
 
+func (bdd *Bdd) Checkpoint() error {
+	_, err := bdd.conn.Exec("PRAGMA wal_checkpoint(TRUNCATE);")
+	return err
+}
+
 func (bdd *Bdd) Close() {
+	if err := bdd.Checkpoint(); err != nil {
+		fmt.Printf("Salió mal el checkpoint, con error: %v", err)
+	}
 	bdd.conn.Close()
 }
 
