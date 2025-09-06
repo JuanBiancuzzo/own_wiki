@@ -231,10 +231,13 @@ func CrearTablas(archivoJson string, tracker *d.TrackerDependencias) ([]d.Tabla,
 			tipoTabla = d.DEPENDIENTE_NO_DEPENDIBLE
 		}
 
-		nuevaTabla := d.ConstruirTabla(tracker, descTabla.Nombre, tipoTabla, descTabla.ElementosRepetidos, variables)
-		mapaTablas[descTabla.Nombre] = &nuevaTabla
+		if nuevaTabla, err := d.ConstruirTabla(tracker, descTabla.Nombre, tipoTabla, descTabla.ElementosRepetidos, variables); err != nil {
+			return tablas, err
 
-		tablas = append(tablas, nuevaTabla)
+		} else {
+			mapaTablas[descTabla.Nombre] = &nuevaTabla
+			tablas = append(tablas, nuevaTabla)
+		}
 	}
 
 	return tablas, nil

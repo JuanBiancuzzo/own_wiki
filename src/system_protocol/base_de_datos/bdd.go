@@ -33,13 +33,29 @@ func NewBdd(carpetaOutput string, canalMensajes chan string) (*Bdd, error) {
 	}, nil
 }
 
-func (bdd *Bdd) Checkpoint() error {
-	_, err := bdd.conn.Exec("PRAGMA wal_checkpoint(TRUNCATE);")
+type TipoCheckpoint byte
+
+const (
+	TC_FULL = iota
+	TC_PASSIVE
+	TC_RESET
+)
+
+func (bdd *Bdd) Checkpoint(tipo TipoCheckpoint) (err error) {
+	switch tipo {
+	case TC_FULL:
+		_, err = bdd.conn.Exec("PRAGMA wal_checkpoint(full);")
+	case TC_PASSIVE:
+		_, err = bdd.conn.Exec("PRAGMA wal_checkpoint(passive);")
+	case TC_RESET:
+		_, err = bdd.conn.Exec("PRAGMA wal_checkpoint(restart);")
+
+	}
 	return err
 }
 
 func (bdd *Bdd) Close() {
-	if err := bdd.Checkpoint(); err != nil {
+	if err := bdd.Checkpoint(TC_FULL); err != nil {
 		fmt.Printf("Salió mal el checkpoint, con error: %v", err)
 	}
 	bdd.conn.Close()
@@ -64,6 +80,10 @@ func (bdd *Bdd) Existe(query string, datos ...any) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (bdd *Bdd) Preparar(query string) (Sentencia, error) {
+	return NewSentencia(bdd.conn, query)
 }
 
 func (bdd *Bdd) Obtener(query string, datos ...any) (int64, error) {
@@ -111,5 +131,5 @@ func (bdd *Bdd) Query(query string, datos ...any) (*sql.Rows, error) {
 }
 
 func (bdd *Bdd) exec(query string, datos ...any) (sql.Result, error) {
-	return bdd.conn.Exec(query, datos...)
+	return bdd.conn.Exec(fmt.Sprintf("BEGIN TRANSACTION; %s; COMMIT;", query), datos...)
 }
