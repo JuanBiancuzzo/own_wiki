@@ -236,12 +236,6 @@ func (td *TrackerDependencias) procesoDependiente(tabla Tabla, idInsertado int64
 	return nil
 }
 
-type updateDependible struct {
-	tablaDependiente string
-	idDependiente    int64
-	key              string
-}
-
 func (td *TrackerDependencias) procesoDependible(tabla Tabla, idInsertado int64, hashDatos IntFK) error {
 	td.lockDependibles.Lock()
 	if _, err := td.BasesDeDatos.InsertarId(INSERTAR_TABLA_DEPENDIENTES, tabla.NombreTabla, idInsertado, hashDatos); err != nil {
@@ -258,18 +252,20 @@ func (td *TrackerDependencias) procesoDependible(tabla Tabla, idInsertado int64,
 	} else {
 		td.lockIncompletos.Unlock()
 
+		var tablaDependiente, key string
+		var idDependiente int64
+
 		hayUpdates := false
 		for filas.Next() {
 			hayUpdates = true
 
-			var update updateDependible
-			if err = filas.Scan(&update.tablaDependiente, &update.idDependiente, &update.key); err != nil {
+			if err = filas.Scan(&tablaDependiente, &idDependiente, &key); err != nil {
 				filas.Close()
 				return fmt.Errorf("error al obtener datos de una query de incompletos, con error: %v", err)
 			}
 
-			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", update.tablaDependiente, update.key, idInsertado, update.idDependiente)
-			lock := td.locksTablas[update.tablaDependiente]
+			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tablaDependiente, key, idInsertado, idDependiente)
+			lock := td.locksTablas[tablaDependiente]
 			lock.Lock()
 			if err = td.BasesDeDatos.Update(query); err != nil {
 				lock.Unlock()
@@ -293,11 +289,6 @@ func (td *TrackerDependencias) procesoDependible(tabla Tabla, idInsertado int64,
 	}
 }
 
-type updateTodos struct {
-	tablaDependiente, key, tablaDestino string
-	idDependiente, idInsertado          int64
-}
-
 func (td *TrackerDependencias) procesoUltimasActualizaciones() error {
 	// Hacer un inner join pora obtener ya de por si los id, sin tener que buscarlos
 	td.lockIncompletos.Lock()
@@ -307,27 +298,25 @@ func (td *TrackerDependencias) procesoUltimasActualizaciones() error {
 
 	} else {
 		td.lockIncompletos.Unlock()
-		updates := []updateTodos{}
+
+		var tablaDependiente, key, tablaDestino string
+		var idDependiente, idInsertado int64
+
 		for filas.Next() {
-			var u updateTodos
-			if err = filas.Scan(&u.tablaDependiente, &u.idDependiente, &u.key, &u.tablaDestino, &u.idInsertado); err != nil {
+			if err = filas.Scan(&tablaDependiente, &idDependiente, &key, &tablaDestino, &idInsertado); err != nil {
 				filas.Close()
 				return fmt.Errorf("error al obtener datos de una query de incompletos, con error: %v", err)
 			}
-			updates = append(updates, u)
 
+			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tablaDependiente, key, idInsertado, idDependiente)
+			td.locksTablas[tablaDependiente].Lock()
+			if err = td.BasesDeDatos.Update(query); err != nil {
+				td.locksTablas[tablaDependiente].Unlock()
+				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tablaDestino, err)
+			}
+			td.locksTablas[tablaDependiente].Unlock()
 		}
 		filas.Close()
-
-		for _, u := range updates {
-			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", u.tablaDependiente, u.key, u.idInsertado, u.idDependiente)
-			td.locksTablas[u.tablaDependiente].Lock()
-			if err = td.BasesDeDatos.Update(query); err != nil {
-				td.locksTablas[u.tablaDependiente].Unlock()
-				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", u.idInsertado, u.tablaDestino, err)
-			}
-			td.locksTablas[u.tablaDependiente].Unlock()
-		}
 
 		if err = td.BasesDeDatos.Eliminar(ELIMINAR_TODO_INCOMPLETOS); err != nil {
 			return fmt.Errorf("error al eliminar el resto de la tabla de incompletos, con error %v", err)
