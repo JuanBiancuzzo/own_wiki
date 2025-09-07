@@ -175,15 +175,15 @@ func generarExiste(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnExis
 		defer sentencia.Close()
 
 		datos := make([]any, largoDatos)
-		for _, clave := range claves {
+		for i, clave := range claves {
 			if dato, ok := datosIngresados[clave]; !ok {
 				return false, fmt.Errorf("el usuario no ingreso el dato para %s", clave)
 
 			} else if relacion, ok := dato.(RelacionTabla); ok {
 				// podemos hacer esto porque claves solo elige para los que tienen multiples
-				datos = append(datos, relacion.Tabla)
+				datos[i] = relacion.Tabla
 			} else {
-				datos = append(datos, dato)
+				datos[i] = dato
 			}
 		}
 
