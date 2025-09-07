@@ -154,7 +154,6 @@ func crearFuncionGenerador(nombreTabla string, query d.QueryDato, parametrosEspe
 			}
 		}
 
-		fmt.Printf("query: %s\n", query.SentenciaQuery)
 		sentencia, err := bdd.Preparar(query.SentenciaQuery)
 		if err != nil {
 			return nil, err
@@ -165,9 +164,6 @@ func crearFuncionGenerador(nombreTabla string, query d.QueryDato, parametrosEspe
 		if err != nil {
 			return nil, err
 		}
-		if columnas, err := filas.Columns(); err == nil {
-			fmt.Printf("Columnas: %+v\n", columnas)
-		}
 
 		return func(yield func(d.ConjuntoDato) bool) {
 			for filas.Next() {
@@ -175,7 +171,6 @@ func crearFuncionGenerador(nombreTabla string, query d.QueryDato, parametrosEspe
 					fmt.Printf("en lectura de una fila, con la query %s, se tuvo el error: %v\n", query.SentenciaQuery, err)
 					return
 				}
-				fmt.Printf("Datos leidos: %+v\n", datosReferencias)
 
 				for i, info := range infoVariables {
 					if valor, err := info.Variable.Desreferenciar(datosReferencias[i]); err != nil {
@@ -193,7 +188,6 @@ func crearFuncionGenerador(nombreTabla string, query d.QueryDato, parametrosEspe
 					return
 				}
 			}
-			fmt.Printf("Terminado\n")
 
 			filas.Close()
 		}, nil
@@ -231,7 +225,6 @@ func NewInformacionCompleta(querys map[string]d.QueryDato, parametrosEsperados [
 			for dato := range iterador {
 				datos = append(datos, dato)
 			}
-			fmt.Printf("Datos: %+v\n", datos)
 			return datos, nil
 
 		}, nil

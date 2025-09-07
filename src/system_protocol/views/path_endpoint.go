@@ -22,7 +22,6 @@ func (pe *PathEndpoint) AgregarEndpoint(endpoint string, claves []string) error 
 		return fmt.Errorf("ya se cargo ese parametro")
 	}
 
-	fmt.Printf("Registrando endpoint: /%s, con parametros: %v\n", endpoint, claves)
 	pe.Endpoints[endpoint] = claves
 	return nil
 }
