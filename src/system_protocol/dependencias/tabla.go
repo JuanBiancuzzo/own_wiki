@@ -17,6 +17,7 @@ const (
 	INDEPENDIENTE_DEPENDIBLE    = 0b11
 )
 
+type FnPreprocesado func(datosIngresados ConjuntoDato) (iExiste int, datos []any, err error)
 type FnExiste func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error)
 type FnInsertar func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (int64, error)
 type FnUpdateClave func(clave string) (b.Sentencia, error)
@@ -34,6 +35,7 @@ type Tabla struct {
 	ObtenerDependencias []Tabla
 
 	// funciones pre computadas
+	Preprocesar            FnPreprocesado
 	Existe                 FnExiste
 	Insertar               FnInsertar
 	CrearForeignKey        FnFKeys
@@ -43,17 +45,17 @@ type Tabla struct {
 
 func ConstruirTabla(tracker *TrackerDependencias, nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) (Tabla, error) {
 	var err error
-	if err = crearTabla(tracker.Bdd, nombreTabla, variables); err != nil {
+	if err = crearTabla(tracker.Tablas, nombreTabla, variables); err != nil {
 		return Tabla{}, err
 	}
 
 	var existe FnExiste
-	if elementosRepetidos {
+	if !elementosRepetidos {
 		existe = func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) {
 			return false, nil
 		}
 
-	} else if existe, err = generarExiste(tracker.Bdd, nombreTabla, variables); err != nil {
+	} else if existe, err = generarExiste(tracker.Tablas, nombreTabla, variables); err != nil {
 		return Tabla{}, err
 	}
 
@@ -63,7 +65,12 @@ func ConstruirTabla(tracker *TrackerDependencias, nombreTabla string, tipoTabla 
 	}
 
 	var sentenciasUpdate FnUpdateClave
-	if sentenciasUpdate, err = generarUpdate(tracker.Bdd, nombreTabla, variables); err != nil {
+	if sentenciasUpdate, err = generarUpdate(tracker.Tablas, nombreTabla, variables); err != nil {
+		return Tabla{}, err
+	}
+
+	var prerocesar FnPreprocesado
+	if prerocesar, err = generarPreprocesarDatos(elementosRepetidos, variables); err != nil {
 		return Tabla{}, err
 	}
 
@@ -77,6 +84,7 @@ func ConstruirTabla(tracker *TrackerDependencias, nombreTabla string, tipoTabla 
 		Variables:   variablesPorNombre,
 		TipoTabla:   tipoTabla,
 
+		Preprocesar:            prerocesar,
 		Existe:                 existe,
 		Insertar:               insertar,
 		CrearForeignKey:        generarFKeys(variables),
@@ -109,6 +117,16 @@ func crearTabla(bdd *b.Bdd, nombreTabla string, variables []Variable) error {
 
 	return nil
 }
+
+func generarPreprocesarDatos(elementosRepetidos bool, variables []Variable) (FnPreprocesado, error) {
+	var iExiste int = 0
+
+	return func(datosIngresados ConjuntoDato) (int, []any, error) {
+
+		return iExiste, []any{}, nil
+	}, nil
+}
+
 func generarExiste(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnExiste, error) {
 	queryParam := []string{}
 	claves := []string{} // tiene en cuenta incluso las claves que tienen valores multiples unicamente
@@ -135,12 +153,6 @@ func generarExiste(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnExis
 		}
 	}
 
-	query := fmt.Sprintf(
-		"SELECT id FROM %s WHERE %s",
-		nombreTabla,
-		strings.Join(queryParam, " AND "),
-	)
-
 	largoDatos := len(claves)
 	if largoDatos == 0 {
 		return func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) {
@@ -148,6 +160,11 @@ func generarExiste(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnExis
 		}, nil
 	}
 
+	query := fmt.Sprintf(
+		"SELECT id FROM %s WHERE %s",
+		nombreTabla,
+		strings.Join(queryParam, " AND "),
+	)
 	sentenciaQuery, err := bdd.Preparar(query)
 	if err != nil {
 		return nil, fmt.Errorf("al preparar la sentencia '%s' se tuvo el error: %v", query, err)
@@ -171,7 +188,7 @@ func generarExiste(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnExis
 		}
 
 		lock.Lock()
-		_, err := sentencia.Query(datos...)
+		_, err := sentencia.Obtener(datos...)
 		lock.Unlock()
 		return err == nil, nil
 	}, nil
@@ -180,11 +197,12 @@ func generarExiste(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnExis
 func generarUpdate(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnUpdateClave, error) {
 	mapaSentencias := make(map[string]b.Sentencia)
 
+	hayClaves := false
 	for _, variable := range variables {
 		if _, ok := variable.Informacion.(VariableReferencia); !ok {
 			continue
 		}
-
+		hayClaves = true
 		clave := variable.Clave
 
 		query := fmt.Sprintf("UPDATE %s SET %s = ? WHERE id = ?", nombreTabla, clave)
@@ -194,6 +212,10 @@ func generarUpdate(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnUpda
 		} else {
 			mapaSentencias[clave] = sentencia
 		}
+	}
+
+	if !hayClaves {
+		return func(clave string) (b.Sentencia, error) { return b.Sentencia{}, fmt.Errorf("no se reconoce la clave") }, nil
 	}
 
 	return func(clave string) (b.Sentencia, error) {
@@ -254,7 +276,7 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 		strings.Join(clavesTotales, ", "),
 		strings.Join(valores, ", "),
 	)
-	sentenciaInsertar, err := tracker.Bdd.Preparar(insertarQuery)
+	sentenciaInsertar, err := tracker.Tablas.Preparar(insertarQuery)
 	if err != nil {
 		return nil, fmt.Errorf("al preparar la sentencia '%s' se tuvo el error: %v", insertarQuery, err)
 	}
@@ -282,10 +304,6 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 		datos := make([]any, largoDatos+1)
 		id := int64(r.Uint32())
 		datos[0] = id
-
-		if nombreTabla == "Carreras" {
-			fmt.Printf("Datos: %+v\n", datosIngresados)
-		}
 
 		for i, clave := range clavesInsertar {
 			if dato, ok := datosIngresados[clave]; !ok {

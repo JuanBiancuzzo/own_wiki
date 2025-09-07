@@ -11,6 +11,8 @@ RUN go mod download
 COPY src/encoding encoding/.
 COPY src/system_protocol system_protocol/.
 
+RUN mkdir /temp
+
 # Build the Go app
 RUN go build -o own_wiki encoding/main.go
 

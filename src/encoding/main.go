@@ -22,8 +22,7 @@ import (
 // mdp "github.com/gomarkdown/markdown/parser"
 // tp "github.com/BurntSushi/toml"
 
-const CANTIDAD_WORKERS = 10
-const CANTIDAD_BACH = 15
+const NOMBRE_BDD = "baseDeDatos.db"
 
 var DIRECTORIOS_IGNORAR = []string{".git", ".configuracion", ".github", ".obsidian", ".trash"}
 
@@ -67,7 +66,7 @@ func MensajeProcesados(procesados, cantidadArchivos int) string {
 	)
 }
 
-func ContadorArchivos(dirOrigen string, canalSacar chan int, canalDone chan bool, canalMensajes chan string) {
+func ContadorArchivos(dirOrigen string, canalSacar, canalDone chan bool, canalMensajes chan string) {
 	type contador struct {
 		cantidad int
 		err      error
@@ -88,8 +87,8 @@ func ContadorArchivos(dirOrigen string, canalSacar chan int, canalDone chan bool
 
 	for seguir {
 		select {
-		case cantidadLeida := <-canalSacar:
-			procesados += cantidadLeida
+		case <-canalSacar:
+			procesados++
 
 		case contador := <-canalCantidad:
 			if contador.err != nil {
@@ -111,8 +110,8 @@ func ContadorArchivos(dirOrigen string, canalSacar chan int, canalDone chan bool
 	porcentajePrevio := 0
 	for seguir {
 		select {
-		case cantidadLeida := <-canalSacar:
-			procesados += cantidadLeida
+		case <-canalSacar:
+			procesados++
 			porcentaje := int((100 * procesados) / cantidadArchivos)
 
 			if procesados%10 == 0 {
@@ -132,45 +131,18 @@ func ContadorArchivos(dirOrigen string, canalSacar chan int, canalDone chan bool
 }
 
 func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalMensajes chan string) error {
-	var waitArchivos sync.WaitGroup
 	canalMensajes <- fmt.Sprintf("El directorio para trabajar va a ser: %s\n", dirOrigen)
 
-	canalInput := make(chan []string, CANTIDAD_WORKERS)
-	waitArchivos.Add(1)
-
-	canalSacar := make(chan int, 20*CANTIDAD_WORKERS)
+	canalSacar := make(chan bool, 100)
 	canalDone := make(chan bool)
 	go ContadorArchivos(dirOrigen, canalSacar, canalDone, canalMensajes)
-
-	terminar := func(motivo string) {
-		canalMensajes <- "Esperando a que termine por: " + motivo
-		close(canalInput)
-		waitArchivos.Wait()
-		close(canalSacar)
-		canalDone <- true
-		close(canalDone)
-	}
-
-	procesarArchivo := func(paths []string) {
-		for _, path := range paths {
-			if err := procesar.CargarArchivo(dirOrigen, path, tracker, canalMensajes); err != nil {
-				canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo en el path: '%s', con error: %v", path, err)
-			}
-		}
-		canalSacar <- len(paths)
-	}
-	go u.DividirTrabajo(canalInput, CANTIDAD_WORKERS, procesarArchivo, &waitArchivos)
 
 	colaDirectorios := u.NewCola[string]()
 	colaDirectorios.Encolar("")
 
-	pathArchivos := make([]string, CANTIDAD_BACH)
-	contador := 0
-
 	for directorioPath := range colaDirectorios.DesencolarIterativamente {
 		archivos, err := os.ReadDir(fmt.Sprintf("%s/%s", dirOrigen, directorioPath))
 		if err != nil {
-			terminar("huvo un error")
 			return fmt.Errorf("se tuvo un error al leer el directorio '%s' dando el error: %v", fmt.Sprintf("%s/%s", dirOrigen, directorioPath), err)
 		}
 
@@ -185,22 +157,15 @@ func RecorrerDirectorio(dirOrigen string, tracker *d.TrackerDependencias, canalM
 				colaDirectorios.Encolar(archivoPath)
 
 			} else if !archivo.IsDir() {
-				pathArchivos[contador] = archivoPath
-				contador++
-
-				if contador >= CANTIDAD_BACH {
-					contador = 0
-					canalInput <- pathArchivos[:]
+				if err := procesar.CargarArchivo(dirOrigen, archivoPath, tracker, canalMensajes); err != nil {
+					canalMensajes <- fmt.Sprintf("Se tuvo un error al crear un archivo en el path: '%s', con error: %v", archivoPath, err)
 				}
+				canalSacar <- true
 			}
 		}
 	}
 
-	if contador > 0 {
-		canalInput <- pathArchivos[:contador]
-	}
-
-	terminar("termino como lo esperado")
+	canalDone <- true
 	return nil
 }
 
@@ -222,14 +187,14 @@ func CargarTablas(dirConfiguracion string, tracker *d.TrackerDependencias) error
 func Encodear(dirInput, dirOutput, dirConfiguracion string, canalMensajes chan string) {
 	_ = godotenv.Load()
 
-	bdd, err := b.NewBdd(dirOutput, canalMensajes)
+	bdd, err := b.NewBdd(dirOutput, NOMBRE_BDD, canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
 	}
 	defer bdd.Close()
 
-	tracker, err := d.NewTrackerDependencias(bdd)
+	tracker, err := d.NewTrackerDependencias(bdd, canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo crear el tracker, se tuvo el error: %v", err)
 		return

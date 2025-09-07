@@ -10,13 +10,11 @@ import (
 	// _ "github.com/go-sql-driver/mysql"
 )
 
-const NOMBRE_BDD = "baseDeDatos.db"
-
 type Bdd struct {
 	conn *sql.DB
 }
 
-func NewBdd(carpetaOutput string, canalMensajes chan string) (*Bdd, error) {
+func NewBdd(carpetaOutput, nombreBdd string, canalMensajes chan string) (*Bdd, error) {
 	/*
 		_ = godotenv.Load()
 
@@ -44,7 +42,7 @@ func NewBdd(carpetaOutput string, canalMensajes chan string) (*Bdd, error) {
 		conn.SetConnMaxLifetime(1 * time.Hour)
 
 	*/
-	conn, err := sql.Open("sqlite3", fmt.Sprintf("%s/%s?_journal_mode=WAL", carpetaOutput, NOMBRE_BDD))
+	conn, err := sql.Open("sqlite3", fmt.Sprintf("%s/%s?_journal_mode=WAL", carpetaOutput, nombreBdd))
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to DB: %v", err)
 	}

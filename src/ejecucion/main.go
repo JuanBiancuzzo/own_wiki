@@ -14,6 +14,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
+const NOMBRE_BDD = "baseDeDatos.db"
+
 // mdp "github.com/gomarkdown/markdown/parser"
 // tp "github.com/BurntSushi/toml"
 // "github.com/go-sql-driver/mysql"
@@ -34,7 +36,7 @@ func Visualizar(carpetaOutput, carpetaConfiguracion string, canalMensajes chan s
 	e := echo.New()
 	e.Use(middleware.Logger())
 
-	bdd, err := b.NewBdd(carpetaOutput, canalMensajes)
+	bdd, err := b.NewBdd(carpetaOutput, NOMBRE_BDD, canalMensajes)
 	if err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo establecer la conexion con la base de datos, con error: %v\n", err)
 		return
