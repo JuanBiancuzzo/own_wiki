@@ -19,6 +19,7 @@ const (
 
 type FnExiste func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error)
 type FnInsertar func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (int64, error)
+type FnUpdateClave func(clave string) (b.Sentencia, error)
 
 // type FnActualizar func(bdd *b.Bdd, datosIngresados ConjuntoDato) error
 // type FnEliminar func(bdd *b.Bdd, id int64) error
@@ -33,10 +34,11 @@ type Tabla struct {
 	ObtenerDependencias []Tabla
 
 	// funciones pre computadas
-	Existe          FnExiste
-	Insertar        FnInsertar
-	CrearForeignKey FnFKeys
-	Hash            FnHash
+	Existe                 FnExiste
+	Insertar               FnInsertar
+	CrearForeignKey        FnFKeys
+	Hash                   FnHash
+	ObtenerSentenciaUpdate FnUpdateClave
 }
 
 func ConstruirTabla(tracker *TrackerDependencias, nombreTabla string, tipoTabla TipoTabla, elementosRepetidos bool, variables []Variable) (Tabla, error) {
@@ -60,6 +62,11 @@ func ConstruirTabla(tracker *TrackerDependencias, nombreTabla string, tipoTabla 
 		return Tabla{}, err
 	}
 
+	var sentenciasUpdate FnUpdateClave
+	if sentenciasUpdate, err = generarUpdate(tracker.Bdd, nombreTabla, variables); err != nil {
+		return Tabla{}, err
+	}
+
 	variablesPorNombre := make(map[string]Variable)
 	for _, variable := range variables {
 		variablesPorNombre[variable.Clave] = variable
@@ -70,11 +77,12 @@ func ConstruirTabla(tracker *TrackerDependencias, nombreTabla string, tipoTabla 
 		Variables:   variablesPorNombre,
 		TipoTabla:   tipoTabla,
 
-		Existe:              existe,
-		Insertar:            insertar,
-		CrearForeignKey:     generarFKeys(variables),
-		Hash:                generarHash(variables),
-		ObtenerDependencias: describirDependencias(variables),
+		Existe:                 existe,
+		Insertar:               insertar,
+		CrearForeignKey:        generarFKeys(variables),
+		Hash:                   generarHash(variables),
+		ObtenerDependencias:    describirDependencias(variables),
+		ObtenerSentenciaUpdate: sentenciasUpdate,
 	}, nil
 }
 
@@ -86,7 +94,7 @@ func crearTabla(bdd *b.Bdd, nombreTabla string, variables []Variable) error {
 	}
 
 	tabla := fmt.Sprintf(
-		"CREATE TABLE %s (\n\tid INT PRIMARY KEY,\n\t%s\n);",
+		"CREATE TABLE %s (\n\tid BIGINT PRIMARY KEY,\n\t%s\n);",
 		nombreTabla,
 		strings.Join(parametros, ",\n\t"),
 	)
@@ -101,7 +109,6 @@ func crearTabla(bdd *b.Bdd, nombreTabla string, variables []Variable) error {
 
 	return nil
 }
-
 func generarExiste(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnExiste, error) {
 	queryParam := []string{}
 	claves := []string{} // tiene en cuenta incluso las claves que tienen valores multiples unicamente
@@ -167,6 +174,34 @@ func generarExiste(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnExis
 		_, err := sentencia.Query(datos...)
 		lock.Unlock()
 		return err == nil, nil
+	}, nil
+}
+
+func generarUpdate(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnUpdateClave, error) {
+	mapaSentencias := make(map[string]b.Sentencia)
+
+	for _, variable := range variables {
+		if _, ok := variable.Informacion.(VariableReferencia); !ok {
+			continue
+		}
+
+		clave := variable.Clave
+
+		query := fmt.Sprintf("UPDATE %s SET %s = ? WHERE id = ?", nombreTabla, clave)
+		if sentencia, err := bdd.Preparar(query); err != nil {
+			return nil, err
+
+		} else {
+			mapaSentencias[clave] = sentencia
+		}
+	}
+
+	return func(clave string) (b.Sentencia, error) {
+		if sentencia, ok := mapaSentencias[clave]; ok {
+			return sentencia, nil
+		}
+
+		return b.Sentencia{}, fmt.Errorf("no se reconoce la clave")
 	}, nil
 }
 

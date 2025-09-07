@@ -1,7 +1,6 @@
 package base_de_datos
 
 import (
-	"context"
 	"database/sql"
 )
 
@@ -10,7 +9,7 @@ type Transaccion struct {
 }
 
 func NewTransaccion(bdd *sql.DB) (Transaccion, error) {
-	if tx, err := bdd.BeginTx(context.Background(), nil); err != nil {
+	if tx, err := bdd.Begin(); err != nil {
 		return Transaccion{}, err
 	} else {
 		return Transaccion{

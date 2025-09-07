@@ -34,7 +34,7 @@ func (v Variable) ObtenerParametroSQL() []string {
 			parametros[0] = fmt.Sprintf("%s TEXT CHECK( LENGTH(%s) <= %d )", nombreVariable, nombreVariable, maximoLargo)
 		}
 
-		parametros[cantidad-1] = fmt.Sprintf("%s INT", v.Clave)
+		parametros[cantidad-1] = fmt.Sprintf("%s BIGINT", v.Clave)
 
 	case VariableArrayReferencia:
 		// no es necesario, ya que no tiene representacion en sql
@@ -104,7 +104,7 @@ func NewVariableDate(representativo bool, clave string, necesario bool) Variable
 func (vs VariableSimple) TipoSQL() string {
 	switch vs.Tipo {
 	case TVS_INT:
-		return "INT"
+		return "BIGINT"
 	case TVS_BOOL:
 		return "BOOLEAN"
 	case TVS_DATE:

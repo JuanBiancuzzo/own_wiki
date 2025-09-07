@@ -12,13 +12,13 @@ const AUX_DEPENDIBLES = "aux_dependibles"
 const TABLA_DEPENDIBLES = `CREATE TABLE IF NOT EXISTS aux_dependibles (
 	nombreTabla TEXT CHECK( LENGTH(nombreTabla) <= %d ) NOT NULL,
 	hashDatos   BIGINT,
-	idDatos     INT
+	idDatos     BIGINT
 );`
 
 const AUX_INCOMPLETOS = "aux_incompletos"
 const TABLA_INCOMPLETOS = `CREATE TABLE IF NOT EXISTS aux_incompletos (
 	tablaDependiente 	TEXT CHECK( LENGTH(tablaDependiente) <= %d ) NOT NULL,
-	idDependiente   	INT,
+	idDependiente   	BIGINT,
 	keyAlId 			VARCHAR(255),
 	tablaDestino 		TEXT CHECK( LENGTH(tablaDestino) <= %d ) NOT NULL,
 	hashDatosDestino   	BIGINT
@@ -147,10 +147,16 @@ func (td *TrackerDependencias) CargarTabla(descripcion Tabla) {
 
 func (td *TrackerDependencias) EmpezarProcesoInsertarDatos(canalMensajes chan string) error {
 	if err := td.Bdd.CrearTabla(fmt.Sprintf(TABLA_DEPENDIBLES, td.maximoNombreTabla)); err != nil {
-		return fmt.Errorf("creando tabla dependibles (\n%s\n), se tuvo el error: %v", fmt.Sprintf(TABLA_DEPENDIBLES, td.maximoNombreTabla), err)
+		return fmt.Errorf(
+			"creando tabla dependibles (\n%s\n), se tuvo el error: %v",
+			fmt.Sprintf(TABLA_DEPENDIBLES, td.maximoNombreTabla), err,
+		)
 
 	} else if err := td.Bdd.CrearTabla(fmt.Sprintf(TABLA_INCOMPLETOS, td.maximoNombreTabla, td.maximoNombreTabla)); err != nil {
-		return fmt.Errorf("creando tabla incompletos (\n%s\n), se tuvo el error: %v", fmt.Sprintf(TABLA_INCOMPLETOS, td.maximoNombreTabla, td.maximoNombreTabla), err)
+		return fmt.Errorf(
+			"creando tabla incompletos (\n%s\n), se tuvo el error: %v",
+			fmt.Sprintf(TABLA_INCOMPLETOS, td.maximoNombreTabla, td.maximoNombreTabla), err,
+		)
 	}
 
 	sentencias := make([]b.Sentencia, ST_MAX_SENTENCIA)
@@ -182,15 +188,11 @@ func (td *TrackerDependencias) procesarCarga(canal chan DatosCarga, canalMensaje
 		if cantidadDatos >= capacidadDatos {
 			contadorExtra++
 			cantidadDatos = 0
-			canalMensajes <- "Procesar 20 pedidos"
 			if err := td.cargarMultiplesDatos(td.Bdd, leerDatos); err != nil {
 				canalMensajes <- fmt.Sprintf("%v", err)
-			} else {
-				canalMensajes <- "[Commiteado] terminado, vamos a seguir"
-				if contadorExtra%4 == 0 {
-					canalMensajes <- "[Checkpoint]"
-					td.Bdd.Checkpoint(b.TC_PASSIVE)
-				}
+
+			} else if contadorExtra%4 == 0 {
+				td.Bdd.Checkpoint(b.TC_PASSIVE)
 			}
 		}
 	}
@@ -291,9 +293,16 @@ func (td *TrackerDependencias) procesoDependiente(tx b.Transaccion, tabla *Tabla
 		if id, err := sentenciaQueryDependientes.Obtener(fKey.TablaDestino, fKey.HashDatosDestino); err == nil {
 			td.lockDependibles.Unlock()
 			// Si fueron insertados, por lo que actualizamos la tabla
-			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tabla.NombreTabla, fKey.Clave, id, idInsertado)
+			sentenciaUpdate, err := tabla.ObtenerSentenciaUpdate(fKey.Clave)
+			if err != nil {
+				return fmt.Errorf("error no existe setencia update en la tabla %s, para la clave %s, dando err: %v", tabla.NombreTabla, fKey.Clave, err)
+			}
+
+			sentenciaUpdate = tx.Sentencia(sentenciaUpdate)
+			defer sentenciaUpdate.Close()
+
 			lock.Lock()
-			if err = tx.Update(query); err != nil {
+			if err = sentenciaUpdate.Update(id, idInsertado); err != nil {
 				lock.Unlock()
 				return fmt.Errorf("error al actualizar %d en tabla %s (proceso dependiente), con error %v", idInsertado, tabla.NombreTabla, err)
 			}
@@ -314,6 +323,11 @@ func (td *TrackerDependencias) procesoDependiente(tx b.Transaccion, tabla *Tabla
 	}
 
 	return nil
+}
+
+type UpdateData struct {
+	tablaDependiente, key string
+	idDependiente         int64
 }
 
 func (td *TrackerDependencias) procesoDependible(tx b.Transaccion, tabla *Tabla, idInsertado int64, hashDatos IntFK) error {
@@ -339,31 +353,44 @@ func (td *TrackerDependencias) procesoDependible(tx b.Transaccion, tabla *Tabla,
 	} else {
 		td.lockIncompletos.Unlock()
 
-		var tablaDependiente, key string
-		var idDependiente int64
-
-		hayUpdates := false
+		updates := []UpdateData{}
+		sentenciasPorTabla := make(map[string]b.Sentencia)
 		for filas.Next() {
-			hayUpdates = true
+			var u UpdateData
 
-			if err = filas.Scan(&tablaDependiente, &idDependiente, &key); err != nil {
+			if err = filas.Scan(&u.tablaDependiente, &u.idDependiente, &u.key); err != nil {
 				filas.Close()
 				return fmt.Errorf("error al obtener datos de una query de incompletos, con error: %v", err)
 			}
 
-			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tablaDependiente, key, idInsertado, idDependiente)
-			lock := td.locksTablas[tablaDependiente]
+			sentenciaUpdate, err := td.RegistrarTablas[u.tablaDependiente].ObtenerSentenciaUpdate(u.key)
+			if err != nil {
+				filas.Close()
+				return fmt.Errorf("error no existe setencia update en la tabla %s, para la clave %s, dando err: %v", u.tablaDependiente, u.key, err)
+			}
+			sentenciasPorTabla[u.tablaDependiente] = tx.Sentencia(sentenciaUpdate)
+
+			updates = append(updates, u)
+		}
+		filas.Close()
+
+		for _, u := range updates {
+			sentenciaUpdate := sentenciasPorTabla[u.tablaDependiente]
+
+			lock := td.locksTablas[u.tablaDependiente]
 			lock.Lock()
-			if err = tx.Update(query); err != nil {
+			if err = sentenciaUpdate.Update(idInsertado, u.idDependiente); err != nil {
 				lock.Unlock()
 				return fmt.Errorf("error al actualizar %d en tabla %s (proceso Dependible distinto), con error %v", idInsertado, tabla.NombreTabla, err)
 			}
 			lock.Unlock()
-
 		}
-		filas.Close()
 
-		if hayUpdates {
+		for tabla := range sentenciasPorTabla {
+			sentenciasPorTabla[tabla].Close()
+		}
+
+		if len(updates) > 0 {
 			td.lockIncompletos.Lock()
 			if err = sentenciaEliminarIncompletos.Eliminar(tabla.NombreTabla, hashDatos); err != nil {
 				td.lockIncompletos.Unlock()
@@ -433,9 +460,18 @@ func (td *TrackerDependencias) procesoUltimasActualizaciones(tx b.Transaccion) e
 				return fmt.Errorf("error al obtener datos de una query de incompletos, con error: %v", err)
 			}
 
-			query := fmt.Sprintf("UPDATE %s SET %s = %d WHERE id = %d", tablaDependiente, key, idInsertado, idDependiente)
+			sentenciaUpdate, err := td.RegistrarTablas[tablaDependiente].ObtenerSentenciaUpdate(key)
+			if err != nil {
+				filas.Close()
+				return fmt.Errorf("error no existe setencia update en la tabla %s, para la clave %s, dando err: %v", tablaDependiente, key, err)
+
+			} else {
+				sentenciaUpdate = tx.Sentencia(sentenciaUpdate)
+			}
+
 			td.locksTablas[tablaDependiente].Lock()
-			if err = tx.Update(query); err != nil {
+			if err = sentenciaUpdate.Update(idInsertado, idDependiente); err != nil {
+				filas.Close()
 				td.locksTablas[tablaDependiente].Unlock()
 				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tablaDestino, err)
 			}
