@@ -52,8 +52,19 @@ func (s Sentencia) InsertarId(datos ...any) (int64, error) {
 }
 
 func (s Sentencia) Update(datos ...any) error {
-	_, err := s.exec(datos...)
-	return err
+	resultado, err := s.exec(datos...)
+	if err != nil {
+		return err
+	}
+
+	if cantidadFilasAfectadas, err := resultado.RowsAffected(); err != nil {
+		return err
+
+	} else if cantidadFilasAfectadas == 0 {
+		return fmt.Errorf("un update afectó 0 filas, esto significa que no fue bien creado el update")
+	}
+
+	return nil
 }
 
 func (s Sentencia) Eliminar(datos ...any) error {

@@ -283,6 +283,10 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 		id := int64(r.Uint32())
 		datos[0] = id
 
+		if nombreTabla == "Carreras" {
+			fmt.Printf("Datos: %+v\n", datosIngresados)
+		}
+
 		for i, clave := range clavesInsertar {
 			if dato, ok := datosIngresados[clave]; !ok {
 				return id, fmt.Errorf("el usuario no ingreso el dato para %s", clave)

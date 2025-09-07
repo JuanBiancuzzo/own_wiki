@@ -270,6 +270,10 @@ func (td *TrackerDependencias) Cargar(nombreTabla string, datosIngresados Conjun
 		return fmt.Errorf("de alguna forma estas cargando en una tabla no registrada")
 
 	} else {
+		if nombreTabla == "Carreras" {
+			fmt.Printf("Desde cargar: %+v\n", datosIngresados)
+		}
+
 		td.canalCarga <- DatosCarga{
 			Tabla: &tabla,
 			Datos: datosIngresados,

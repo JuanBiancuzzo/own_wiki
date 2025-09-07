@@ -29,8 +29,3 @@ func (t Transaccion) RollBack() error {
 func (t Transaccion) Sentencia(sentencia Sentencia) Sentencia {
 	return sentencia.NewSentenciaDeTransaccion(t.transaccion)
 }
-
-func (t Transaccion) Update(query string, datos ...any) error {
-	_, err := t.transaccion.Exec(query, datos...)
-	return err
-}

@@ -90,24 +90,13 @@ func (bdd *Bdd) Close() {
 }
 
 func (bdd *Bdd) CrearTabla(query string, datos ...any) error {
-	_, err := bdd.exec(query, datos...)
+	_, err := bdd.conn.Exec(query, datos...)
 	return err
 }
 
 func (bdd *Bdd) EliminarTabla(nombreTabla string) error {
-	_, err := bdd.exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", nombreTabla))
+	_, err := bdd.conn.Exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", nombreTabla))
 	return err
-}
-
-func (bdd *Bdd) Existe(query string, datos ...any) (bool, error) {
-	lectura := make([]any, len(datos))
-	fila := bdd.QueryRow(query, datos...)
-
-	if err := fila.Scan(lectura...); err != nil {
-		return false, nil
-	}
-
-	return true, nil
 }
 
 func (bdd *Bdd) Preparar(query string) (Sentencia, error) {
@@ -116,52 +105,4 @@ func (bdd *Bdd) Preparar(query string) (Sentencia, error) {
 
 func (bdd *Bdd) Transaccion() (Transaccion, error) {
 	return NewTransaccion(bdd.conn)
-}
-
-func (bdd *Bdd) Obtener(query string, datos ...any) (int64, error) {
-	var id int64
-	fila := bdd.QueryRow(query, datos...)
-	if fila == nil {
-		return id, fmt.Errorf("error al obtener query")
-	}
-
-	if err := fila.Scan(&id); err != nil {
-		return id, fmt.Errorf("error al intentar query la bdd, con error: %v", err)
-	}
-
-	return id, nil
-}
-
-func (bdd *Bdd) InsertarId(query string, datos ...any) (int64, error) {
-	if filaAfectada, err := bdd.exec(query, datos...); err != nil {
-		return 0, fmt.Errorf("error al insertar con query (ejecutando exec), con error: %v", err)
-
-	} else if id, err := filaAfectada.LastInsertId(); err != nil {
-		return 0, fmt.Errorf("error al obtener id from query, con error: %v", err)
-
-	} else {
-		return id, nil
-	}
-}
-
-func (bdd *Bdd) Update(query string, datos ...any) error {
-	_, err := bdd.exec(query, datos...)
-	return err
-}
-
-func (bdd *Bdd) Eliminar(query string, datos ...any) error {
-	_, err := bdd.exec(query, datos...)
-	return err
-}
-
-func (bdd *Bdd) QueryRow(query string, datos ...any) *sql.Row {
-	return bdd.conn.QueryRow(query, datos...)
-}
-
-func (bdd *Bdd) Query(query string, datos ...any) (*sql.Rows, error) {
-	return bdd.conn.Query(query, datos...)
-}
-
-func (bdd *Bdd) exec(query string, datos ...any) (sql.Result, error) {
-	return bdd.conn.Exec(query, datos...)
 }

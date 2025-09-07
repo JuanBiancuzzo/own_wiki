@@ -77,7 +77,12 @@ func NewInformacionFila(query d.QueryDato, parametrosEsperados []string) (FnInfo
 	}
 
 	return func(bdd *b.Bdd, parametrosDados []string) (any, error) {
-		fila := bdd.QueryRow(query.SentenciaQuery, parametrosDados[indiceIdNecesario])
+		sentencia, err := bdd.Preparar(query.SentenciaQuery)
+		if err != nil {
+			return nil, err
+		}
+		fila := sentencia.QueryRow(parametrosDados[indiceIdNecesario])
+		defer sentencia.Close()
 
 		if err := fila.Scan(datosReferencias...); err != nil {
 			return nil, fmt.Errorf("en lectura de una fila, con la query %s, se tuvo el error: %v", query.SentenciaQuery, err)
@@ -150,7 +155,13 @@ func crearFuncionGenerador(nombreTabla string, query d.QueryDato, parametrosEspe
 		}
 
 		fmt.Printf("query: %s\n", query.SentenciaQuery)
-		filas, err := bdd.Query(query.SentenciaQuery, parametrosRequeridos...)
+		sentencia, err := bdd.Preparar(query.SentenciaQuery)
+		if err != nil {
+			return nil, err
+		}
+
+		filas, err := sentencia.Query(parametrosRequeridos...)
+		defer sentencia.Close()
 		if err != nil {
 			return nil, err
 		}
