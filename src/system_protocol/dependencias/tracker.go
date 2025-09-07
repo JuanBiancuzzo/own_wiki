@@ -328,8 +328,8 @@ func (td *TrackerDependencias) procesoDependiente(tx b.Transaccion, tabla *Tabla
 }
 
 type UpdateData struct {
-	tablaDependiente, key string
-	idDependiente         int64
+	tablaDependiente string
+	idDependiente    int64
 }
 
 func (td *TrackerDependencias) procesoDependible(tx b.Transaccion, tabla *Tabla, idInsertado int64, hashDatos IntFK) error {
@@ -350,18 +350,20 @@ func (td *TrackerDependencias) procesoDependible(tx b.Transaccion, tabla *Tabla,
 
 		updates := []UpdateData{}
 		sentenciasPorTabla := make(map[string]b.Sentencia)
+
 		for filas.Next() {
 			var u UpdateData
+			var key string
 
-			if err = filas.Scan(&u.tablaDependiente, &u.idDependiente, &u.key); err != nil {
+			if err = filas.Scan(&u.tablaDependiente, &u.idDependiente, &key); err != nil {
 				filas.Close()
 				return fmt.Errorf("error al obtener datos de una query de incompletos, con error: %v", err)
 			}
 
-			sentenciaUpdate, err := td.RegistrarTablas[u.tablaDependiente].ObtenerSentenciaUpdate(u.key)
+			sentenciaUpdate, err := td.RegistrarTablas[u.tablaDependiente].ObtenerSentenciaUpdate(key)
 			if err != nil {
 				filas.Close()
-				return fmt.Errorf("error no existe setencia update en la tabla %s, para la clave %s, dando err: %v", u.tablaDependiente, u.key, err)
+				return fmt.Errorf("error no existe setencia update en la tabla %s, para la clave %s, dando err: %v", u.tablaDependiente, key, err)
 			}
 			sentenciasPorTabla[u.tablaDependiente] = tx.Sentencia(sentenciaUpdate)
 
@@ -402,33 +404,33 @@ func (td *TrackerDependencias) TerminarProcesoInsertarDatos() error {
 	close(td.canalCarga)
 	td.waitCarga.Wait()
 
-	/*
-		transaccion, err := td.Bdd.Transaccion()
-		if err != nil {
-			return err
-		}
+	transaccion, err := td.Tablas.Transaccion()
+	if err != nil {
+		return err
+	}
 
-		if err := td.procesoUltimasActualizaciones(transaccion); err != nil {
+	if err = td.procesoUltimasActualizaciones(transaccion); err != nil {
+		errRollBack := transaccion.RollBack()
+		return fmt.Errorf("error al procesar ultimos: %v, y rollback: %v", err, errRollBack)
+	}
+
+	for tabla := range td.RegistrarTablas {
+		if err := td.RegistrarTablas[tabla].RestringirTabla(transaccion); err != nil {
 			errRollBack := transaccion.RollBack()
-			return fmt.Errorf("error al procesar ultimos: %v, y rollback: %v", err, errRollBack)
+			return fmt.Errorf("error al restringir tabla %s: %v, y rollback: %v", tabla, err, errRollBack)
 		}
+	}
 
-		for tabla := range td.RegistrarTablas {
-			if err := td.RegistrarTablas[tabla].RestringirTabla(transaccion); err != nil {
-				errRollBack := transaccion.RollBack()
-				return fmt.Errorf("error al restringir tabla %s: %v, y rollback: %v", tabla, err, errRollBack)
-			}
-		}
+	if err := td.Temp.EliminarTabla(AUX_DEPENDIBLES); err != nil {
+		return fmt.Errorf("error al eliminar tabla auxiliar dependibles, con error: %v", err)
 
-			if err := td.Bdd.EliminarTabla(AUX_DEPENDIBLES); err != nil {
-				return fmt.Errorf("error al eliminar tabla auxiliar dependibles, con error: %v", err)
+	} else if err = td.Temp.EliminarTabla(AUX_INCOMPLETOS); err != nil {
+		return fmt.Errorf("error al eliminar tabla auxiliar incompletos, con error: %v", err)
+	}
 
-			} else if err = td.Bdd.EliminarTabla(AUX_INCOMPLETOS); err != nil {
-				return fmt.Errorf("error al eliminar tabla auxiliar incompletos, con error: %v", err)
-			}
-
-		return transaccion.Commit()
-	*/
+	if err = transaccion.Commit(); err != nil {
+		return err
+	}
 
 	td.Temp.Close()
 	for _, sentencia := range td.sentencias {
@@ -437,51 +439,60 @@ func (td *TrackerDependencias) TerminarProcesoInsertarDatos() error {
 	return nil
 }
 
+type UpdateDataTotal struct {
+	tablaDependiente, tablaDestino string
+	idDependiente, idInsertado     int64
+}
+
 func (td *TrackerDependencias) procesoUltimasActualizaciones(tx b.Transaccion) error {
 	// Hacer un inner join pora obtener ya de por si los id, sin tener que buscarlos
-	sentenciaQueryIncompletos := tx.Sentencia(td.sentencias[ST_QUERY_TODO_INCOMPLETOS])
-	sentenciaEliminarIncompletos := tx.Sentencia(td.sentencias[ST_ELIMINAR_TODO_INCOMPLETOS])
+
+	updates := []UpdateDataTotal{}
+	sentenciasTablas := make(map[string]b.Sentencia)
 
 	td.lockIncompletos.Lock()
-	if filas, err := sentenciaQueryIncompletos.Query(); err != nil {
+	if filas, err := td.sentencias[ST_QUERY_TODO_INCOMPLETOS].Query(); err != nil {
 		td.lockIncompletos.Unlock()
 		return fmt.Errorf("error al query de todos los elementos de incompletos, con error: %v", err)
 
 	} else {
 		td.lockIncompletos.Unlock()
 
-		var tablaDependiente, key, tablaDestino string
-		var idDependiente, idInsertado int64
-
 		for filas.Next() {
-			if err = filas.Scan(&tablaDependiente, &idDependiente, &key, &tablaDestino, &idInsertado); err != nil {
+			var u UpdateDataTotal
+			var key string
+
+			if err = filas.Scan(&u.tablaDependiente, &u.idDependiente, &key, &u.tablaDestino, &u.idInsertado); err != nil {
 				filas.Close()
 				return fmt.Errorf("error al obtener datos de una query de incompletos, con error: %v", err)
 			}
+			updates = append(updates, u)
 
-			sentenciaUpdate, err := td.RegistrarTablas[tablaDependiente].ObtenerSentenciaUpdate(key)
+			sentenciaUpdate, err := td.RegistrarTablas[u.tablaDependiente].ObtenerSentenciaUpdate(key)
 			if err != nil {
 				filas.Close()
-				return fmt.Errorf("error no existe setencia update en la tabla %s, para la clave %s, dando err: %v", tablaDependiente, key, err)
-
-			} else {
-				sentenciaUpdate = tx.Sentencia(sentenciaUpdate)
+				return fmt.Errorf("error no existe setencia update en la tabla %s, para la clave %s, dando err: %v", u.tablaDependiente, key, err)
 			}
-
-			td.locksTablas[tablaDependiente].Lock()
-			if err = sentenciaUpdate.Update(idInsertado, idDependiente); err != nil {
-				filas.Close()
-				td.locksTablas[tablaDependiente].Unlock()
-				return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", idInsertado, tablaDestino, err)
-			}
-			td.locksTablas[tablaDependiente].Unlock()
+			sentenciasTablas[u.tablaDependiente] = tx.Sentencia(sentenciaUpdate)
 		}
 		filas.Close()
-
-		if err = sentenciaEliminarIncompletos.Eliminar(); err != nil {
-			return fmt.Errorf("error al eliminar el resto de la tabla de incompletos, con error %v", err)
-		}
-
-		return nil
 	}
+
+	for _, u := range updates {
+		lock := td.locksTablas[u.tablaDependiente]
+		sentenciaUpdate := sentenciasTablas[u.tablaDependiente]
+
+		lock.Lock()
+		if err := sentenciaUpdate.Update(u.idInsertado, u.idDependiente); err != nil {
+			lock.Unlock()
+			return fmt.Errorf("error al actualizar %d en tabla %s, con error %v", u.idInsertado, u.tablaDestino, err)
+		}
+		lock.Unlock()
+	}
+
+	if err := td.sentencias[ST_ELIMINAR_TODO_INCOMPLETOS].Eliminar(); err != nil {
+		return fmt.Errorf("error al eliminar el resto de la tabla de incompletos, con error %v", err)
+	}
+
+	return nil
 }

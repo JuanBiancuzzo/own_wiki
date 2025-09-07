@@ -7,7 +7,6 @@ import (
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
-	// _ "github.com/go-sql-driver/mysql"
 )
 
 type Bdd struct {
@@ -15,33 +14,6 @@ type Bdd struct {
 }
 
 func NewBdd(carpetaOutput, nombreBdd string, canalMensajes chan string) (*Bdd, error) {
-	/*
-		_ = godotenv.Load()
-
-		dbUser := os.Getenv("MYSQL_USER")
-		dbPass := os.Getenv("MYSQL_PASSWORD")
-		dbHost := os.Getenv("MYSQL_HOST")
-		dbPort := os.Getenv("MYSQL_PORT")
-		dbName := os.Getenv("MYSQL_DB_NAME")
-
-		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
-
-		conn, err := sql.Open("mysql", dsn)
-		if err != nil {
-			return nil, fmt.Errorf("error connecting to DB: %v", err)
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		if err = conn.PingContext(ctx); err != nil {
-			return nil, fmt.Errorf("no se pudo pinear el servidor de MySQL, con error: %v", err)
-		}
-
-		conn.SetConnMaxIdleTime(5 * time.Minute)
-		conn.SetConnMaxLifetime(1 * time.Hour)
-
-	*/
 	conn, err := sql.Open("sqlite3", fmt.Sprintf("%s/%s?_journal_mode=WAL", carpetaOutput, nombreBdd))
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to DB: %v", err)
