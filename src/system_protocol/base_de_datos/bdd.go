@@ -67,7 +67,7 @@ func (bdd *Bdd) CrearTabla(query string, datos ...any) error {
 }
 
 func (bdd *Bdd) EliminarTabla(nombreTabla string) error {
-	_, err := bdd.exec(fmt.Sprintf("DROP TABLE %s", nombreTabla))
+	_, err := bdd.exec(fmt.Sprintf("DROP TABLE IF EXISTS %s", nombreTabla))
 	return err
 }
 
@@ -84,6 +84,10 @@ func (bdd *Bdd) Existe(query string, datos ...any) (bool, error) {
 
 func (bdd *Bdd) Preparar(query string) (Sentencia, error) {
 	return NewSentencia(bdd.conn, query)
+}
+
+func (bdd *Bdd) Transaccion() (Transaccion, error) {
+	return NewTransaccion(bdd.conn)
 }
 
 func (bdd *Bdd) Obtener(query string, datos ...any) (int64, error) {

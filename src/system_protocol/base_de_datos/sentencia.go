@@ -19,6 +19,12 @@ func NewSentencia(bdd *sql.DB, query string) (Sentencia, error) {
 	}
 }
 
+func (s Sentencia) NewSentenciaDeTransaccion(transaccion *sql.Tx) Sentencia {
+	return Sentencia{
+		sentencia: transaccion.Stmt(s.sentencia),
+	}
+}
+
 func (s Sentencia) Obtener(datos ...any) (int64, error) {
 	var id int64
 	fila := s.QueryRow(datos...)
@@ -65,4 +71,8 @@ func (s Sentencia) Query(datos ...any) (*sql.Rows, error) {
 
 func (s Sentencia) exec(datos ...any) (sql.Result, error) {
 	return s.sentencia.Exec(datos...)
+}
+
+func (s Sentencia) Close() {
+	s.sentencia.Close()
 }

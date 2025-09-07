@@ -2,6 +2,7 @@ package dependencias
 
 import (
 	"fmt"
+	"math/rand"
 	b "own_wiki/system_protocol/base_de_datos"
 	"strings"
 	"sync"
@@ -16,8 +17,8 @@ const (
 	INDEPENDIENTE_DEPENDIBLE    = 0b11
 )
 
-type FnExiste func(datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error)
-type FnInsertar func(datosIngresados ConjuntoDato, lock *sync.Mutex) (int64, error)
+type FnExiste func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error)
+type FnInsertar func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (int64, error)
 
 // type FnActualizar func(bdd *b.Bdd, datosIngresados ConjuntoDato) error
 // type FnEliminar func(bdd *b.Bdd, id int64) error
@@ -46,7 +47,9 @@ func ConstruirTabla(tracker *TrackerDependencias, nombreTabla string, tipoTabla 
 
 	var existe FnExiste
 	if elementosRepetidos {
-		existe = func(datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) { return false, nil }
+		existe = func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) {
+			return false, nil
+		}
 
 	} else if existe, err = generarExiste(tracker.Bdd, nombreTabla, variables); err != nil {
 		return Tabla{}, err
@@ -83,7 +86,7 @@ func crearTabla(bdd *b.Bdd, nombreTabla string, variables []Variable) error {
 	}
 
 	tabla := fmt.Sprintf(
-		"CREATE TABLE %s (\n\tid INT AUTO_INCREMENT PRIMARY KEY,\n\t%s\n);",
+		"CREATE TABLE %s (\n\tid INT PRIMARY KEY,\n\t%s\n);",
 		nombreTabla,
 		strings.Join(parametros, ",\n\t"),
 	)
@@ -92,7 +95,6 @@ func crearTabla(bdd *b.Bdd, nombreTabla string, variables []Variable) error {
 		return fmt.Errorf("no se pudo crear la tabla \n%s\n, con error: %v", tabla, err)
 	}
 
-	fmt.Printf("Tabla para %s:\n%s\n", nombreTabla, tabla)
 	if err := bdd.CrearTabla(tabla); err != nil {
 		return fmt.Errorf("no se pudo crear la tabla \n%s\n, con error: %v", tabla, err)
 	}
@@ -134,17 +136,20 @@ func generarExiste(bdd *b.Bdd, nombreTabla string, variables []Variable) (FnExis
 
 	largoDatos := len(claves)
 	if largoDatos == 0 {
-		return func(datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) {
+		return func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) {
 			return false, nil
 		}, nil
 	}
 
-	sentencia, err := bdd.Preparar(query)
+	sentenciaQuery, err := bdd.Preparar(query)
 	if err != nil {
 		return nil, fmt.Errorf("al preparar la sentencia '%s' se tuvo el error: %v", query, err)
 	}
 
-	return func(datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) {
+	return func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (bool, error) {
+		sentencia := tx.Sentencia(sentenciaQuery)
+		defer sentencia.Close()
+
 		datos := make([]any, largoDatos)
 		for _, clave := range claves {
 			if dato, ok := datosIngresados[clave]; !ok {
@@ -209,40 +214,17 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 
 	// Este ya tiene que tener los 0 en las referencias, asi no las tenemos q agregar
 	insertarQuery := fmt.Sprintf(
-		"INSERT INTO %s (%s) VALUES (%s)",
+		"INSERT INTO %s (id, %s) VALUES (?, %s)",
 		nombreTabla,
 		strings.Join(clavesTotales, ", "),
 		strings.Join(valores, ", "),
 	)
-	sentencia, err := tracker.Bdd.Preparar(insertarQuery)
+	sentenciaInsertar, err := tracker.Bdd.Preparar(insertarQuery)
 	if err != nil {
 		return nil, fmt.Errorf("al preparar la sentencia '%s' se tuvo el error: %v", insertarQuery, err)
 	}
 
-	largoDatos := len(clavesInsertar)
-	return func(datosIngresados ConjuntoDato, lock *sync.Mutex) (int64, error) {
-		datos := make([]any, largoDatos)
-
-		for i, clave := range clavesInsertar {
-			if dato, ok := datosIngresados[clave]; !ok {
-				return 0, fmt.Errorf("el usuario no ingreso el dato para %s", clave)
-
-			} else if relacion, ok := dato.(RelacionTabla); ok {
-				// podemos hacer esto porque claves solo elige para los que tienen multiples
-				datos[i] = relacion.Tabla
-
-			} else {
-				datos[i] = dato
-			}
-		}
-
-		lock.Lock()
-		id, err := sentencia.InsertarId(datos...)
-		lock.Unlock()
-		if err != nil {
-			return 0, err
-		}
-
+	cargarExtra := func(datosIngresados ConjuntoDato) {
 		for i, clave := range clavesExternas {
 			if dato, ok := datosIngresados[clave]; !ok {
 				continue
@@ -254,7 +236,41 @@ func generarInsertar(nombreTabla string, tracker *TrackerDependencias, variables
 				}
 			}
 		}
+	}
 
+	r := rand.New(rand.NewSource(0))
+	largoDatos := len(clavesInsertar)
+	return func(tx b.Transaccion, datosIngresados ConjuntoDato, lock *sync.Mutex) (int64, error) {
+		sentencia := tx.Sentencia(sentenciaInsertar)
+		defer sentencia.Close()
+
+		datos := make([]any, largoDatos+1)
+		id := int64(r.Uint32())
+		datos[0] = id
+
+		for i, clave := range clavesInsertar {
+			if dato, ok := datosIngresados[clave]; !ok {
+				return id, fmt.Errorf("el usuario no ingreso el dato para %s", clave)
+
+			} else if relacion, ok := dato.(RelacionTabla); ok {
+				// podemos hacer esto porque claves solo elige para los que tienen multiples
+				datos[i+1] = relacion.Tabla
+
+			} else {
+				datos[i+1] = dato
+			}
+		}
+
+		lock.Lock()
+		_, err := sentencia.InsertarId(datos...)
+		lock.Unlock()
+		if err != nil {
+			return id, err
+		}
+
+		if len(clavesExternas) > 0 {
+			go cargarExtra(datosIngresados)
+		}
 		return id, nil
 	}, nil
 }
@@ -409,7 +425,7 @@ func describirDependencias(variables []Variable) []Tabla {
 }
 
 // TODO
-func (dt Tabla) RestringirTabla(bdd *b.Bdd) error {
+func (dt Tabla) RestringirTabla(tx b.Transaccion) error {
 	return nil
 }
 
