@@ -14,9 +14,9 @@ type Endpoint struct {
 	Informaciones map[string]FnInformacion
 }
 
-func NewEndpoint(nombreView, bloque string, parametros []string, informaciones map[string]FnInformacion) Endpoint {
+func NewEndpoint(bloque string, parametros []string, informaciones map[string]FnInformacion) Endpoint {
 	return Endpoint{
-		Bloque:        fmt.Sprintf("%s/%s", nombreView, bloque),
+		Bloque:        bloque,
 		Parametros:    parametros,
 		Informaciones: informaciones,
 	}

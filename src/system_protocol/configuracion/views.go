@@ -171,7 +171,8 @@ func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (info
 				}
 			}
 
-			endpoints[infoEndpoint.Nombre] = v.NewEndpoint(viewInfo.Nombre, infoEndpoint.BloqueTemplate, infoEndpoint.Parametros, informaciones)
+			bloqueTemplate := fmt.Sprintf("%s/%s", viewInfo.Nombre, infoEndpoint.BloqueTemplate)
+			endpoints[infoEndpoint.Nombre] = v.NewEndpoint(bloqueTemplate, infoEndpoint.Parametros, informaciones)
 		}
 
 		pathsTemplate := make([]string, len(viewInfo.Templates))

@@ -60,7 +60,8 @@ func Visualizar(carpetaOutput, carpetaConfiguracion string, canalMensajes chan s
 		e.Static("/css", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathCss))
 
 		infoViews.GenerarEndpoints(e, bdd)
-		e.Logger.Fatal(e.Start(":12345"))
+
+		_ = e.Start(":12345")
 	}
 }
 

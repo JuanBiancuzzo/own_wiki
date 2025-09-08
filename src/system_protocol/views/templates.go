@@ -51,18 +51,16 @@ func NewTemplate(viewManager *ViewManager) (*Templates, error) {
 		"PedirElementos": CreateURLPedido,
 	})
 
-	views := []View{}
-
 	templates := make(map[string]*template.Template)
-	for _, view := range views {
-		if templUsuario, err := templatesDeArchivos(view.PathTemplates); err != nil {
+	for nombre := range viewManager.PathsTemplates {
+		if templUsuario, err := templatesDeArchivos(viewManager.PathsTemplates[nombre]); err != nil {
 			return nil, err
 
 		} else if templ, err := templ.ParseFiles(templUsuario...); err != nil {
 			return nil, fmt.Errorf("error al parsear archivos, con error: %v", err)
 
 		} else {
-			templates[view.Nombre] = templ
+			templates[nombre] = templ
 		}
 	}
 
