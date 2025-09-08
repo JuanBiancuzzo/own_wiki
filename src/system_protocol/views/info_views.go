@@ -9,45 +9,26 @@ import (
 type InfoViews struct {
 	PathCss      string
 	PathImagenes string
-	Views        []View
-
-	PathEndpoint *PathEndpoint
-	PathView     *PathView
+	ViewManager  *ViewManager
 }
 
-func NewInfoViews(views []View, pathCss, pathImagenes string) (*InfoViews, error) {
-	pathEndpoint := NewPathEndpoint()
-	pathView := NewPathView()
-	for _, view := range views {
-		if err := pathView.AgregarView(view.Nombre); err != nil {
-			return nil, err
-		}
-
-		if err := view.RegistrarEndpoints(pathEndpoint); err != nil {
-			return nil, err
-		}
-	}
-
+func NewInfoViews(pathCss, pathImagenes string) (*InfoViews, error) {
 	return &InfoViews{
-		Views:        views,
 		PathCss:      pathCss,
 		PathImagenes: pathImagenes,
-
-		PathEndpoint: pathEndpoint,
-		PathView:     pathView,
+		ViewManager:  NewViewManager(),
 	}, nil
 }
 
-func (t *InfoViews) RegistrarRenderer(e *echo.Echo, carpetaRoot string) error {
-	var err error
-	if e.Renderer, err = NewTemplate(t.Views, t.PathView, t.PathEndpoint); err != nil {
-		return err
-	}
-	return nil
+func (iv *InfoViews) AgregarView(view View) error {
+	return iv.ViewManager.Agregar(view)
 }
 
-func (t *InfoViews) GenerarEndpoints(e *echo.Echo, bdd *b.Bdd) {
-	for _, view := range t.Views {
-		view.GenerarEndpoints(e, bdd)
-	}
+func (iv *InfoViews) RegistrarRenderer(e *echo.Echo, carpetaRoot string) (err error) {
+	e.Renderer, err = NewTemplate(iv.ViewManager)
+	return err
+}
+
+func (iv *InfoViews) GenerarEndpoints(e *echo.Echo, bdd *b.Bdd) {
+	iv.ViewManager.GenerarEndpoints(e, bdd)
 }

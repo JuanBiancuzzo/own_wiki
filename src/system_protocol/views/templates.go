@@ -44,12 +44,14 @@ func templatesDeArchivos(pathsTemplate []string) ([]string, error) {
 	return templUsuario, nil
 }
 
-func NewTemplate(views []View, pathView *PathView, pathEndpoint *PathEndpoint) (*Templates, error) {
+func NewTemplate(viewManager *ViewManager) (*Templates, error) {
 	templ := template.New("").Funcs(template.FuncMap{
-		"EndpointURL":    pathEndpoint.CreateURLPathEndpoint,
-		"PathViewURL":    pathView.CreateURLPathView,
+		"EndpointURL":    viewManager.EndpointManager.CreateURLPathEndpoint,
+		"PathViewURL":    viewManager.CreateURLPathView,
 		"PedirElementos": CreateURLPedido,
 	})
+
+	views := []View{}
 
 	templates := make(map[string]*template.Template)
 	for _, view := range views {

@@ -14,16 +14,16 @@ type Endpoint struct {
 	Informaciones map[string]FnInformacion
 }
 
-func NewEndpoint(bloque string, parametros []string, informaciones map[string]FnInformacion) Endpoint {
+func NewEndpoint(nombreView, bloque string, parametros []string, informaciones map[string]FnInformacion) Endpoint {
 	return Endpoint{
-		Bloque:        bloque,
+		Bloque:        fmt.Sprintf("%s/%s", nombreView, bloque),
 		Parametros:    parametros,
 		Informaciones: informaciones,
 	}
 }
 
 // Hacer un endpoint para actualizar, insertar y eliminar
-func (e Endpoint) GenerarEndpoint(bdd *b.Bdd, viewNombre string) func(ec echo.Context) error {
+func (e Endpoint) GenerarEndpoint(bdd *b.Bdd) func(ec echo.Context) error {
 	nombreVariables := []string{}
 	arrayInformacion := []FnInformacion{}
 	for nombreValor := range e.Informaciones {
@@ -31,31 +31,27 @@ func (e Endpoint) GenerarEndpoint(bdd *b.Bdd, viewNombre string) func(ec echo.Co
 		arrayInformacion = append(arrayInformacion, e.Informaciones[nombreValor])
 	}
 
-	bloque := fmt.Sprintf("%s/%s", viewNombre, e.Bloque)
+	valores := make([]string, len(e.Parametros))
+	data := make(d.ConjuntoDato)
 
-	return func(ec echo.Context) error {
-		valores := make([]string, len(e.Parametros))
+	return func(ec echo.Context) (err error) {
 		for i, requisito := range e.Parametros {
 			valores[i] = ec.QueryParam(requisito)
 		}
 
-		data := make(d.ConjuntoDato)
 		for i, nombreValor := range nombreVariables {
 			informacion := arrayInformacion[i]
-			if valor, err := informacion(bdd, valores); err != nil {
+			if data[nombreValor], err = informacion(bdd, valores); err != nil {
 				fmt.Printf("Error la informacion %s con error: %v\n", nombreValor, err)
 				return err
-
-			} else {
-				data[nombreValor] = valor
 			}
 		}
 
-		if err := bdd.Checkpoint(b.TC_PASSIVE); err != nil {
+		if err = bdd.Checkpoint(b.TC_PASSIVE); err != nil {
 			fmt.Printf("Error al hacer checkpoint con error: %v\n", err)
 			return err
 		}
 
-		return ec.Render(200, bloque, data)
+		return ec.Render(200, e.Bloque, data)
 	}
 }

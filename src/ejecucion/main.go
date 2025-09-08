@@ -20,7 +20,7 @@ const NOMBRE_BDD = "baseDeDatos.db"
 // tp "github.com/BurntSushi/toml"
 // "github.com/go-sql-driver/mysql"
 
-func ObtenerViews(dirConfiguracion string, bdd *b.Bdd) (*v.InfoViews, error) {
+func ObtenerViews(dirConfiguracion string) (*v.InfoViews, error) {
 	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "tablas.json")); err != nil {
 		return nil, fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
 
@@ -46,7 +46,7 @@ func Visualizar(carpetaOutput, carpetaConfiguracion string, canalMensajes chan s
 
 	canalMensajes <- "Se conectaron correctamente las bdd necesarias"
 
-	if infoViews, err := ObtenerViews(carpetaConfiguracion, bdd); err != nil {
+	if infoViews, err := ObtenerViews(carpetaConfiguracion); err != nil {
 		canalMensajes <- fmt.Sprintf("No se pudo cargar las views, con error: %v", err)
 
 	} else {
@@ -60,7 +60,7 @@ func Visualizar(carpetaOutput, carpetaConfiguracion string, canalMensajes chan s
 		e.Static("/css", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathCss))
 
 		infoViews.GenerarEndpoints(e, bdd)
-		e.Logger.Fatal(e.Start(":42069"))
+		e.Logger.Fatal(e.Start(":12345"))
 	}
 }
 

@@ -62,9 +62,8 @@ func leerView(pathView string) (View, error) {
 	}
 }
 
-func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (*v.InfoViews, error) {
+func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (infoView *v.InfoViews, err error) {
 	var informacionViews InformacionViews
-	var err error
 
 	if bytesJson, err := os.ReadFile(fmt.Sprintf("%s/%s", pathConfiguracion, "views.json")); err != nil {
 		return nil, fmt.Errorf("error al leer el archivo de configuracion para las views, con error: %v", err)
@@ -103,8 +102,11 @@ func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (*v.I
 		tablasPorNombre[tabla.Nombre] = &tabla
 	}
 
-	views := make([]v.View, len(viewsInfo))
-	for i, viewInfo := range viewsInfo {
+	if infoView, err = v.NewInfoViews(informacionViews.PathCss, informacionViews.PathImagenes); err != nil {
+		return infoView, err
+	}
+
+	for _, viewInfo := range viewsInfo {
 		endpoints := make(map[string]v.Endpoint)
 
 		for _, infoEndpoint := range viewInfo.Endpoints {
@@ -169,7 +171,7 @@ func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (*v.I
 				}
 			}
 
-			endpoints[infoEndpoint.Nombre] = v.NewEndpoint(infoEndpoint.BloqueTemplate, infoEndpoint.Parametros, informaciones)
+			endpoints[infoEndpoint.Nombre] = v.NewEndpoint(viewInfo.Nombre, infoEndpoint.BloqueTemplate, infoEndpoint.Parametros, informaciones)
 		}
 
 		pathsTemplate := make([]string, len(viewInfo.Templates))
@@ -183,10 +185,13 @@ func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (*v.I
 			bloqueIncio = viewInfo.esInicio.BloqueTemplate
 		}
 
-		views[i] = v.NewView(esInicio, bloqueIncio, viewInfo.Nombre, viewInfo.BloqueTemplate, endpoints, pathsTemplate)
+		view := v.NewView(esInicio, bloqueIncio, viewInfo.Nombre, viewInfo.BloqueTemplate, endpoints, pathsTemplate)
+		if err = infoView.AgregarView(view); err != nil {
+			return infoView, fmt.Errorf("al registrar la view %+v, con error: %v", view, err)
+		}
 	}
 
-	return v.NewInfoViews(views, informacionViews.PathCss, informacionViews.PathImagenes)
+	return infoView, err
 }
 
 func crearInformacionElementoUnico(parametros []string, detalles ParametroElementoUnico, descripciones map[string]*d.DescripcionTabla) (v.FnInformacion, error) {
