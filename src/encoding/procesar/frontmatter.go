@@ -11,7 +11,7 @@ type Frontmatter struct {
 	Etapa                string            `yaml:"etapa,omitempty"`
 	Aliases              []string          `yaml:"aliases,omitempty"`
 	Referencias          []string          `yaml:"referencias,omitempty"`
-	NumReferncia         int               `yaml:"numReferncia,omitempty"`
+	NumReferencia        int               `yaml:"numReferncia,omitempty"`
 	TipoCita             string            `yaml:"tipoCita,omitempty"`
 	Previo               string            `yaml:"previo,omitempty"`
 	Num                  int               `yaml:"num,omitempty"`

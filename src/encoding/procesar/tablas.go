@@ -4,6 +4,7 @@ const (
 	TABLA_ARCHIVOS    = "Archivos"
 	TABLA_PERSONAS    = "Personas"
 	TABLA_EDITORIALES = "Editoriales"
+	TABLA_REFERENCIAS = "Referencias"
 )
 
 const (

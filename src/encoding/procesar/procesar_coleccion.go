@@ -50,6 +50,11 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 	edicion := NumeroODefault(meta.Edicion, 1)
 	volumen := NumeroODefault(meta.Volumen, 0)
 
+	err = tracker.Cargar(TABLA_REFERENCIAS, d.ConjuntoDato{"numero": meta.NumReferencia})
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar referencia de un libro con error: %v", err)
+	}
+
 	autores := make([]d.ConjuntoDato, len(meta.NombreAutores))
 	for i, autor := range meta.NombreAutores {
 		datosAutor := d.ConjuntoDato{
@@ -85,6 +90,11 @@ func ProcesarLibro(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 		numero := NumeroODefault(capitulo.NumeroCapitulo, 0)
 		paginaInicio := NumeroODefault(capitulo.Paginas.Inicio, 0)
 		paginaFinal := NumeroODefault(capitulo.Paginas.Final, 1)
+
+		err = tracker.Cargar(TABLA_REFERENCIAS, d.ConjuntoDato{"numero": capitulo.NumReferencia})
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar referencia de un capitulo de un libro con error: %v", err)
+		}
 
 		editores := make([]d.ConjuntoDato, len(capitulo.Editores))
 		for i, editor := range capitulo.Editores {
@@ -142,6 +152,11 @@ func ProcesarPaper(path string, meta *Frontmatter, tracker *d.TrackerDependencia
 	numero := NumeroODefault(meta.NumeroInforme, 0)
 	paginaInicio := NumeroODefault(meta.Paginas.Inicio, 0)
 	paginaFinal := NumeroODefault(meta.Paginas.Final, 1)
+
+	err = tracker.Cargar(TABLA_REFERENCIAS, d.ConjuntoDato{"numero": meta.NumReferencia})
+	if HABILITAR_ERROR && err != nil {
+		return fmt.Errorf("cargar referencia de un paper con error: %v", err)
+	}
 
 	autores := make([]d.ConjuntoDato, len(meta.Autores))
 	for i, autor := range meta.Autores {

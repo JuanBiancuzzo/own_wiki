@@ -3,6 +3,7 @@ package procesar
 import (
 	"fmt"
 	d "own_wiki/system_protocol/dependencias"
+	"strconv"
 	"strings"
 )
 
@@ -55,6 +56,23 @@ func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 		}
 	}
 
+	bibliografia := make([]d.ConjuntoDato, len(meta.Referencias))
+	for i, referencia := range meta.Referencias {
+		datosReferencia := make(d.ConjuntoDato)
+		if datosReferencia["numero"], err = strconv.Atoi(referencia); HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("al convertir la referencia '%s' tuve el error: %v", referencia, err)
+		}
+
+		err = tracker.Cargar(TABLA_REFERENCIAS, datosReferencia)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar referencia en la materia con error: %v", err)
+		}
+
+		bibliografia[i] = d.ConjuntoDato{
+			"refReferencia": d.NewRelacion(TABLA_REFERENCIAS, datosReferencia),
+		}
+	}
+
 	err = tracker.Cargar(TABLA_MATERIAS, d.ConjuntoDato{
 		"nombre":     meta.NombreMateria,
 		"etapa":      EtapaODefault(meta.Etapa, ETAPA_SIN_EMPEZAR),
@@ -67,6 +85,7 @@ func ProcesarMateria(path string, meta *Frontmatter, tracker *d.TrackerDependenc
 			"cuatrimestre": cuatrimestre,
 		}),
 		"refCorrelativas": materiasCorrelativas,
+		"refBibliografia": bibliografia,
 	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar materia con error: %v", err)
@@ -111,9 +130,26 @@ func ProcesarMateriaEquivalente(path string, meta *Frontmatter, tracker *d.Track
 	return nil
 }
 
-func ProcesarTemaMateria(path string, meta *Frontmatter, tracker *d.TrackerDependencias) error {
+func ProcesarTemaMateria(path string, meta *Frontmatter, tracker *d.TrackerDependencias) (err error) {
+	bibliografia := make([]d.ConjuntoDato, len(meta.Referencias))
+	for i, referencia := range meta.Referencias {
+		datosReferencia := make(d.ConjuntoDato)
+		if datosReferencia["numero"], err = strconv.Atoi(referencia); HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("al convertir la referencia '%s' tuve el error: %v", referencia, err)
+		}
+
+		err = tracker.Cargar(TABLA_REFERENCIAS, datosReferencia)
+		if HABILITAR_ERROR && err != nil {
+			return fmt.Errorf("cargar referencia en el tema de la materia con error: %v", err)
+		}
+
+		bibliografia[i] = d.ConjuntoDato{
+			"refReferencia": d.NewRelacion(TABLA_REFERENCIAS, datosReferencia),
+		}
+	}
+
 	infoTema := meta.InfoTemaMateria
-	err := tracker.Cargar(TABLA_TEMA_MATERIA, d.ConjuntoDato{
+	err = tracker.Cargar(TABLA_TEMA_MATERIA, d.ConjuntoDato{
 		"nombre":     meta.NombreResumen,
 		"capitulo":   NumeroODefault(meta.Capitulo, 1),
 		"parte":      NumeroODefault(meta.Parte, 0),
@@ -122,6 +158,7 @@ func ProcesarTemaMateria(path string, meta *Frontmatter, tracker *d.TrackerDepen
 			"nombre":     infoTema.Materia,
 			"refCarrera": d.NewRelacion(TABLA_CARRERAS, d.ConjuntoDato{"nombre": infoTema.Carrera}),
 		}),
+		"refBibliografia": bibliografia,
 	})
 	if HABILITAR_ERROR && err != nil {
 		return fmt.Errorf("cargar tema materia con error: %v", err)

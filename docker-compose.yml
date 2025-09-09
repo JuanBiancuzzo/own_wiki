@@ -3,6 +3,8 @@ services:
     build: 
       context: .
       dockerfile: src/encoding/Dockerfile
+    profiles:
+      - preprocesar
     container_name: encodear_archivos
     tty: true
     volumes:
@@ -18,8 +20,6 @@ services:
     build: 
       context: .
       dockerfile: src/ejecucion/Dockerfile
-    profiles:
-      - frontend
     container_name: manejar_archivos
     depends_on:
       app_encoder:
