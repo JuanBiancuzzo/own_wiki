@@ -102,7 +102,10 @@ func CrearInfoViews(pathConfiguracion string, tablas []d.DescripcionTabla) (info
 		tablasPorNombre[tabla.Nombre] = &tabla
 	}
 
-	if infoView, err = v.NewInfoViews(informacionViews.PathCss, informacionViews.PathImagenes); err != nil {
+	if infoView, err = v.NewInfoViews(map[string]string{
+		"/css":     informacionViews.PathCss,
+		"/imgenes": informacionViews.PathImagenes,
+	}); err != nil {
 		return infoView, err
 	}
 

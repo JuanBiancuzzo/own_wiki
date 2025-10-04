@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	b "own_wiki/system_protocol/base_de_datos"
+	c "own_wiki/system_protocol/configuracion"
 	v "own_wiki/system_protocol/views"
 	"strings"
 	"sync"
@@ -21,34 +22,34 @@ const NOMBRE_BDD = "baseDeDatos.db"
 
 func ObtenerViews(dirConfiguracion string) (*v.InfoViews, error) {
 
-	viewRoot = v.NewView()
-	viewFacultad = v.NewView()
-
-	return &v.InfoViews{
-		ElementosEstaticos: map[string]string{
-			"/imagenes": fmt.Sprintf("%s/imagenes"),
-			"/css":      fmt.Sprintf("%s/css"),
-			"/js":       fmt.Sprintf("%s/js"),
-		},
-		RootView:           &viewRoot,
-		EndpointsGenerales: map[string]v.Endpoint{},
-		Views: map[string]v.View{
-			"/Root":     viewRoot,
-			"/Facultad": viewFacultad,
-		},
-	}, nil
-
 	/*
-		if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "tablas.json")); err != nil {
-			return nil, fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
+		viewRoot = v.NewView()
+		viewFacultad = v.NewView()
 
-		} else if descripcionTablas, err := c.DescribirTablas(string(bytes)); err != nil {
-			return nil, err
+		return &v.InfoViews{
+			ElementosEstaticos: map[string]string{
+				"/imagenes": fmt.Sprintf("%s/imagenes"),
+				"/css":      fmt.Sprintf("%s/css"),
+				"/js":       fmt.Sprintf("%s/js"),
+			},
+			RootView:           &viewRoot,
+			EndpointsGenerales: map[string]v.Endpoint{},
+			Views: map[string]v.View{
+				"/Root":     viewRoot,
+				"/Facultad": viewFacultad,
+			},
+		}, nil
 
-		} else {
-			return c.CrearInfoViews(dirConfiguracion, descripcionTablas)
-		}
 	*/
+	if bytes, err := os.ReadFile(fmt.Sprintf("%s/%s", dirConfiguracion, "tablas.json")); err != nil {
+		return nil, fmt.Errorf("error al leer el archivo de configuracion para las tablas, con error: %v", err)
+
+	} else if descripcionTablas, err := c.DescribirTablas(string(bytes)); err != nil {
+		return nil, err
+
+	} else {
+		return c.CrearInfoViews(dirConfiguracion, descripcionTablas)
+	}
 }
 
 func Visualizar(carpetaOutput, carpetaConfiguracion string, canalMensajes chan string) {
@@ -75,8 +76,8 @@ func Visualizar(carpetaOutput, carpetaConfiguracion string, canalMensajes chan s
 		}
 
 		// Ver que hacer con esto
-		e.Static("/imagenes", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathImagenes))
-		e.Static("/css", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathCss))
+		// e.Static("/imagenes", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathImagenes))
+		// e.Static("/css", fmt.Sprintf("%s/%s", carpetaConfiguracion, infoViews.PathCss))
 
 		infoViews.GenerarEndpoints(e, bdd)
 
