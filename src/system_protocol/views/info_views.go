@@ -7,16 +7,14 @@ import (
 )
 
 type InfoViews struct {
-	PathCss      string
-	PathImagenes string
-	ViewManager  *ViewManager
+	RecursosEstaticos map[string]string
+	ViewManager       *ViewManager
 }
 
-func NewInfoViews(pathCss, pathImagenes string) (*InfoViews, error) {
+func NewInfoViews(recursosEstaticos map[string]string) (*InfoViews, error) {
 	return &InfoViews{
-		PathCss:      pathCss,
-		PathImagenes: pathImagenes,
-		ViewManager:  NewViewManager(),
+		RecursosEstaticos: recursosEstaticos,
+		ViewManager:       NewViewManager(),
 	}, nil
 }
 
@@ -30,5 +28,9 @@ func (iv *InfoViews) RegistrarRenderer(e *echo.Echo, carpetaRoot string) (err er
 }
 
 func (iv *InfoViews) GenerarEndpoints(e *echo.Echo, bdd *b.Bdd) {
+	for path := range iv.RecursosEstaticos {
+		e.Static(path, iv.RecursosEstaticos[path])
+	}
+
 	iv.ViewManager.GenerarEndpoints(e, bdd)
 }
