@@ -1,5 +1,2 @@
-volumenes/
 src/**/tmp/
-configuracion/
-output/
 .env

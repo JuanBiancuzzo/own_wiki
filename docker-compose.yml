@@ -9,9 +9,8 @@ services:
     tty: true
     volumes:
       - ../../Ashurbanipal:/var/datos
-      - ./output:/var/output
-      - ./configuracion:/var/configuracion
-      # - ./volumenes/treesitter_bindings:/var/lib/treesitter_bindings
+      - ../../Pequeña Biblioteca/.configuracion:/var/configuracion
+      - ../../Pequeña Biblioteca:/var/output
     networks:
       - appnet
     command: ["./own_wiki", "-d", "/var/datos", "-c", "/var/configuracion", "-o", "/var/output"] 
@@ -29,8 +28,8 @@ services:
       - "12345:12345"
     volumes:
       - ./src:/app
-      - ./output:/var/output
-      - ./configuracion:/var/configuracion
+      - ../../Pequeña Biblioteca/.configuracion:/var/configuracion
+      - ../../Pequeña Biblioteca:/var/output
     networks:
       - appnet
     command: ["air", "-c", "ejecucion/.air.toml"] 
