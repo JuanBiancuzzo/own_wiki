@@ -2,10 +2,11 @@ package views
 
 import (
 	"fmt"
-	b "own_wiki/system_protocol/base_de_datos"
-	d "own_wiki/system_protocol/dependencias"
 	"slices"
 	"strings"
+
+	b "github.com/JuanBiancuzzo/own_wiki/system_protocol/base_de_datos"
+	d "github.com/JuanBiancuzzo/own_wiki/system_protocol/dependencias"
 )
 
 type FnInformacion func(*b.Bdd, []string) (any, error)

@@ -2,8 +2,9 @@ package views
 
 import (
 	"fmt"
-	b "own_wiki/system_protocol/base_de_datos"
-	d "own_wiki/system_protocol/dependencias"
+
+	b "github.com/JuanBiancuzzo/own_wiki/system_protocol/base_de_datos"
+	d "github.com/JuanBiancuzzo/own_wiki/system_protocol/dependencias"
 
 	"github.com/labstack/echo/v4"
 )

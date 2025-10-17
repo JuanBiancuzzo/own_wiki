@@ -3,9 +3,10 @@ package procesar
 import (
 	"fmt"
 	"os"
-	d "own_wiki/system_protocol/dependencias"
 	"strconv"
 	"strings"
+
+	d "github.com/JuanBiancuzzo/own_wiki/system_protocol/dependencias"
 
 	"gopkg.in/yaml.v2"
 )

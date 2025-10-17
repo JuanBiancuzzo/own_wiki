@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	d "own_wiki/system_protocol/dependencias"
-	u "own_wiki/system_protocol/utilidades"
+	d "github.com/JuanBiancuzzo/own_wiki/system_protocol/dependencias"
+	u "github.com/JuanBiancuzzo/own_wiki/system_protocol/utilidades"
 )
 
 type TipoVariable string

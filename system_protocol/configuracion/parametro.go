@@ -3,8 +3,9 @@ package configuracion
 import (
 	"encoding/json"
 	"fmt"
-	d "own_wiki/system_protocol/dependencias"
 	"strings"
+
+	d "github.com/JuanBiancuzzo/own_wiki/system_protocol/dependencias"
 )
 
 type TipoParametro string

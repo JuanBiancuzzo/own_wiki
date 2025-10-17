@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	d "own_wiki/system_protocol/dependencias"
-	v "own_wiki/system_protocol/views"
 	"slices"
 	"strings"
+
+	d "github.com/JuanBiancuzzo/own_wiki/system_protocol/dependencias"
+	v "github.com/JuanBiancuzzo/own_wiki/system_protocol/views"
 )
 
 type InformacionViews struct {
@@ -217,19 +218,21 @@ func crearInformacionElementoUnico(parametros []string, detalles ParametroElemen
 }
 
 func crearInformacionElementosCompleto(tablas InfoTablas, parametros []string, groupBy []string, descripciones map[string]*d.DescripcionTabla) (v.FnInformacion, error) {
-	if querys, err := d.NewQueryMultiples(tablas, groupBy, descripciones); err != nil {
+	if _, err := d.NewQueryMultiples(tablas, groupBy, descripciones); err != nil {
 		return nil, err
 
 	} else {
-		return v.NewInformacionCompleta(querys, parametros)
+		return nil, nil
+		// return v.NewInformacionCompleta(querys, parametros)
 	}
 }
 
 func crearInformacionElementosParcial(tablas InfoTablas, parametros []string, groupBy []string, descripciones map[string]*d.DescripcionTabla) (v.RespuestaInformacion, error) {
-	if querys, err := d.NewQueryMultiples(tablas, groupBy, descripciones); err != nil {
+	if _, err := d.NewQueryMultiples(tablas, groupBy, descripciones); err != nil {
 		return v.RespuestaInformacion{}, err
 
 	} else {
-		return v.NewInformacionParcial(querys, parametros)
+		return v.RespuestaInformacion{}, err
+		// return v.NewInformacionParcial(querys, parametros)
 	}
 }

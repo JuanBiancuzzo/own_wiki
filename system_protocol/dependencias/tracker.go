@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	b "own_wiki/system_protocol/base_de_datos"
+	b "github.com/JuanBiancuzzo/own_wiki/system_protocol/base_de_datos"
 )
 
 const AUX_DEPENDIBLES = "aux_dependibles"
