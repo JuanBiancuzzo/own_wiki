@@ -1,4 +1,2 @@
 volumenes/
-src/**/tmp/
-configuracion/
 .env
