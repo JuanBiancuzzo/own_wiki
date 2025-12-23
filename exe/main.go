@@ -8,15 +8,20 @@ import (
 	"syscall"
 	"time"
 
+	_ "embed"
+
+	t "own_wiki/platforms/terminal"
 	"own_wiki/src/ecv"
 	e "own_wiki/src/events"
-	t "own_wiki/src/platform/terminal"
 
 	c "own_wiki/src/system/configuration"
 	log "own_wiki/src/system/logger"
 )
 
 const USER_CONFIG_PATH string = "config/user_config.json"
+
+///go:embed "../config/system_config.json"
+// var systemConfigBytes []byte
 
 type MainView struct{}
 
