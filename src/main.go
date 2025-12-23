@@ -16,6 +16,8 @@ import (
 	log "own_wiki/src/system/logger"
 )
 
+const USER_CONFIG_PATH string = "config/user_config.json"
+
 type MainView struct{}
 
 func (mv *MainView) View(scene *ecv.Scene, yield func() bool) ecv.View {
@@ -129,15 +131,20 @@ func Loop(config c.UserConfig, wg *sync.WaitGroup) {
 }
 
 func main() {
-	if err := log.CreateLogger("logs/logger.txt", log.VERBOSE); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		return
-	}
-	defer log.Close()
+	if userConfigBytes, err := os.ReadFile(USER_CONFIG_PATH); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to read User define configuration, with error: %v\n", err)
 
-	var waitGroup sync.WaitGroup
-	Loop(c.UserConfig{
-		TargetFrameRate: 1,
-	}, &waitGroup)
-	waitGroup.Wait()
+	} else if userConfig, err := c.NewUserConfig(userConfigBytes); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create User define configuration, with error: %v\n", err)
+
+	} else if err := log.CreateLogger("logs/logger.txt", log.VERBOSE); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+
+	} else {
+		defer log.Close()
+
+		var waitGroup sync.WaitGroup
+		Loop(userConfig, &waitGroup)
+		waitGroup.Wait()
+	}
 }
