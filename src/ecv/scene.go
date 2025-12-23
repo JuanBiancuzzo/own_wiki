@@ -1,13 +1,23 @@
 package ecv
 
-type SceneRepresentation any
-
-type Scene struct{}
+type Scene struct {
+	Screen []any
+}
 
 func NewScene() *Scene {
-	return &Scene{}
+	return &Scene{
+		Screen: []any{},
+	}
+}
+
+func (s *Scene) CleanScreen() {
+	s.Screen = []any{}
+}
+
+func (s *Scene) AddToScreen(element any) {
+	s.Screen = append(s.Screen, element)
 }
 
 func (s *Scene) GetRepresentation() SceneRepresentation {
-	return nil
+	return s.Screen
 }

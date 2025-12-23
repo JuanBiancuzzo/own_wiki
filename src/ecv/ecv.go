@@ -1,6 +1,7 @@
 package ecv
 
 import (
+	"fmt"
 	"iter"
 	e "own_wiki/events"
 )
@@ -23,8 +24,12 @@ func NewECV() *ECV {
 	}
 }
 
+func (ecv *ECV) RegisterComponent(component any) {
+
+}
+
 func (ecv *ECV) AssignCurrentView(view View) {
-	nextViewChannel := make(chan View)
+	nextViewChannel := make(chan View, 1)
 
 	iterator := func(yield func(uint8) bool) {
 		nextViewChannel <- view.View(ecv.Scene, func() bool { return yield(0) })
@@ -33,7 +38,7 @@ func (ecv *ECV) AssignCurrentView(view View) {
 	next, stop := iter.Pull(iterator)
 
 	ecv.currentView = func() (View, bool) {
-		if _, stoped := next(); !stoped {
+		if _, valid := next(); valid {
 			return nil, false
 		}
 		return <-nextViewChannel, true
@@ -42,10 +47,11 @@ func (ecv *ECV) AssignCurrentView(view View) {
 }
 
 func (ecv *ECV) GenerateFrame() (SceneRepresentation, bool) {
-	if nextView, stoped := ecv.currentView(); stoped && nextView != nil {
+	if nextView, stopped := ecv.currentView(); stopped && nextView != nil {
 		ecv.AssignCurrentView(nextView)
 
-	} else {
+	} else if stopped {
+		fmt.Printf("NextView: %v, y stopped: %v\n", nextView, stopped)
 		return nil, false
 	}
 
@@ -54,6 +60,7 @@ func (ecv *ECV) GenerateFrame() (SceneRepresentation, bool) {
 
 func (ecv *ECV) Close() {
 	if ecv.stopView != nil {
+		fmt.Println("Llamando stop a la view")
 		ecv.stopView()
 	}
 }

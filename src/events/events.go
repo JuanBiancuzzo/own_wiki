@@ -1,7 +1,13 @@
 package events
 
-type Event uint
+type Event any
 
-const (
-	E_ERROR = iota
-)
+type CharacterEvent struct {
+	Char rune
+}
+
+func NewCharacterEvent(char rune) CharacterEvent {
+	return CharacterEvent{
+		Char: char,
+	}
+}
