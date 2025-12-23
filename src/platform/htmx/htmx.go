@@ -2,9 +2,9 @@ package htmx
 
 import (
 	"fmt"
-	ecv "own_wiki/ecv"
-	e "own_wiki/events"
-	p "own_wiki/platform"
+	ecv "own_wiki/src/ecv"
+	e "own_wiki/src/events"
+	p "own_wiki/src/platform"
 	"sync"
 )
 

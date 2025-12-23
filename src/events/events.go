@@ -11,3 +11,13 @@ func NewCharacterEvent(char rune) CharacterEvent {
 		Char: char,
 	}
 }
+
+type CloseEvent struct {
+	Reason string
+}
+
+func NewCloseEvent(reason string) CloseEvent {
+	return CloseEvent{
+		Reason: reason,
+	}
+}

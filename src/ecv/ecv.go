@@ -2,8 +2,8 @@ package ecv
 
 import (
 	"iter"
-	e "own_wiki/events"
-	c "own_wiki/system/configuration"
+	e "own_wiki/src/events"
+	c "own_wiki/src/system/configuration"
 )
 
 type ECV struct {
@@ -14,7 +14,7 @@ type ECV struct {
 	stopView    func()
 }
 
-func NewECV(config c.Configuration) *ECV {
+func NewECV(config c.UserConfig) *ECV {
 	return &ECV{
 		EventQueue: make(chan e.Event),
 		Scene:      NewScene(config.TargetFrameRate),

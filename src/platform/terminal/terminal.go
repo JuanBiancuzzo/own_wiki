@@ -4,14 +4,15 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
 
-	ecv "own_wiki/ecv"
-	e "own_wiki/events"
-	p "own_wiki/platform"
-	log "own_wiki/system/logger"
+	ecv "own_wiki/src/ecv"
+	e "own_wiki/src/events"
+	p "own_wiki/src/platform"
+	log "own_wiki/src/system/logger"
 
 	ctxio "github.com/jbenet/go-context/io"
 )
@@ -35,7 +36,7 @@ func NewTerminal() p.Platform {
 func (hp *TerminalPlatform) HandleInput(eventQueue chan e.Event, wg *sync.WaitGroup) {
 	for {
 		char, _, err := hp.Reader.ReadRune()
-		if err == context.Canceled {
+		if err == context.Canceled || err == io.EOF {
 			break
 
 		} else if err != nil {

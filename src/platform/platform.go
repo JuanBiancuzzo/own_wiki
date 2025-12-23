@@ -1,8 +1,8 @@
 package platform
 
 import (
-	ecv "own_wiki/ecv"
-	e "own_wiki/events"
+	ecv "own_wiki/src/ecv"
+	e "own_wiki/src/events"
 	"sync"
 )
 

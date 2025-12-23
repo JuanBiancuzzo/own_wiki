@@ -2,25 +2,29 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
-	e "own_wiki/ecv"
-	t "own_wiki/platform/terminal"
+	"own_wiki/src/ecv"
+	e "own_wiki/src/events"
+	t "own_wiki/src/platform/terminal"
 
-	c "own_wiki/system/configuration"
-	log "own_wiki/system/logger"
+	c "own_wiki/src/system/configuration"
+	log "own_wiki/src/system/logger"
 )
 
 type MainView struct{}
 
-func (mv *MainView) View(scene *e.Scene, yield func() bool) e.View {
+func (mv *MainView) View(scene *ecv.Scene, yield func() bool) ecv.View {
 	scene.CleanScreen()
 
-	heading := e.NewHeading(1, "Titulo")
+	heading := ecv.NewHeading(1, "Titulo")
 	scene.AddToScreen(heading)
 
-	text := e.NewText("Hola")
+	text := ecv.NewText("Hola")
 	scene.AddToScreen(text)
 
 	for i := range 5 * scene.FrameRate {
@@ -64,10 +68,10 @@ el sistema funcione. Estas son
     para ingresar las entidades
   - Funcion para ingresar el par (entidad, []view)
 */
-func SimulatedUser(ecv *e.ECV) {
+func SimulatedUser(ecvSystem *ecv.ECV) {
 	// Registrar los componentes -> Esto se traduce en las estructuras de la base de datos
-	ecv.RegisterComponent(TitleComponent{})
-	ecv.RegisterComponent(TextComponent{})
+	ecvSystem.RegisterComponent(TitleComponent{})
+	ecvSystem.RegisterComponent(TextComponent{})
 
 	// Registrar las entidades
 	/*
@@ -78,27 +82,44 @@ func SimulatedUser(ecv *e.ECV) {
 
 	// Registrar las views
 	mainView := &MainView{}
-	ecv.AssignCurrentView(mainView)
+	ecvSystem.AssignCurrentView(mainView)
 }
 
-func Loop(config c.Configuration, wg *sync.WaitGroup) {
-	ecv := e.NewECV(config) // Creamos event queue que va a ser un channel
-	defer ecv.Close()
+func HandleSigTerm(eventQueue chan e.Event) chan os.Signal {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		if _, ok := <-signals; ok {
+			log.Debug("Getting ctrl+c interrupt")
+			eventQueue <- e.NewCloseEvent("Ctrl+c interrupt")
+		}
+	}()
+
+	return signals
+}
+
+func Loop(config c.UserConfig, wg *sync.WaitGroup) {
+	ecvSystem := ecv.NewECV(config) // Creamos event queue que va a ser un channel
+	defer ecvSystem.Close()
+
+	sigTermChannel := HandleSigTerm(ecvSystem.EventQueue)
+	defer close(sigTermChannel)
 
 	// Registrar estructura dadas por el usuario, y genera las views
-	SimulatedUser(ecv)
+	SimulatedUser(ecvSystem)
 
 	platform := t.NewTerminal()
 	defer platform.Close()
 
 	wg.Add(1)
-	go platform.HandleInput(ecv.EventQueue, wg)
+	go platform.HandleInput(ecvSystem.EventQueue, wg)
 
 	ticker := time.NewTicker(time.Duration(1000/config.TargetFrameRate) * time.Millisecond)
 
 	// Esto fuerza a que cada iteración como mínimo dure 1/FrameRate
 	for range ticker.C {
-		representation, ok := ecv.GenerateFrame()
+		representation, ok := ecvSystem.GenerateFrame()
 		if !ok {
 			break
 		}
@@ -108,14 +129,14 @@ func Loop(config c.Configuration, wg *sync.WaitGroup) {
 }
 
 func main() {
-	if err := log.CreateLogger("../logs/logger.txt", log.VERBOSE); err != nil {
-		fmt.Printf("%v\n", err)
+	if err := log.CreateLogger("logs/logger.txt", log.VERBOSE); err != nil {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return
 	}
 	defer log.Close()
 
 	var waitGroup sync.WaitGroup
-	Loop(c.Configuration{
+	Loop(c.UserConfig{
 		TargetFrameRate: 1,
 	}, &waitGroup)
 	waitGroup.Wait()
