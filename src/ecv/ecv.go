@@ -1,9 +1,9 @@
 package ecv
 
 import (
-	"fmt"
 	"iter"
 	e "own_wiki/events"
+	c "own_wiki/system/configuration"
 )
 
 type ECV struct {
@@ -14,10 +14,10 @@ type ECV struct {
 	stopView    func()
 }
 
-func NewECV() *ECV {
+func NewECV(config c.Configuration) *ECV {
 	return &ECV{
 		EventQueue: make(chan e.Event),
-		Scene:      NewScene(),
+		Scene:      NewScene(config.TargetFrameRate),
 
 		currentView: nil,
 		stopView:    nil,
@@ -51,7 +51,6 @@ func (ecv *ECV) GenerateFrame() (SceneRepresentation, bool) {
 		ecv.AssignCurrentView(nextView)
 
 	} else if stopped {
-		fmt.Printf("NextView: %v, y stopped: %v\n", nextView, stopped)
 		return nil, false
 	}
 
@@ -60,7 +59,6 @@ func (ecv *ECV) GenerateFrame() (SceneRepresentation, bool) {
 
 func (ecv *ECV) Close() {
 	if ecv.stopView != nil {
-		fmt.Println("Llamando stop a la view")
 		ecv.stopView()
 	}
 }

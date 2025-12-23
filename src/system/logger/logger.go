@@ -3,6 +3,7 @@ package logger
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -28,9 +29,16 @@ func CreateLogger(path string, verbosity Verbosity) (err error) {
 		return nil
 	}
 
+	splitPath := strings.Split(path, "/")
+	folder := strings.Join(splitPath[:len(splitPath)-1], "/")
+
+	if err = os.MkdirAll(folder, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to open/create logger folder, with error: %w", err)
+	}
+
 	var file *os.File = nil
 	if file, err = os.Create(path); err != nil {
-		return fmt.Errorf("failed to open logger file: %w", err)
+		return fmt.Errorf("failed to open logger file, with error: %w", err)
 	}
 
 	channel := make(chan string)

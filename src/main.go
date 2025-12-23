@@ -7,6 +7,8 @@ import (
 
 	e "own_wiki/ecv"
 	t "own_wiki/platform/terminal"
+
+	c "own_wiki/system/configuration"
 	log "own_wiki/system/logger"
 )
 
@@ -15,13 +17,13 @@ type MainView struct{}
 func (mv *MainView) View(scene *e.Scene, yield func() bool) e.View {
 	scene.CleanScreen()
 
-	heading := e.NewText("Titulo")
+	heading := e.NewHeading(1, "Titulo")
 	scene.AddToScreen(heading)
 
 	text := e.NewText("Hola")
 	scene.AddToScreen(text)
 
-	for i := range 3 * 60 {
+	for i := range 5 * scene.FrameRate {
 		if !yield() {
 			fmt.Printf("Exiting at the first wait at %d\n", i)
 			return nil
@@ -30,14 +32,14 @@ func (mv *MainView) View(scene *e.Scene, yield func() bool) e.View {
 
 	text.ChangeText("Chau")
 
-	for range 3 * 60 {
+	for range 10 * scene.FrameRate {
 		if !yield() {
 			fmt.Println("Exiting at the last wait")
 			return nil
 		}
 	}
 
-	return mv
+	return nil
 }
 
 type TitleComponent struct {
@@ -79,16 +81,8 @@ func SimulatedUser(ecv *e.ECV) {
 	ecv.AssignCurrentView(mainView)
 }
 
-func main() {
-	if err := log.CreateLogger("logs/logger.txt", log.VERBOSE); err != nil {
-		fmt.Printf("%v\n", err)
-		return
-	}
-	defer log.Close()
-
-	var waitGroup sync.WaitGroup
-
-	ecv := e.NewECV() // Creamos event queue que va a ser un channel
+func Loop(config c.Configuration, wg *sync.WaitGroup) {
+	ecv := e.NewECV(config) // Creamos event queue que va a ser un channel
 	defer ecv.Close()
 
 	// Registrar estructura dadas por el usuario, y genera las views
@@ -97,22 +91,32 @@ func main() {
 	platform := t.NewTerminal()
 	defer platform.Close()
 
-	waitGroup.Add(1)
-	go platform.HandleInput(ecv.EventQueue, &waitGroup)
+	wg.Add(1)
+	go platform.HandleInput(ecv.EventQueue, wg)
 
-	targetFrameRate := 60
-	ticker := time.NewTicker(time.Duration(1000/targetFrameRate) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(1000/config.TargetFrameRate) * time.Millisecond)
 
 	// Esto fuerza a que cada iteración como mínimo dure 1/FrameRate
 	for range ticker.C {
 		representation, ok := ecv.GenerateFrame()
 		if !ok {
-			fmt.Println("Not ok")
 			break
 		}
 
 		platform.Render(representation)
 	}
+}
 
+func main() {
+	if err := log.CreateLogger("../logs/logger.txt", log.VERBOSE); err != nil {
+		fmt.Printf("%v\n", err)
+		return
+	}
+	defer log.Close()
+
+	var waitGroup sync.WaitGroup
+	Loop(c.Configuration{
+		TargetFrameRate: 1,
+	}, &waitGroup)
 	waitGroup.Wait()
 }

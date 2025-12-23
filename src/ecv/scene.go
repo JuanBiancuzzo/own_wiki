@@ -1,12 +1,14 @@
 package ecv
 
 type Scene struct {
-	Screen []any
+	Screen    []any
+	FrameRate uint64
 }
 
-func NewScene() *Scene {
+func NewScene(framRate uint64) *Scene {
 	return &Scene{
-		Screen: []any{},
+		Screen:    []any{},
+		FrameRate: framRate,
 	}
 }
 
