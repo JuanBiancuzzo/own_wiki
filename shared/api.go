@@ -30,12 +30,25 @@ el sistema funcione. Estas son
   - Funcion para ingresar el par (entidad, []view)
 */
 
+type ComponentInformation struct {
+	Name string
+}
+
+func GetComponentInformation[T any]() ComponentInformation {
+	var t T
+	typeInfo := reflect.TypeOf(t)
+
+	return ComponentInformation{
+		Name: typeInfo.Name(),
+	}
+}
+
 /*
 Esta es la interfaz que tiene que cumplir el plugin.
   - RegisterComponents: Esta permite definir los bloques minimos para crear entidades
 */
 type UserDefineData interface {
-	RegisterComponents() ([]reflect.Type, error)
+	RegisterComponents() ([]ComponentInformation, error)
 }
 
 // This is the implementation of plugin.Plugin so we can serve/consume this.
@@ -61,7 +74,7 @@ type RPCServer struct {
 	Impl UserDefineData
 }
 
-func (m *RPCServer) RegisterComponents(args any, resp *[]reflect.Type) (err error) {
+func (m *RPCServer) RegisterComponents(args any, resp *[]ComponentInformation) (err error) {
 	*resp, err = m.Impl.RegisterComponents()
 	return err
 }
@@ -70,8 +83,8 @@ func (m *RPCServer) RegisterComponents(args any, resp *[]reflect.Type) (err erro
 // RPCClient is an implementation of Plugin that talks over RPC.
 type RPCClient struct{ client *rpc.Client }
 
-func (m *RPCClient) RegisterComponents() ([]reflect.Type, error) {
-	var resp []reflect.Type
+func (m *RPCClient) RegisterComponents() ([]ComponentInformation, error) {
+	var resp []ComponentInformation
 	err := m.client.Call("Plugin.RegisterComponents", new(any), &resp)
 	return resp, err
 }

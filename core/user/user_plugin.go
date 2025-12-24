@@ -2,7 +2,7 @@ package user
 
 import (
 	"os/exec"
-	"reflect"
+	"path/filepath"
 
 	"github.com/JuanBiancuzzo/own_wiki/shared"
 	plugin "github.com/hashicorp/go-plugin"
@@ -17,10 +17,7 @@ func GetUserDefineData(pluginPath string) (*UserPlugin, error) {
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
 		Plugins:         shared.PluginMap,
-		Cmd:             exec.Command("sh", "-c", pluginPath),
-		AllowedProtocols: []plugin.Protocol{
-			plugin.ProtocolNetRPC,
-		},
+		Cmd:             exec.Command(filepath.Join("bin", "userDefineData.exe")),
 	})
 
 	if rpcClient, err := client.Client(); err != nil { // Connect via RPC
@@ -39,7 +36,7 @@ func GetUserDefineData(pluginPath string) (*UserPlugin, error) {
 	}
 }
 
-func (up *UserPlugin) RegisterComponents() ([]reflect.Type, error) {
+func (up *UserPlugin) RegisterComponents() ([]shared.ComponentInformation, error) {
 	return up.plugin.RegisterComponents()
 }
 

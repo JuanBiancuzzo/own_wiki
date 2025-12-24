@@ -15,7 +15,7 @@ import (
 	u "github.com/JuanBiancuzzo/own_wiki/core/user"
 )
 
-func HandleSigTerm(eventQueue chan e.Event) chan os.Signal {
+func handleSigTerm(eventQueue chan e.Event) chan os.Signal {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
@@ -29,27 +29,35 @@ func HandleSigTerm(eventQueue chan e.Event) chan os.Signal {
 	return signals
 }
 
-func Loop(config c.UserConfig, platform p.Platform) {
+func Loop(config c.UserConfig, platform p.Platform, wg *sync.WaitGroup) {
 	ecvSystem := ecv.NewECV(config) // Creamos event queue que va a ser un channel
 	defer ecvSystem.Close()
 
-	sigTermChannel := HandleSigTerm(ecvSystem.EventQueue)
+	sigTermChannel := handleSigTerm(ecvSystem.EventQueue)
 	defer close(sigTermChannel)
 
 	// Registrar estructura dadas por el usuario, y genera las views
 	userDefineData, err := u.GetUserDefineData(config.UserDefineDataDirectory)
 	if err != nil {
 		log.Error("Failed to get user define data plugin, with error: '%v'", err)
+		return
 	}
 	defer userDefineData.Close()
 
-	var waitGroup sync.WaitGroup
-	defer waitGroup.Wait()
+	if componentTypes, err := userDefineData.RegisterComponents(); err != nil {
+		log.Error("Failed to get components from user, with error: '%v'", err)
+		return
 
-	waitGroup.Add(1)
+	} else {
+		log.Info("The components register by the user are: %v", componentTypes)
+	}
+
+	wg.Add(1)
 	go func() {
 		platform.HandleInput(ecvSystem.EventQueue)
-		waitGroup.Done()
+		log.Debug("Waiting for Platform to handle all pending gorutings")
+		wg.Done()
+		log.Debug("Platform finished to handle input")
 	}()
 
 	ticker := time.NewTicker(time.Duration(1000/config.TargetFrameRate) * time.Millisecond)
@@ -58,9 +66,12 @@ func Loop(config c.UserConfig, platform p.Platform) {
 	for range ticker.C {
 		representation, ok := ecvSystem.GenerateFrame()
 		if !ok {
+			log.Debug("Leaving representation")
 			break
 		}
 
 		platform.Render(representation)
 	}
+
+	log.Debug("Loop finished")
 }

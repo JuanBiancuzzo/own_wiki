@@ -5,4 +5,5 @@ use (
 	./exe
 	./shared
 	./view
+	./plugin
 )

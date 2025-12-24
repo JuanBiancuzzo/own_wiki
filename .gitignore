@@ -1,3 +1,5 @@
-logs/*
-plugin/*
+logs/
+bin/
+plugin/
+config/
 .env

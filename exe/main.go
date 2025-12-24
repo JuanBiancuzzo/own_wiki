@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	_ "embed"
 
@@ -37,17 +38,23 @@ func main() {
 		defer log.Close()
 
 		var platform p.Platform
-		if systemConfig.Platform == "HTMX" {
+		switch systemConfig.Platform {
+		case "HTMX":
 			platform = htmx.NewHTMX()
 
-		} else if systemConfig.Platform == "Terminal" {
+		case "Terminal":
 			platform = terminal.NewTerminal()
 
-		} else {
+		default:
 			log.Error("Failed to asign platform, check configuration file, options are HTMX, Terminal")
 			return
 		}
 
-		core.Loop(userConfig, platform)
+		var waitGroup sync.WaitGroup
+
+		core.Loop(userConfig, platform, &waitGroup)
+		platform.Close()
+
+		waitGroup.Wait()
 	}
 }

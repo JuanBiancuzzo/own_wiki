@@ -48,6 +48,10 @@ func (ecv *ECV) AssignCurrentView(view View) {
 }
 
 func (ecv *ECV) GenerateFrame() (SceneRepresentation, bool) {
+	if ecv.currentView == nil {
+		return nil, false
+	}
+
 	if nextView, stopped := ecv.currentView(); stopped && nextView != nil {
 		ecv.AssignCurrentView(nextView)
 
