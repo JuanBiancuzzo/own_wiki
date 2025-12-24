@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	ecv "own_wiki/src/ecv"
-	e "own_wiki/src/events"
-	p "own_wiki/src/platform"
-	log "own_wiki/src/system/logger"
+	"github.com/JuanBiancuzzo/own_wiki/core/ecv"
+	e "github.com/JuanBiancuzzo/own_wiki/core/events"
+	p "github.com/JuanBiancuzzo/own_wiki/core/platform"
+	log "github.com/JuanBiancuzzo/own_wiki/core/system/logger"
 
 	ctxio "github.com/jbenet/go-context/io"
 )

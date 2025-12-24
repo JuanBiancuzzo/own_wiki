@@ -1,13 +1,12 @@
 package platform
 
 import (
-	ecv "own_wiki/src/ecv"
-	e "own_wiki/src/events"
-	"sync"
+	"github.com/JuanBiancuzzo/own_wiki/core/ecv"
+	e "github.com/JuanBiancuzzo/own_wiki/core/events"
 )
 
 type Platform interface {
-	HandleInput(chan e.Event, *sync.WaitGroup)
+	HandleInput(chan e.Event)
 
 	Render(ecv.SceneRepresentation)
 

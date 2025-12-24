@@ -2,8 +2,9 @@ package ecv
 
 import (
 	"iter"
-	e "own_wiki/src/events"
-	c "own_wiki/src/system/configuration"
+
+	e "github.com/JuanBiancuzzo/own_wiki/core/events"
+	c "github.com/JuanBiancuzzo/own_wiki/core/system/configuration"
 )
 
 type ECV struct {

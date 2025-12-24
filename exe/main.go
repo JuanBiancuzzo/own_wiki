@@ -3,137 +3,22 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"sync"
-	"syscall"
-	"time"
 
 	_ "embed"
 
-	t "own_wiki/platforms/terminal"
-	"own_wiki/src/ecv"
-	e "own_wiki/src/events"
+	"github.com/JuanBiancuzzo/own_wiki/exe/platforms/htmx"
+	"github.com/JuanBiancuzzo/own_wiki/exe/platforms/terminal"
 
-	c "own_wiki/src/system/configuration"
-	log "own_wiki/src/system/logger"
+	"github.com/JuanBiancuzzo/own_wiki/core"
+	p "github.com/JuanBiancuzzo/own_wiki/core/platform"
+	c "github.com/JuanBiancuzzo/own_wiki/core/system/configuration"
+	log "github.com/JuanBiancuzzo/own_wiki/core/system/logger"
 )
 
 const USER_CONFIG_PATH string = "config/user_config.json"
 
-///go:embed "../config/system_config.json"
-// var systemConfigBytes []byte
-
-type MainView struct{}
-
-func (mv *MainView) View(scene *ecv.Scene, yield func() bool) ecv.View {
-	scene.CleanScreen()
-
-	heading := ecv.NewHeading(1, "Titulo")
-	scene.AddToScreen(heading)
-
-	text := ecv.NewText("Hola")
-	scene.AddToScreen(text)
-
-	for i := range 5 * scene.FrameRate {
-		if !yield() {
-			fmt.Printf("Exiting at the first wait at %d\n", i)
-			return nil
-		}
-	}
-
-	text.ChangeText("Chau")
-
-	for range 10 * scene.FrameRate {
-		if !yield() {
-			fmt.Println("Exiting at the last wait")
-			return nil
-		}
-	}
-
-	return nil
-}
-
-type TitleComponent struct {
-	Title string
-}
-
-type TextComponent struct {
-	Paragraphs []string
-}
-
-type FileEntity struct {
-	TitleComponent
-	TextComponent
-}
-
-/*
-Con esto podemos definir 3 funciones, que fuerzan al usuario a establecer
-todo lo que deberia hacer, es la API/contrato, que necesitan cumplir para que
-el sistema funcione. Estas son
-  - Funcion para ingresar los struct que corresponden como componentes
-  - Funcion que recibe un archivo de texto, con toda la metadata, y el sistema
-    para ingresar las entidades
-  - Funcion para ingresar el par (entidad, []view)
-*/
-func SimulatedUser(ecvSystem *ecv.ECV) {
-	// Registrar los componentes -> Esto se traduce en las estructuras de la base de datos
-	ecvSystem.RegisterComponent(TitleComponent{})
-	ecvSystem.RegisterComponent(TextComponent{})
-
-	// Registrar las entidades
-	/*
-		Ahora que estan los componentes, podemos correr una funcion generada
-		por el usuario que lea los archivos que tiene, y cree las entidades a
-		partir de estos archivos.
-	*/
-
-	// Registrar las views
-	mainView := &MainView{}
-	ecvSystem.AssignCurrentView(mainView)
-}
-
-func HandleSigTerm(eventQueue chan e.Event) chan os.Signal {
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		if _, ok := <-signals; ok {
-			log.Debug("Getting ctrl+c interrupt")
-			eventQueue <- e.NewCloseEvent("Ctrl+c interrupt")
-		}
-	}()
-
-	return signals
-}
-
-func Loop(config c.UserConfig, wg *sync.WaitGroup) {
-	ecvSystem := ecv.NewECV(config) // Creamos event queue que va a ser un channel
-	defer ecvSystem.Close()
-
-	sigTermChannel := HandleSigTerm(ecvSystem.EventQueue)
-	defer close(sigTermChannel)
-
-	// Registrar estructura dadas por el usuario, y genera las views
-	SimulatedUser(ecvSystem)
-
-	platform := t.NewTerminal()
-	defer platform.Close()
-
-	wg.Add(1)
-	go platform.HandleInput(ecvSystem.EventQueue, wg)
-
-	ticker := time.NewTicker(time.Duration(1000/config.TargetFrameRate) * time.Millisecond)
-
-	// Esto fuerza a que cada iteración como mínimo dure 1/FrameRate
-	for range ticker.C {
-		representation, ok := ecvSystem.GenerateFrame()
-		if !ok {
-			break
-		}
-
-		platform.Render(representation)
-	}
-}
+//go:embed "config/system_config.json"
+var systemConfigBytes []byte
 
 func main() {
 	if userConfigBytes, err := os.ReadFile(USER_CONFIG_PATH); err != nil {
@@ -142,14 +27,27 @@ func main() {
 	} else if userConfig, err := c.NewUserConfig(userConfigBytes); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create User define configuration, with error: %v\n", err)
 
+	} else if systemConfig, err := c.NewSystemConfig(systemConfigBytes); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create User define configuration, with error: %v\n", err)
+
 	} else if err := log.CreateLogger("logs/logger.txt", log.VERBOSE); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 
 	} else {
 		defer log.Close()
 
-		var waitGroup sync.WaitGroup
-		Loop(userConfig, &waitGroup)
-		waitGroup.Wait()
+		var platform p.Platform
+		if systemConfig.Platform == "HTMX" {
+			platform = htmx.NewHTMX()
+
+		} else if systemConfig.Platform == "Terminal" {
+			platform = terminal.NewTerminal()
+
+		} else {
+			log.Error("Failed to asign platform, check configuration file, options are HTMX, Terminal")
+			return
+		}
+
+		core.Loop(userConfig, platform)
 	}
 }

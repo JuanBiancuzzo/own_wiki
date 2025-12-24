@@ -2,10 +2,11 @@ package htmx
 
 import (
 	"fmt"
-	ecv "own_wiki/src/ecv"
-	e "own_wiki/src/events"
-	p "own_wiki/src/platform"
 	"sync"
+
+	"github.com/JuanBiancuzzo/own_wiki/core/ecv"
+	e "github.com/JuanBiancuzzo/own_wiki/core/events"
+	p "github.com/JuanBiancuzzo/own_wiki/core/platform"
 )
 
 type HTMXPlatform struct{}

@@ -5,7 +5,8 @@ import (
 )
 
 type UserConfig struct {
-	TargetFrameRate uint64 `json:"TargetFPS"`
+	TargetFrameRate         uint64 `json:"TargetFPS"`
+	UserDefineDataDirectory string `json:"pluginDir"`
 }
 
 type SystemConfig struct {
