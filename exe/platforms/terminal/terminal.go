@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/JuanBiancuzzo/own_wiki/core/ecv"
 	e "github.com/JuanBiancuzzo/own_wiki/core/events"
@@ -33,7 +32,7 @@ func NewTerminal() p.Platform {
 	}
 }
 
-func (hp *TerminalPlatform) HandleInput(eventQueue chan e.Event, wg *sync.WaitGroup) {
+func (hp *TerminalPlatform) HandleInput(eventQueue chan e.Event) {
 	for {
 		char, _, err := hp.Reader.ReadRune()
 		if err == context.Canceled || err == io.EOF {
@@ -54,7 +53,6 @@ func (hp *TerminalPlatform) HandleInput(eventQueue chan e.Event, wg *sync.WaitGr
 	}
 
 	log.Info("Closing HandleInput")
-	wg.Done()
 }
 
 func (hp *TerminalPlatform) Render(viewRepresentation ecv.SceneRepresentation) {

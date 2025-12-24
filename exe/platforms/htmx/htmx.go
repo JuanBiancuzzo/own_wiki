@@ -2,7 +2,6 @@ package htmx
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/JuanBiancuzzo/own_wiki/core/ecv"
 	e "github.com/JuanBiancuzzo/own_wiki/core/events"
@@ -15,9 +14,7 @@ func NewHTMX() p.Platform {
 	return &HTMXPlatform{}
 }
 
-func (hp *HTMXPlatform) HandleInput(eventQueue chan e.Event, wg *sync.WaitGroup) {
-	wg.Done()
-}
+func (hp *HTMXPlatform) HandleInput(eventQueue chan e.Event) {}
 
 func (hp *HTMXPlatform) Render(view ecv.SceneRepresentation) {
 	if len(view) > 0 {
