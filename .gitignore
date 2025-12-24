@@ -1,4 +1,3 @@
-volumenes/
-src/**/tmp/
-configuracion/
+logs/*
+plugin/*
 .env

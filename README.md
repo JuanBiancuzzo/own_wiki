@@ -1,1 +1,1 @@
-# own_wiki
+# Own wiki
