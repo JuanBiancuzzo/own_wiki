@@ -49,7 +49,9 @@ func Loop(config c.UserConfig, platform p.Platform, wg *sync.WaitGroup) {
 		return
 
 	} else {
-		log.Info("The components register by the user are: %v", componentTypes)
+		for _, component := range componentTypes {
+			log.Info("Component register by the user is: %+v", *component)
+		}
 	}
 
 	wg.Add(1)

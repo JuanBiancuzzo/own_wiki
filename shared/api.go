@@ -2,7 +2,6 @@ package shared
 
 import (
 	"net/rpc"
-	"reflect"
 
 	// _ "github.com/JuanBiancuzzo/own_wiki/view"
 	"github.com/hashicorp/go-plugin"
@@ -30,25 +29,14 @@ el sistema funcione. Estas son
   - Funcion para ingresar el par (entidad, []view)
 */
 
-type ComponentInformation struct {
-	Name string
-}
-
-func GetComponentInformation[T any]() ComponentInformation {
-	var t T
-	typeInfo := reflect.TypeOf(t)
-
-	return ComponentInformation{
-		Name: typeInfo.Name(),
-	}
-}
-
 /*
 Esta es la interfaz que tiene que cumplir el plugin.
   - RegisterComponents: Esta permite definir los bloques minimos para crear entidades
 */
 type UserDefineData interface {
-	RegisterComponents() ([]ComponentInformation, error)
+	RegisterComponents() ([]*ComponentInformation, error)
+
+	RegisterEntities() ([]*EntityInformation, error)
 }
 
 // This is the implementation of plugin.Plugin so we can serve/consume this.
@@ -58,11 +46,11 @@ type UserDefineDataPlugin struct {
 	Impl UserDefineData
 }
 
-func (p *UserDefineDataPlugin) Server(*plugin.MuxBroker) (interface{}, error) {
+func (p *UserDefineDataPlugin) Server(*plugin.MuxBroker) (any, error) {
 	return &RPCServer{Impl: p.Impl}, nil
 }
 
-func (*UserDefineDataPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
+func (*UserDefineDataPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (any, error) {
 	return &RPCClient{client: c}, nil
 }
 
@@ -74,8 +62,13 @@ type RPCServer struct {
 	Impl UserDefineData
 }
 
-func (m *RPCServer) RegisterComponents(args any, resp *[]ComponentInformation) (err error) {
+func (m *RPCServer) RegisterComponents(args any, resp *[]*ComponentInformation) (err error) {
 	*resp, err = m.Impl.RegisterComponents()
+	return err
+}
+
+func (m *RPCServer) RegisterEntities(args any, resp *[]*EntityInformation) (err error) {
+	*resp, err = m.Impl.RegisterEntities()
 	return err
 }
 
@@ -83,8 +76,14 @@ func (m *RPCServer) RegisterComponents(args any, resp *[]ComponentInformation) (
 // RPCClient is an implementation of Plugin that talks over RPC.
 type RPCClient struct{ client *rpc.Client }
 
-func (m *RPCClient) RegisterComponents() ([]ComponentInformation, error) {
-	var resp []ComponentInformation
+func (m *RPCClient) RegisterComponents() ([]*ComponentInformation, error) {
+	var resp []*ComponentInformation
 	err := m.client.Call("Plugin.RegisterComponents", new(any), &resp)
+	return resp, err
+}
+
+func (m *RPCClient) RegisterEntities() ([]*EntityInformation, error) {
+	var resp []*EntityInformation
+	err := m.client.Call("Plugin.RegisterEntities", new(any), &resp)
 	return resp, err
 }
