@@ -39,6 +39,10 @@ func GetUserDefineData(pluginPath string) (*UserPlugin, error) {
 	}
 }
 
+/*
+Aca deberiamos agarrar esa informacion y traducirla, generando una estructura que
+represente todo lo que puede hacer el usuario
+*/
 func (up *UserPlugin) RegisterComponents() ([]*shared.ComponentInformation, error) {
 	return up.plugin.RegisterComponents()
 }

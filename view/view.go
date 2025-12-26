@@ -1,4 +1,4 @@
-package ecv
+package view
 
 type SceneRepresentation []any
 

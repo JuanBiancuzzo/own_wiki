@@ -1,14 +1,14 @@
 package platform
 
 import (
-	"github.com/JuanBiancuzzo/own_wiki/core/ecv"
 	e "github.com/JuanBiancuzzo/own_wiki/core/events"
+	v "github.com/JuanBiancuzzo/own_wiki/view"
 )
 
 type Platform interface {
 	HandleInput(chan e.Event)
 
-	Render(ecv.SceneRepresentation)
+	Render(v.SceneRepresentation)
 
 	Close()
 }
