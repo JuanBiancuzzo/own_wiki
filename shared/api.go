@@ -3,7 +3,7 @@ package shared
 import (
 	"net/rpc"
 
-	// _ "github.com/JuanBiancuzzo/own_wiki/view"
+	v "github.com/JuanBiancuzzo/own_wiki/view"
 	"github.com/hashicorp/go-plugin"
 )
 
@@ -49,7 +49,7 @@ type UserDefineData interface {
 	CreateView(sceneInformation SceneInformation) error
 
 	// Con eso forazamos que tome los eventos, y diga que se hace despues
-	AvanzarView(events []int) ([]*SceneOperation, error)
+	AvanzarView(events []v.Event) ([]*v.SceneOperation, error)
 }
 
 // Esto muestra como realmente estaria bueno que la api este dada por el core del programa
@@ -96,7 +96,7 @@ func (m *RPCServer) CreateView(sceneInformation SceneInformation, resp *any) err
 	return m.Impl.CreateView(sceneInformation)
 }
 
-func (m *RPCServer) AvanzarView(events []int, resp *[]*SceneOperation) (err error) {
+func (m *RPCServer) AvanzarView(events []v.Event, resp *[]*v.SceneOperation) (err error) {
 	*resp, err = m.Impl.AvanzarView(events)
 	return err
 }
@@ -128,7 +128,7 @@ func (m *RPCClient) CreateView(sceneInformation SceneInformation) error {
 	return m.client.Call("Plugin.CreateView", sceneInformation, &resp)
 }
 
-func (m *RPCClient) AvanzarView(events []int) (resp []*SceneOperation, err error) {
+func (m *RPCClient) AvanzarView(events []v.Event) (resp []*v.SceneOperation, err error) {
 	err = m.client.Call("Plugin.AvanzarView", &events, &resp)
 	return resp, err
 }

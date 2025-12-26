@@ -1,8 +1,6 @@
 package shared
 
 import (
-	"reflect"
-
 	v "github.com/JuanBiancuzzo/own_wiki/view"
 )
 
@@ -11,23 +9,6 @@ type SceneInformation struct {
 	EntityName string
 	// Entity     any
 	Scene v.Scene
-}
-
-// Cambio de escena, Modificacion o eliminacion de componente
-type SceneOperation struct {
-	// Cambio de escena
-	viewName string
-	entityID uint64
-}
-
-func ChangeScene[V v.View](entity any) *SceneOperation {
-	var view V
-	viewInfo := reflect.TypeOf(view)
-
-	return &SceneOperation{
-		viewName: viewInfo.Name(),
-		entityID: 0, // Hacer que sea el hash de los elementos importantes
-	}
 }
 
 /*

@@ -1,8 +1,6 @@
 package ecv
 
 import (
-	"iter"
-
 	e "github.com/JuanBiancuzzo/own_wiki/core/events"
 	c "github.com/JuanBiancuzzo/own_wiki/core/system/configuration"
 
@@ -31,6 +29,7 @@ func (ecv *ECV) RegisterComponent(component any) {
 
 }
 
+/*
 func (ecv *ECV) AssignCurrentView(view v.View) {
 	nextViewChannel := make(chan v.View, 1)
 
@@ -63,6 +62,7 @@ func (ecv *ECV) GenerateFrame() (v.SceneRepresentation, bool) {
 
 	return ecv.Scene.GetRepresentation(), true
 }
+*/
 
 func (ecv *ECV) Close() {
 	if ecv.stopView != nil {

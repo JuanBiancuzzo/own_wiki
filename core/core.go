@@ -66,13 +66,13 @@ func Loop(config c.UserConfig, platform p.Platform, wg *sync.WaitGroup) {
 
 	// Esto fuerza a que cada iteración como mínimo dure 1/FrameRate
 	for range ticker.C {
-		representation, ok := ecvSystem.GenerateFrame()
+		/* representation, ok := ecvSystem.GenerateFrame()
 		if !ok {
 			log.Debug("Leaving representation")
 			break
 		}
 
-		platform.Render(representation)
+		platform.Render(representation)*/
 	}
 
 	log.Debug("Loop finished")
