@@ -7,27 +7,38 @@ import (
 type SceneRepresentation []any
 
 type Event int
-type FnYield func(ops []*SceneOperation) <-chan []Event
+type FnYield func(ops *SceneOperation) <-chan []Event
 
 type View interface {
-	View(scene *Scene, yield FnYield) (nextScene *SceneOperation)
+	// If not next scene, then nextScene should be nil
+	View(scene *Scene, yield FnYield) (nextScene *ChangeSceneOperation)
 }
 
 // Cambio de escena, Modificacion o eliminacion de componente
-type SceneOperation struct {
-	// Cambio de escena
-	viewName string
-	entityID uint64
+type ChangeSceneOperation struct {
+	ViewName string
+	EntityID uint64
 }
 
-func ChangeScene[V View](entity any) *SceneOperation {
+func ChangeSceneOp[V View](entity any) *ChangeSceneOperation {
 	var view V
 	viewInfo := reflect.TypeOf(view)
 
-	return &SceneOperation{
-		viewName: viewInfo.Name(),
-		entityID: 0, // Hacer que sea el hash de los elementos importantes
+	return &ChangeSceneOperation{
+		ViewName: viewInfo.Name(),
+		EntityID: 0, // Hacer que sea el hash de los elementos importantes
 	}
+}
+
+type ChangeEntityOperation struct{}
+
+type SceneOperation struct {
+	SceneCaracteristics *SceneRepresentation
+
+	ChangeScene *ChangeSceneOperation
+	EndScene    bool
+
+	Operations []ChangeEntityOperation
 }
 
 // -+- Bloques -+-

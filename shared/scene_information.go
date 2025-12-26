@@ -8,7 +8,7 @@ type SceneInformation struct {
 	ViewName   string
 	EntityName string
 	// Entity     any
-	Scene v.Scene
+	Scene *v.Scene
 }
 
 /*

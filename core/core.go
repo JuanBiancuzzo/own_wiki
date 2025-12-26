@@ -13,6 +13,8 @@ import (
 	c "github.com/JuanBiancuzzo/own_wiki/core/system/configuration"
 	log "github.com/JuanBiancuzzo/own_wiki/core/system/logger"
 	u "github.com/JuanBiancuzzo/own_wiki/core/user"
+
+	v "github.com/JuanBiancuzzo/own_wiki/view"
 )
 
 func handleSigTerm(eventQueue chan e.Event) chan os.Signal {
@@ -57,22 +59,60 @@ func Loop(config c.UserConfig, platform p.Platform, wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		platform.HandleInput(ecvSystem.EventQueue)
-		log.Debug("Waiting for Platform to handle all pending gorutings")
 		wg.Done()
 		log.Debug("Platform finished to handle input")
 	}()
 
-	ticker := time.NewTicker(time.Duration(1000/config.TargetFrameRate) * time.Millisecond)
+	// Unificar esto
+	eventChannel := make(chan []v.Event)
+	wg.Add(1)
+	go func() {
+		// Esto fuerza a que cada iteración como mínimo dure 1/FrameRate
+		ticker := time.NewTicker(time.Duration(1000/config.TargetFrameRate) * time.Millisecond)
 
-	// Esto fuerza a que cada iteración como mínimo dure 1/FrameRate
-	for range ticker.C {
-		/* representation, ok := ecvSystem.GenerateFrame()
-		if !ok {
+		acumulatedEvents := []e.Event{}
+		keepReading := true
+
+		for keepReading {
+			select {
+			case events, ok := <-ecvSystem.EventQueue:
+				if !ok {
+					keepReading = false
+					break
+				}
+				acumulatedEvents = append(acumulatedEvents, events)
+
+			case <-ticker.C:
+				eventChannel <- []v.Event{}
+
+				// Simula eliminar los eventos utilizados
+				acumulatedEvents = []e.Event{}
+			}
+		}
+
+		close(eventChannel)
+		wg.Done()
+		log.Debug("Events handler for scene close")
+	}()
+
+	userDefineData.CreateView("MainView", ecvSystem.Scene)
+	for events := range eventChannel {
+		ops, err := userDefineData.AvanzarView(events)
+		if err != nil {
+			log.Debug("Failed to advance the view, with error: %v", err)
+			break
+		}
+
+		platform.Render(*ops.SceneCaracteristics)
+
+		if ops.EndScene == true {
 			log.Debug("Leaving representation")
 			break
 		}
 
-		platform.Render(representation)*/
+		if ops.ChangeScene != nil {
+			userDefineData.CreateView(ops.ChangeScene.ViewName, ecvSystem.Scene)
+		}
 	}
 
 	log.Debug("Loop finished")

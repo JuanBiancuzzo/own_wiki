@@ -49,10 +49,14 @@ type UserDefineData interface {
 	CreateView(sceneInformation SceneInformation) error
 
 	// Con eso forazamos que tome los eventos, y diga que se hace despues
-	AvanzarView(events []v.Event) ([]*v.SceneOperation, error)
+	AvanzarView(events []v.Event) (*v.SceneOperation, error)
 }
 
+// -+- CAMBIARRR -+-
 // Esto muestra como realmente estaria bueno que la api este dada por el core del programa
+// Tambien deberia ser un ida y vuelta en los mensajes, ya que tal vez no deberia vincular
+// 	el cambio de entidades con el cambio de escena, y la creacion de frames.
+// Esos cambios de las entidades, deberian ser eventos del sistema
 
 // This is the implementation of plugin.Plugin so we can serve/consume this.
 type UserDefineDataPlugin struct {
@@ -96,7 +100,7 @@ func (m *RPCServer) CreateView(sceneInformation SceneInformation, resp *any) err
 	return m.Impl.CreateView(sceneInformation)
 }
 
-func (m *RPCServer) AvanzarView(events []v.Event, resp *[]*v.SceneOperation) (err error) {
+func (m *RPCServer) AvanzarView(events []v.Event, resp **v.SceneOperation) (err error) {
 	*resp, err = m.Impl.AvanzarView(events)
 	return err
 }
@@ -128,7 +132,7 @@ func (m *RPCClient) CreateView(sceneInformation SceneInformation) error {
 	return m.client.Call("Plugin.CreateView", sceneInformation, &resp)
 }
 
-func (m *RPCClient) AvanzarView(events []v.Event) (resp []*v.SceneOperation, err error) {
+func (m *RPCClient) AvanzarView(events []v.Event) (resp *v.SceneOperation, err error) {
 	err = m.client.Call("Plugin.AvanzarView", &events, &resp)
 	return resp, err
 }

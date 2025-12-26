@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	v "github.com/JuanBiancuzzo/own_wiki/view"
+
 	"github.com/JuanBiancuzzo/own_wiki/shared"
 	plugin "github.com/hashicorp/go-plugin"
 )
@@ -49,6 +51,22 @@ func (up *UserPlugin) RegisterComponents() ([]*shared.ComponentInformation, erro
 
 func (up *UserPlugin) RegisterEntities() ([]*shared.EntityInformation, error) {
 	return up.plugin.RegisterEntities()
+}
+
+func (up *UserPlugin) RegisterViews() ([]*shared.ViewInformation, error) {
+	return up.plugin.RegisterViews()
+}
+
+func (up *UserPlugin) CreateView(viewName string, scene *v.Scene) error {
+	return up.plugin.CreateView(shared.SceneInformation{
+		ViewName:   viewName,
+		EntityName: "",
+		Scene:      scene,
+	})
+}
+
+func (up *UserPlugin) AvanzarView(events []v.Event) (*v.SceneOperation, error) {
+	return up.plugin.AvanzarView(events)
 }
 
 func (up *UserPlugin) Close() {
