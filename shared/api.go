@@ -37,6 +37,8 @@ type UserDefineData interface {
 	RegisterComponents() ([]*ComponentInformation, error)
 
 	RegisterEntities() ([]*EntityInformation, error)
+
+	RegisterViews() ([]*ViewInformation, error)
 }
 
 // This is the implementation of plugin.Plugin so we can serve/consume this.
