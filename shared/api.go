@@ -87,6 +87,20 @@ func (m *RPCServer) RegisterEntities(args any, resp *[]*EntityInformation) (err 
 	return err
 }
 
+func (m *RPCServer) RegisterViews(args any, resp *[]*ViewInformation) (err error) {
+	*resp, err = m.Impl.RegisterViews()
+	return err
+}
+
+func (m *RPCServer) CreateView(sceneInformation SceneInformation, resp *any) error {
+	return m.Impl.CreateView(sceneInformation)
+}
+
+func (m *RPCServer) AvanzarView(events []int, resp *[]*SceneOperation) (err error) {
+	*resp, err = m.Impl.AvanzarView(events)
+	return err
+}
+
 // Client
 // RPCClient is an implementation of Plugin that talks over RPC.
 type RPCClient struct{ client *rpc.Client }
@@ -100,5 +114,21 @@ func (m *RPCClient) RegisterComponents() ([]*ComponentInformation, error) {
 func (m *RPCClient) RegisterEntities() ([]*EntityInformation, error) {
 	var resp []*EntityInformation
 	err := m.client.Call("Plugin.RegisterEntities", new(any), &resp)
+	return resp, err
+}
+
+func (m *RPCClient) RegisterViews() ([]*ViewInformation, error) {
+	var resp []*ViewInformation
+	err := m.client.Call("Plugin.RegisterViews", new(any), &resp)
+	return resp, err
+}
+
+func (m *RPCClient) CreateView(sceneInformation SceneInformation) error {
+	var resp any
+	return m.client.Call("Plugin.CreateView", sceneInformation, &resp)
+}
+
+func (m *RPCClient) AvanzarView(events []int) (resp []*SceneOperation, err error) {
+	err = m.client.Call("Plugin.AvanzarView", &events, &resp)
 	return resp, err
 }
