@@ -32,6 +32,8 @@ el sistema funcione. Estas son
 /*
 Esta es la interfaz que tiene que cumplir el plugin.
   - RegisterComponents: Esta permite definir los bloques minimos para crear entidades
+  - RegisterEntities: Esta permite definir los conjuntos de componentes que nos gustaria ver juntos
+  - RegisterViews: Esta permite definir como mostrar las entidades definidas
 */
 type UserDefineData interface {
 	RegisterComponents() ([]*ComponentInformation, error)
@@ -39,7 +41,18 @@ type UserDefineData interface {
 	RegisterEntities() ([]*EntityInformation, error)
 
 	RegisterViews() ([]*ViewInformation, error)
+
+	// Nos falta definir una funcion que le permita al usuario crear todas las entidades
+	// TODO
+
+	// De esta forma podemos inicializar o afirmar que hay un cambio de escena
+	CreateView(sceneInformation SceneInformation) error
+
+	// Con eso forazamos que tome los eventos, y diga que se hace despues
+	AvanzarView(events []int) ([]*SceneOperation, error)
 }
+
+// Esto muestra como realmente estaria bueno que la api este dada por el core del programa
 
 // This is the implementation of plugin.Plugin so we can serve/consume this.
 type UserDefineDataPlugin struct {
