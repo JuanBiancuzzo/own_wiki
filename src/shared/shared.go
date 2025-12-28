@@ -2,6 +2,8 @@ package shared
 
 import (
 	"reflect"
+
+	"github.com/JuanBiancuzzo/own_wiki/src/core/systems/file_loader"
 )
 
 type ComponentInformation reflect.Type
@@ -33,5 +35,5 @@ type UserDefineStructure interface {
 	// Given that when importing file there has to be a way to transform them in entities, this
 	// is where it happends. This also defines what entity is it wanted to be the main menu. If
 	// multiples entities are main menu capable, then it will apear an option to select
-	ProcessFile(file string) []Entity
+	ProcessFile(file file_loader.File) []Entity
 }

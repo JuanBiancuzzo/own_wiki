@@ -81,12 +81,29 @@ func ReturnStructure(system *ecv.ECV) ReturnRegisterStructure {
 	}
 }
 
+type UploadEntity interface {
+	Upload(entity any) error
+}
+
 type UserStructureData interface {
+	// ---+--- Register ---+---
 	// Carga el plugin definido por el usuario,
 	LoadPlugin(path string) (ErrorLoadPath, error)
 
 	// Manera de obtener una estructura general de plugin definido por el usuario
 	RegisterStructures() (ReturnRegisterStructure, error)
+
+	// ---+--- Importing ---+---
+	// Inicializar el proceso de importacion de archivos
+	InitializeImport(uploader UploadEntity) error
+
+	// Recibe la informacion de un path a un archivo importado
+	ProcessFile(file string) error
+
+	// Define el fin del proceso de importar archivos
+	FinishImporing() error
+
+	// ---+--- View Management ---+---
 }
 
 // This is the implementation of plugin.Plugin so we can serve/consume this.

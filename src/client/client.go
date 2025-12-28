@@ -8,6 +8,7 @@ import (
 
 	"github.com/JuanBiancuzzo/own_wiki/src/core/api"
 	"github.com/JuanBiancuzzo/own_wiki/src/core/ecv"
+	"github.com/JuanBiancuzzo/own_wiki/src/core/systems/file_loader"
 
 	"github.com/JuanBiancuzzo/own_wiki/src/shared"
 )
@@ -22,6 +23,8 @@ type OwnWikiUserStructure struct {
 	Components map[string]reflect.Type
 	Entities   map[string]reflect.Type
 	Views      map[string]reflect.Type
+
+	Importer *Importer
 }
 
 func NewOwnWiki() *OwnWikiUserStructure {
@@ -31,9 +34,12 @@ func NewOwnWiki() *OwnWikiUserStructure {
 		Components: make(map[string]reflect.Type),
 		Entities:   make(map[string]reflect.Type),
 		Views:      make(map[string]reflect.Type),
+
+		Importer: nil,
 	}
 }
 
+// ---+--- Register ---+---
 func (o *OwnWikiUserStructure) LoadPlugin(path string) (api.ErrorLoadPath, error) {
 	if userPlugin, err := p.Open(path); err != nil {
 		return api.NewErrorLoadPath("Plugin not found, with error: %v", err), nil
@@ -93,7 +99,32 @@ func (o *OwnWikiUserStructure) RegisterStructures() (api.ReturnRegisterStructure
 	}
 }
 
-// View
+// ---+--- Importing ---+---
+func (o *OwnWikiUserStructure) InitializeImport(uploader api.UploadEntity) error {
+	o.Importer = NewImporter()
+
+	process := func(file file_loader.File) {
+		for _, entity := range o.Plugin.ProcessFile(file) {
+			uploader.Upload(entity)
+		}
+	}
+
+	file_loader.NewReaderWorker(10, o.Importer.FilePaths, process, o.Importer.WaitGroup)
+	return nil
+}
+
+func (o *OwnWikiUserStructure) ProcessFile(filePath string) error {
+	o.Importer.FilePaths <- filePath
+	return nil
+}
+
+func (o *OwnWikiUserStructure) FinishImporing() error {
+	o.Importer.Close()
+	o.Importer = nil
+	return nil
+}
+
+// ---+--- View Management ---+---
 
 func (o *OwnWikiUserStructure) Close() {}
 
