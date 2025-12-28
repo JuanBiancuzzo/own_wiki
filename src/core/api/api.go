@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
@@ -38,12 +39,54 @@ siguientes views. Los eventos pueden ser:
   	  * Eliminar un componente
 */
 
+type ErrorLoadPath struct {
+	HasError    bool
+	ErrorReason string
+}
+
+func NoErrorLoadPath() ErrorLoadPath {
+	return ErrorLoadPath{
+		HasError: false,
+	}
+}
+
+func NewErrorLoadPath(reason string, args ...any) ErrorLoadPath {
+	return ErrorLoadPath{
+		HasError:    true,
+		ErrorReason: fmt.Sprintf(reason, args...),
+	}
+}
+
+type ReturnRegisterStructure struct {
+	HasError    bool
+	ErrorReason string
+	Ecv         *ecv.ECV
+}
+
+func NewErrorRegisterStructure(reason string, args ...any) ReturnRegisterStructure {
+	return ReturnRegisterStructure{
+		HasError:    true,
+		ErrorReason: fmt.Sprintf(reason, args...),
+	}
+}
+
+func ReturnStructure(system *ecv.ECV) ReturnRegisterStructure {
+	if system == nil {
+		return NewErrorRegisterStructure("No system register")
+	}
+
+	return ReturnRegisterStructure{
+		HasError: false,
+		Ecv:      system,
+	}
+}
+
 type UserStructureData interface {
 	// Carga el plugin definido por el usuario,
-	LoadPlugin(path string) error
+	LoadPlugin(path string) (ErrorLoadPath, error)
 
 	// Manera de obtener una estructura general de plugin definido por el usuario
-	RegisterStructures() (*ecv.ECV, error)
+	RegisterStructures() (ReturnRegisterStructure, error)
 }
 
 // This is the implementation of plugin.Plugin so we can serve/consume this.

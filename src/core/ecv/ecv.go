@@ -9,4 +9,4 @@ type EventHandler interface {
 	PushEvent(event e.Event) error
 }
 
-type ECV any
+type ECV struct{}
