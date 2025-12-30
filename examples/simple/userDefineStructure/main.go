@@ -59,8 +59,8 @@ type BookView struct {
 func (bv *BookView) Preload(outputEvents v.EventHandler) {}
 
 // Lo puedo hacer como parte de mi cliente
-func (bv *BookView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) {
-
+func (bv *BookView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
+	return nil
 }
 
 // Aca el usuario no lo puede llenar para filtrar como dije antes
@@ -79,24 +79,24 @@ func (lv *LibraryView) Preload(outputEvents v.EventHandler) {
 func (lv *LibraryView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
 
 	// Esto lo implementamos como un request a la api del sistema
-	_ = lv.Library.Books.Request()
+	_ = lv.Library.Books.Request(5)
 
 	return &LibraryView{
 		NewLibrary([]BookComponent{
 			// All seria vacio
 
 			// Where condicion simple
-			BookComponent{Author: "Jose"},
+			{Author: "Jose"},
 
 			// Caso de un 'or'
-			BookComponent{Author: "Pablo"},
-			BookComponent{Author: "Maria"},
+			{Author: "Pablo"},
+			{Author: "Maria"},
 
 			// Caso de un 'and'
-			BookComponent{Author: "Pablo", Edition: 1},
+			{Author: "Pablo", Edition: 1},
 
 			// like -> todos los que terminan con 'son'
-			BookComponent{Author: "%son"},
+			{Author: "%son"},
 
 			// Como manejar un rango, y como manejar si quiero recibir todos pero de a poco?
 		}),
@@ -124,11 +124,11 @@ func (*UserDefineStructure) RegisterEntities() []s.EntityInformation {
 
 func (*UserDefineStructure) RegisterViews() (mainViews []s.ViewInformation, otherViews []s.ViewInformation) {
 	mainViews = append(mainViews, []s.ViewInformation{
-		s.GetViewInformation[LibraryView](),
-	})
+		s.GetViewInformation[*LibraryView](),
+	}...)
 	otherViews = append(otherViews, []s.ViewInformation{
-		s.GetViewInformation[BookView](),
-	})
+		s.GetViewInformation[*BookView](),
+	}...)
 
 	return mainViews, otherViews
 }
