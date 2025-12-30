@@ -6,14 +6,16 @@ import (
 )
 
 // Moverlo al lugar correcto
-type Configuration struct{}
 
 type MainView struct {
-	Configuration
 }
 
 func (mv *MainView) Preload(outputEvents v.EventHandler) {
 	// We could preload the main view of the user
+
+	// la view definida por el usuario deberia estar en el struct de main view
+	// y que deberiamos generar un viewWalker para
+
 }
 
 func (mv *MainView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {

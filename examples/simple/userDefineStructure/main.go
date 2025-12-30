@@ -37,16 +37,6 @@ type ReviewEntity struct {
 	Review   ReviewComponent
 }
 
-type LibraryEntity struct {
-	Books s.Iterator[BookComponent]
-}
-
-func NewLibrary(books []BookComponent) LibraryEntity {
-	return LibraryEntity{
-		Books: s.NewIterator(books),
-	}
-}
-
 // ---+--- Views ---+---
 
 // Le calculamos el uid del componente, y lo podemos rellenar
@@ -63,9 +53,23 @@ func (bv *BookView) View(world *v.World, outputEvents v.EventHandler, yield v.Fn
 	return nil
 }
 
+// En el caso de hacer una referencia a componentes, y/u operaciones a entidades
+// se toma como una nueva entidad anonima
+type FilterLibraryView struct {
+	BookReviews s.Limit[ReviewComponent]
+}
+
+func (fv *FilterLibraryView) Preload(outputEvents v.EventHandler) {}
+
+func (fv *FilterLibraryView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
+	return nil
+}
+
 // Aca el usuario no lo puede llenar para filtrar como dije antes
 type LibraryView struct {
-	Library LibraryEntity
+	Books s.Iterator[BookComponent]
+
+	generalReviews *v.ViewWaker
 }
 
 func (lv *LibraryView) Preload(outputEvents v.EventHandler) {
@@ -74,15 +78,23 @@ func (lv *LibraryView) Preload(outputEvents v.EventHandler) {
 	// Por otro lado se podria ir precargando imagenes, o buildeando cosas que fueran necesarias a lo largo de la view
 	// Esto implica que deberia haber un evento que defina el inicio de la precarga, ya que sino, se ejecutara este e
 	// inmediatamente despues la view
+
+	// Preload de FilterLibraryView con n elementos limitados, y de esa forma tenerlos
+	reviewsView := &FilterLibraryView{s.NewLimit([]ReviewComponent{}, 5)}
+	reviewsView.Preload(outputEvents)
+
+	lv.generalReviews = v.NewViewWaker(reviewsView)
 }
 
 func (lv *LibraryView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
 
 	// Esto lo implementamos como un request a la api del sistema
-	_ = lv.Library.Books.Request(5)
+	_ = lv.Books.Request(20)
+
+	// Al final se quiere mostrar la view, FilterLibraryView
 
 	return &LibraryView{
-		NewLibrary([]BookComponent{
+		Books: s.NewIterator([]BookComponent{
 			// All seria vacio
 
 			// Where condicion simple
@@ -118,7 +130,6 @@ func (*UserDefineStructure) RegisterEntities() []s.EntityInformation {
 	return []s.EntityInformation{
 		s.GetEntityInformation[BookEntity](),
 		s.GetEntityInformation[ReviewEntity](),
-		s.GetEntityInformation[LibraryEntity](),
 	}
 }
 
@@ -128,8 +139,8 @@ func (*UserDefineStructure) RegisterViews() (mainViews []s.ViewInformation, othe
 	}...)
 	otherViews = append(otherViews, []s.ViewInformation{
 		s.GetViewInformation[*BookView](),
+		// s.GetViewInformation[*FilterLibraryView](),
 	}...)
-
 	return mainViews, otherViews
 }
 
