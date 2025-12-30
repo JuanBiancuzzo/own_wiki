@@ -56,7 +56,7 @@ type BookView struct {
 	Book ReviewEntity
 }
 
-func (bv *BookView) Preload() {}
+func (bv *BookView) Preload(outputEvents v.EventHandler) {}
 
 // Lo puedo hacer como parte de mi cliente
 func (bv *BookView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) {
@@ -68,7 +68,7 @@ type LibraryView struct {
 	Library LibraryEntity
 }
 
-func (lv *LibraryView) Preload() {
+func (lv *LibraryView) Preload(outputEvents v.EventHandler) {
 	// Aca podrias ordenar, tendrias q filtrar para el between
 
 	// Por otro lado se podria ir precargando imagenes, o buildeando cosas que fueran necesarias a lo largo de la view

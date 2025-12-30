@@ -10,12 +10,13 @@ type Configuration struct{}
 
 type MainView struct {
 	Configuration
-
-	MainLayout *v.Layout
-	UserWorld  *v.World
 }
 
-func NewMainView(configuration Configuration, world *v.World) *MainView {
+func (mv *MainView) Preload(outputEvents v.EventHandler) {
+	// We could preload the main view of the user
+}
+
+func (mv *MainView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
 	world.Clear()
 
 	mainLayout := world.MainCamera.ScreenLayout
@@ -26,15 +27,6 @@ func NewMainView(configuration Configuration, world *v.World) *MainView {
 	userWorld := v.NewWorld()
 	mainLayout.Add(userWorld)
 
-	return &MainView{
-		Configuration: configuration,
-
-		MainLayout: mainLayout,
-		UserWorld:  userWorld,
-	}
-}
-
-func (mv *MainView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) {
 	for events := range yield(world.Render()) {
 		unconsume := []e.Event{}
 		for event := range events {
@@ -48,4 +40,6 @@ func (mv *MainView) View(world *v.World, outputEvents v.EventHandler, yield v.Fn
 		// y mandar la informacion
 		// Vamos a hacer una query para obtener la informacion necesaria
 	}
+
+	return nil
 }

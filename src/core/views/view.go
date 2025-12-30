@@ -50,10 +50,11 @@ que dentro del mismo programa se muestre lo que el usuario queria, agregando la 
 type View interface {
 	// When initializing the view, it may be useful to initilize the world necesary layout and
 	// references to elements that are needed. And getting the data to use
-	Preload()
+	Preload(outputEvents EventHandler)
 
 	// View is the way to render and create a representation of the data
-	View(world *World, outputEvents EventHandler, yield FnYield)
+	// A nil return value would be that there isnt a next view
+	View(world *World, outputEvents EventHandler, yield FnYield) View
 }
 
 // This structure is capable of waking the state machine define by the sequence
