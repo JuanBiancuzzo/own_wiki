@@ -83,12 +83,17 @@ func (o *OwnWikiUserStructure) RegisterStructures() (api.ReturnRegisterStructure
 		o.Entities[entity.Name()] = entity
 	}
 
-	for entity, view := range o.Plugin.RegisterViews() {
-		if err := builder.RegisterView(reflect.New(entity), reflect.New(view)); err != nil {
-			return api.NewErrorRegisterStructure("Failed to register a view, with error: %v", err), nil
-		}
+	mainViews, otherViews := o.Plugin.RegisterViews()
+	isMain := []bool{true, false}
 
-		o.Views[view.Name()] = view
+	for i, views := range [][]shared.ViewInformation{mainViews, otherViews} {
+		for _, view := range views {
+			if err := builder.RegisterView(reflect.New(view), isMain[i]); err != nil {
+				return api.NewErrorRegisterStructure("Failed to register a view, with error: %v", err), nil
+			}
+
+			o.Views[view.Name()] = view
+		}
 	}
 
 	if system, err := builder.BuildECV(); err != nil {
@@ -104,7 +109,7 @@ func (o *OwnWikiUserStructure) InitializeImport(uploader api.UploadEntity) error
 	o.Importer = NewImporter()
 
 	process := func(file file_loader.File) {
-		for _, entity := range o.Plugin.ProcessFile(file) {
+		for _, entity := range o.Plugin.ProcessFile(shared.File(file)) {
 			uploader.Upload(entity)
 		}
 	}
