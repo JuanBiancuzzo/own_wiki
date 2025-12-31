@@ -1,6 +1,8 @@
 package components
 
 import (
+	"fmt"
+
 	s "github.com/JuanBiancuzzo/own_wiki/src/shared"
 )
 
@@ -11,6 +13,22 @@ const (
 	RT_PAPER
 	RT_WEB
 )
+
+func (rt ReferenceType) String() string {
+	switch rt {
+	case RT_BOOK:
+		return "Book"
+
+	case RT_PAPER:
+		return "Paper"
+
+	case RT_WEB:
+		return "Web"
+
+	default:
+		return fmt.Sprintf("Error %d is not a ReferenceType possible value", rt)
+	}
+}
 
 func GetReferencesComponents() []s.ComponentInformation {
 	return []s.ComponentInformation{

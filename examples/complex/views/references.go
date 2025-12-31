@@ -10,6 +10,13 @@ import (
 func GetReferencesViews() []s.ViewInformation {
 	return []s.ViewInformation{
 		s.GetViewInformation[*ReferencesView](),
+
+		// Its necessary to register them if we want to set them as a next
+		// view of ReferencesView. The other option is to make a walker of the
+		// corresponding one and looped it.
+		s.GetViewInformation[*ReferencesBookView](),
+		s.GetViewInformation[*ReferencesPaperView](),
+		s.GetViewInformation[*ReferencesWebView](),
 	}
 }
 
@@ -40,11 +47,17 @@ func (rv *ReferencesView) View(world *v.World, outputEvents v.EventHandler, yiel
 
 	case c.RT_WEB:
 		return NewReferencesWebView(rv.Reference)
-	}
 
-	return nil
+	default:
+		// Send error via outputEvent, to be handle by the system represented in the view
+		_ = rv.Reference.Type.String()
+
+		// Maybe make a view to show the error
+		return nil
+	}
 }
 
+// ---+--- Book ---+---
 type ReferencesBookView struct {
 	Reference c.ReferenceBookComponent
 }
@@ -63,6 +76,7 @@ func (rv *ReferencesBookView) View(world *v.World, outputEvents v.EventHandler, 
 	return nil
 }
 
+// ---+--- Paper ---+---
 type ReferencesPaperView struct {
 	Reference c.ReferencePaperComponent
 }
@@ -81,6 +95,7 @@ func (rv *ReferencesPaperView) View(world *v.World, outputEvents v.EventHandler,
 	return nil
 }
 
+// ---+--- Web ---+---
 type ReferencesWebView struct {
 	Reference c.ReferenceWebComponent
 }
