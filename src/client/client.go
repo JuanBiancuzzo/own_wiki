@@ -8,7 +8,9 @@ import (
 
 	"github.com/JuanBiancuzzo/own_wiki/src/core/api"
 	"github.com/JuanBiancuzzo/own_wiki/src/core/ecv"
+	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
 	"github.com/JuanBiancuzzo/own_wiki/src/core/systems/file_loader"
+	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 
 	"github.com/JuanBiancuzzo/own_wiki/src/shared"
 )
@@ -25,6 +27,8 @@ type OwnWikiUserStructure struct {
 	Views      map[string]reflect.Type
 
 	Importer *Importer
+
+	Walker *v.ViewWaker
 }
 
 func NewOwnWiki() *OwnWikiUserStructure {
@@ -36,6 +40,8 @@ func NewOwnWiki() *OwnWikiUserStructure {
 		Views:      make(map[string]reflect.Type),
 
 		Importer: nil,
+
+		Walker: nil,
 	}
 }
 
@@ -130,8 +136,24 @@ func (o *OwnWikiUserStructure) FinishImporing() error {
 }
 
 // ---+--- View Management ---+---
+func (o *OwnWikiUserStructure) InitializeView(initialView v.View, world *v.World, outputEvents v.EventHandler, request api.RequestView) error {
+	o.Walker = v.NewViewWaker(initialView, world, outputEvents, request.Request)
+	return nil
+}
 
+func (o *OwnWikiUserStructure) Prelaod(uid v.ViewId, view v.View) error {
+	o.Walker.Preload(uid, view)
+	return nil
+}
+
+func (o *OwnWikiUserStructure) WalkScene(events []e.Event) (v.SceneRepresentation, error) {
+	return o.Walker.WalkScene(events), nil
+}
+
+// ---+--- Extra functionality ---+---
 func (o *OwnWikiUserStructure) Close() {}
+
+// ---+--- Handle plugin ---+---
 
 func main() {
 	ownWiki := NewOwnWiki()

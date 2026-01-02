@@ -4,6 +4,9 @@ import (
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
+
+	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
+	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 )
 
 // Definimos un handshake para poder controlar versiones del plugin
@@ -40,6 +43,12 @@ type UploadEntity interface {
 	Upload(entity any) error
 }
 
+type RequestView interface {
+	// La dataView generada no puede haber sido preloadeada porque se
+	// actualizan los valores ocultos, por ende no son mandados
+	Request(requestedView v.View) (uid v.ViewId, dataView v.View)
+}
+
 type UserStructureData interface {
 	// ---+--- Register ---+---
 	// Carga el plugin definido por el usuario,
@@ -59,6 +68,15 @@ type UserStructureData interface {
 	FinishImporing() error
 
 	// ---+--- View Management ---+---
+	// La view initial esta llena con la información default esperada de no tener
+	// datos incluidos en esa view
+	InitializeView(initialView v.View, world *v.World, outputEvents v.EventHandler, request RequestView) error
+
+	// Avanza la escena al siguiente frame, pidiendo una nueva view si es necesario
+	WalkScene(events []e.Event) (v.SceneRepresentation, error)
+
+	// Indica que se debe precarlar la view
+	Prelaod(uid v.ViewId, view v.View) error
 }
 
 // This is the implementation of plugin.Plugin so we can serve/consume this.

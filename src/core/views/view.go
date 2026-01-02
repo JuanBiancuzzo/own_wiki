@@ -56,19 +56,3 @@ type View interface {
 	// A nil return value would be that there isnt a next view
 	View(world *World, outputEvents EventHandler, yield FnYield) View
 }
-
-// This structure is capable of waking the state machine define by the sequence
-// of views
-type ViewWaker struct {
-	view View
-}
-
-func NewViewWaker(view View) *ViewWaker {
-	return &ViewWaker{
-		view: view,
-	}
-}
-
-func (vw *ViewWaker) Preload(outputEvents EventHandler) {
-	vw.view.Preload(outputEvents)
-}
