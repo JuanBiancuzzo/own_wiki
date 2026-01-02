@@ -7,13 +7,29 @@ import (
 	"sync"
 )
 
-type Verbosity string
+type Verbosity uint
 
 const (
-	MUTE    = "mute"
-	NORMAL  = "normal"
-	VERBOSE = "verbose"
+	MUTE = iota
+	NORMAL
+	VERBOSE
 )
+
+func (v Verbosity) String() string {
+	switch v {
+	case MUTE:
+		return "Mute"
+
+	case NORMAL:
+		return "Normal"
+
+	case VERBOSE:
+		return "Verbose"
+
+	default:
+		return fmt.Sprintf("[ERROR] '%d' is not a posible Verbosity", v)
+	}
+}
 
 type loggerInfo struct {
 	Channel   chan string
