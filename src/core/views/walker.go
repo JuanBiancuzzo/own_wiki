@@ -6,91 +6,102 @@ import (
 
 // This structure is capable of waking the state machine define by the sequence
 // of views
-type ViewId uint64
+type ViewWalker interface {
+	// Se asume que para este punto la view ya fue preloadeada
+	InitializeView(view View)
 
-type FnViewRequest func(requestedView View) (uid ViewId, dataView View)
+	// Preloadea la view en el caso de no haberlo sido
+	Preload(uid ViewId, view View)
 
-type ViewWaker struct {
+	// Avanza la escena el siguiente frame
+	WalkScene(events []e.Event)
+
+	// Renderiza el frame
+	Render() SceneRepresentation
+}
+
+type LocalWalker struct {
 	World        *World
 	OutputEvents EventHandler
-	Request      FnViewRequest
+	RequestView  RequestView
 
 	EventChannel chan []e.Event
-	SceneChannel chan SceneRepresentation
+	FrameChannel chan bool
 	NextView     chan View
 
 	Preloaded map[ViewId]View
 }
 
-func NewViewWaker(view View, world *World, outputEvents EventHandler, request FnViewRequest) *ViewWaker {
-	view.Preload(outputEvents)
-
-	viewWalker := &ViewWaker{
+func NewLocalWalker(initialView View, world *World, outputEvents EventHandler, requestView RequestView) *LocalWalker {
+	walker := &LocalWalker{
 		World:        world,
 		OutputEvents: outputEvents,
-		Request:      request,
+		RequestView:  requestView,
 
 		Preloaded: make(map[ViewId]View),
 	}
 
-	viewWalker.initializeView(view)
+	initialView.Preload(outputEvents)
+	walker.InitializeView(initialView)
 
-	return viewWalker
+	return walker
 }
 
-func (vw *ViewWaker) Preload(uid ViewId, view View) {
-	if _, ok := vw.Preloaded[uid]; ok {
+func (lw *LocalWalker) InitializeView(view View) {
+	lw.EventChannel = closeAndCreate(lw.EventChannel)
+	lw.NextView = closeAndCreate(lw.NextView)
+	lw.FrameChannel = closeAndCreate(lw.FrameChannel)
+
+	var yield FnYield = func() []e.Event {
+		lw.FrameChannel <- true
+		return <-lw.EventChannel
+	}
+
+	go func(world *World, outputEvents EventHandler, yield FnYield, nextView chan View) {
+		nextView <- view.View(world, outputEvents, yield)
+	}(lw.World, lw.OutputEvents, yield, lw.NextView)
+}
+
+func (lw *LocalWalker) Preload(uid ViewId, view View) {
+	if _, ok := lw.Preloaded[uid]; ok {
 		return
 	}
 
-	view.Preload(vw.OutputEvents)
-	vw.Preloaded[uid] = view
+	view.Preload(lw.OutputEvents)
+	lw.Preloaded[uid] = view
 }
 
-func (vw *ViewWaker) WalkScene(events []e.Event) (newScene SceneRepresentation) {
-	vw.EventChannel <- events
+func (lw *LocalWalker) WalkScene(events []e.Event) {
+	lw.EventChannel <- events
 
 	keepAdvancing := true
 
 	for keepAdvancing {
 		select {
-		case newScene = <-vw.SceneChannel:
+		case <-lw.FrameChannel:
 			keepAdvancing = false
 
-		case view := <-vw.NextView:
-			uid, dataView := vw.Request(view)
-			if preloadedView, ok := vw.Preloaded[uid]; ok {
+		case view := <-lw.NextView:
+			uid, dataView := lw.RequestView.Request(view)
+			if preloadedView, ok := lw.Preloaded[uid]; ok {
 				dataView = preloadedView
 
 				// Todo lo precargado se elimina ya que no fue elegido
-				for vi := range vw.Preloaded {
-					delete(vw.Preloaded, vi)
+				for vi := range lw.Preloaded {
+					delete(lw.Preloaded, vi)
 				}
 
 			} else {
-				dataView.Preload(vw.OutputEvents)
+				dataView.Preload(lw.OutputEvents)
 			}
 
-			vw.initializeView(dataView)
+			lw.InitializeView(dataView)
 		}
 	}
-
-	return newScene
 }
 
-func (vw *ViewWaker) initializeView(view View) {
-	vw.EventChannel = closeAndCreate(vw.EventChannel)
-	vw.NextView = closeAndCreate(vw.NextView)
-	vw.SceneChannel = closeAndCreate(vw.SceneChannel)
-
-	var yield FnYield = func(scene SceneRepresentation) []e.Event {
-		vw.SceneChannel <- scene
-		return <-vw.EventChannel
-	}
-
-	go func(world *World, outputEvents EventHandler, yield FnYield, nextView chan View) {
-		nextView <- view.View(world, outputEvents, yield)
-	}(vw.World, vw.OutputEvents, yield, vw.NextView)
+func (lw *LocalWalker) Render() SceneRepresentation {
+	return lw.World.Render()
 }
 
 func closeAndCreate[T any](channel chan T) chan T {

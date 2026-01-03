@@ -4,40 +4,26 @@ import (
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
 )
 
-type World struct {
-	MainCamera Camera
+type Renderable interface {
+	Render() SceneRepresentation
 }
-
-func NewWorld() *World {
-	return &World{}
-}
-
-func (w *World) Clear() {}
-
-func (w *World) Render() SceneRepresentation {
-	return nil
-}
-
-type Camera struct {
-	ScreenLayout *Layout
-}
-
-type Layout struct{}
-
-func NewLayout() *Layout {
-	return &Layout{}
-}
-
-func (l *Layout) Add(element any) {}
 
 type EventHandler interface {
 	// This method is to be capable to send modifications to the system in a view
 	PushEvent(event e.Event) error
 }
 
+type ViewId uint64
+
+type RequestView interface {
+	// La dataView generada no puede haber sido preloadeada porque se
+	// actualizan los valores ocultos, por ende no son mandados
+	Request(requestedView View) (uid ViewId, dataView View)
+}
+
 type SceneRepresentation any
 
-type FnYield func(SceneRepresentation) []e.Event
+type FnYield func() []e.Event
 
 /*
 Lo que busco es crear una interfaz de una view, esta deberia recibir un "mundo" el cual

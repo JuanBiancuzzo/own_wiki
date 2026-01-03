@@ -28,7 +28,7 @@ type OwnWikiUserStructure struct {
 
 	Importer *Importer
 
-	Walker *v.ViewWaker
+	Walker v.ViewWalker
 }
 
 func NewOwnWiki() *OwnWikiUserStructure {
@@ -136,8 +136,8 @@ func (o *OwnWikiUserStructure) FinishImporing() error {
 }
 
 // ---+--- View Management ---+---
-func (o *OwnWikiUserStructure) InitializeView(initialView v.View, world *v.World, outputEvents v.EventHandler, request api.RequestView) error {
-	o.Walker = v.NewViewWaker(initialView, world, outputEvents, request.Request)
+func (o *OwnWikiUserStructure) InitializeView(initialView v.View, world *v.World, outputEvents v.EventHandler, request v.RequestView) error {
+	o.Walker = v.NewLocalWalker(initialView, world, outputEvents, request)
 	return nil
 }
 
@@ -146,8 +146,13 @@ func (o *OwnWikiUserStructure) Prelaod(uid v.ViewId, view v.View) error {
 	return nil
 }
 
-func (o *OwnWikiUserStructure) WalkScene(events []e.Event) (v.SceneRepresentation, error) {
-	return o.Walker.WalkScene(events), nil
+func (o *OwnWikiUserStructure) WalkScene(events []e.Event) error {
+	o.Walker.WalkScene(events)
+	return nil
+}
+
+func (o *OwnWikiUserStructure) RenderScene() (v.SceneRepresentation, error) {
+	return o.Walker.Render(), nil
 }
 
 // ---+--- Extra functionality ---+---

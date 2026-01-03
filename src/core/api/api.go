@@ -43,12 +43,6 @@ type UploadEntity interface {
 	Upload(entity any) error
 }
 
-type RequestView interface {
-	// La dataView generada no puede haber sido preloadeada porque se
-	// actualizan los valores ocultos, por ende no son mandados
-	Request(requestedView v.View) (uid v.ViewId, dataView v.View)
-}
-
 type UserStructureData interface {
 	// ---+--- Register ---+---
 	// Carga el plugin definido por el usuario,
@@ -70,13 +64,15 @@ type UserStructureData interface {
 	// ---+--- View Management ---+---
 	// La view initial esta llena con la información default esperada de no tener
 	// datos incluidos en esa view
-	InitializeView(initialView v.View, world *v.World, outputEvents v.EventHandler, request RequestView) error
+	InitializeView(initialView v.View, world *v.World, outputEvents v.EventHandler, request v.RequestView) error
 
 	// Avanza la escena al siguiente frame, pidiendo una nueva view si es necesario
-	WalkScene(events []e.Event) (v.SceneRepresentation, error)
+	WalkScene(events []e.Event) error
 
 	// Indica que se debe precarlar la view
 	Prelaod(uid v.ViewId, view v.View) error
+
+	RenderScene() (v.SceneRepresentation, error)
 }
 
 // This is the implementation of plugin.Plugin so we can serve/consume this.
