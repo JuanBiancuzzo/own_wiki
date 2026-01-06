@@ -44,12 +44,8 @@ type UploadEntity interface {
 	Upload(entity any) error
 }
 
-type Entity any
-
 type OWData interface {
-	QueryEntity(q.QueryRequest) Entity
-
-	QueryAll(q.QueryRequest) []Entity
+	Query(q.QueryRequest) any
 
 	SendEvent(e.Event)
 }

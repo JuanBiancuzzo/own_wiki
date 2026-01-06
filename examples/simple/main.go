@@ -2,6 +2,7 @@ package plugin
 
 import (
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
+	q "github.com/JuanBiancuzzo/own_wiki/src/core/query"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 	s "github.com/JuanBiancuzzo/own_wiki/src/shared"
 )
@@ -26,70 +27,83 @@ type ReviewComponent struct {
 }
 
 // ---+--- Entities ---+---
-// Conjunto de components que definen la busqueda
 type BookEntity struct {
 	Book     BookComponent
-	Chapters []ChapterComponent // Si esta vacio se toma todos los casos que acompañen el libro
+	Chapters []ChapterComponent
 }
 
 type ReviewEntity struct {
 	Book     BookComponent
-	Chapters s.Limit[ChapterComponent]
+	Chapters q.Limit[ChapterComponent]
 	Review   ReviewComponent
 }
 
 // ---+--- Views ---+---
 
-// Le calculamos el uid del componente, y lo podemos rellenar
-// con la informacion que tenemos
 type BookView struct {
-	// Describimos los componentes que necesitamos como antes definiamos la entidad
-	Book ReviewEntity
+	Review ReviewEntity
 }
 
-func (bv *BookView) Preload(outputEvents v.EventHandler) {}
+func (bv *BookView) Preload(data s.OWData) {
+	if book, ok := data.Query(bv.Review).(ReviewEntity); ok {
+		bv.Review = book
 
-// Lo puedo hacer como parte de mi cliente
-func (bv *BookView) View(world *v.World, outputEvents v.EventHandler, requestView v.RequestView, yield v.FnYield) v.View {
+	} else {
+		data.SendEvent("Failed to get data for book review")
+	}
+}
+
+func (bv *BookView) View(world *v.World, data s.OWData, yield v.FnYield) v.View[s.OWData] {
 	return nil
 }
 
 // En el caso de hacer una referencia a componentes, y/u operaciones a entidades
 // se toma como una nueva entidad anonima
 type FilterLibraryView struct {
-	BookReviews s.Limit[ReviewComponent]
+	BookReviews q.Limit[ReviewComponent] // Esto se coincidera una entitdad anonima
 }
 
-func (fv *FilterLibraryView) Preload(outputEvents v.EventHandler) {}
+func (fv *FilterLibraryView) Preload(data s.OWData) {
+	if books, ok := data.Query(fv.BookReviews).(q.Limit[ReviewComponent]); ok {
+		fv.BookReviews = books
 
-func (fv *FilterLibraryView) View(world *v.World, outputEvents v.EventHandler, requestView v.RequestView, yield v.FnYield) v.View {
+	} else {
+		data.SendEvent("Failed to get data for book filter review")
+	}
+}
+
+func (fv *FilterLibraryView) View(world *v.World, data s.OWData, yield v.FnYield) v.View[s.OWData] {
 	return nil
 }
 
 // Aca el usuario no lo puede llenar para filtrar como dije antes
 type LibraryView struct {
-	Books s.Iterator[BookComponent]
+	Books q.Iterator[BookComponent]
 
-	reviewView v.View
+	reviewView v.View[s.OWData]
 }
 
-func (lv *LibraryView) Preload(outputEvents v.EventHandler) {
-	// Aca podrias ordenar, tendrias q filtrar para el between
+func (lv *LibraryView) Preload(data s.OWData) {
+	if books, ok := data.Query(lv.Books).(q.Iterator[BookComponent]); ok {
+		lv.Books = books
+
+	} else {
+		data.SendEvent("Failed to get data for book filter review")
+	}
 
 	// Por otro lado se podria ir precargando imagenes, o buildeando cosas que fueran necesarias a lo largo de la view
 	// Esto implica que deberia haber un evento que defina el inicio de la precarga, ya que sino, se ejecutara este e
 	// inmediatamente despues la view
 
-	lv.reviewView = &FilterLibraryView{s.NewLimit([]ReviewComponent{}, 5)}
-	// mandar evento preload esta view
-	// outputEvents.PushEvent(e.PreloadView(lv.reviewView))
+	lv.reviewView = &FilterLibraryView{q.NewLimit([]ReviewComponent{}, 5)}
+	lv.reviewView.Preload(data)
 }
 
-func (lv *LibraryView) View(world *v.World, outputEvents v.EventHandler, requestView v.RequestView, yield v.FnYield) v.View {
+func (lv *LibraryView) View(world *v.World, data s.OWData, yield v.FnYield) v.View[s.OWData] {
 
 	// Deberia chequear si fue preloadeada, pero como hacemos para que este nuevo walker tenga
 	// registro de que fue preloadeado
-	generalReviews := v.NewLocalWalker(lv.reviewView, world, outputEvents, requestView)
+	generalReviews := v.NewLocalWalker(lv.reviewView, world, data)
 
 	// Esto lo implementamos como un request a la api del sistema
 	_ = lv.Books.Request(20)
@@ -98,7 +112,7 @@ func (lv *LibraryView) View(world *v.World, outputEvents v.EventHandler, request
 	generalReviews.WalkScene([]e.Event{})
 
 	return &LibraryView{
-		Books: s.NewIterator([]BookComponent{
+		Books: q.NewIterator([]BookComponent{
 			// Vacio sería dejarlo vacio
 
 			// Where condicion simple
@@ -144,7 +158,7 @@ func (*UserDefineStructure) RegisterViews() (mainViews []s.ViewInformation, othe
 	}...)
 	otherViews = append(otherViews, []s.ViewInformation{
 		s.GetViewInformation[*BookView](),
-		// s.GetViewInformation[*FilterLibraryView](),
+		s.GetViewInformation[*FilterLibraryView](),
 	}...)
 	return mainViews, otherViews
 }

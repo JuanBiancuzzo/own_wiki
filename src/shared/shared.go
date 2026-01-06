@@ -3,6 +3,7 @@ package shared
 import (
 	"reflect"
 
+	api "github.com/JuanBiancuzzo/own_wiki/src/core/api"
 	"github.com/JuanBiancuzzo/own_wiki/src/core/systems/file_loader"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 )
@@ -25,37 +26,14 @@ type Entity any
 
 type ViewInformation reflect.Type
 
-func GetViewInformation[V v.View]() ViewInformation {
+type OWData api.OWData
+
+func GetViewInformation[V v.View[OWData]]() ViewInformation {
 	var view V
 	return reflect.TypeOf(view)
 }
 
 type Option[T any] struct{}
-
-type Iterator[T any] struct{}
-
-func NewIterator[T any](elements []T) Iterator[T] {
-	return Iterator[T]{}
-}
-
-func (r Iterator[T]) Request(amount int) []T {
-	return []T{}
-}
-
-type Limit[T any] struct {
-	request []T
-}
-
-func NewLimit[T any](elements []T, amount int) Limit[T] {
-	iterator := NewIterator(elements)
-	return Limit[T]{
-		request: iterator.Request(amount),
-	}
-}
-
-func (l Limit[T]) Get() []T {
-	return l.request
-}
 
 type File file_loader.File
 
