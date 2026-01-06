@@ -9,7 +9,10 @@ import (
 var UserConfig UserConfiguration
 
 type UserConfiguration struct {
-	LoggerDir string `json:"LoggerPath"`
+}
+
+func LoadDefaultUserConfiguration() {
+	UserConfig = UserConfiguration{}
 }
 
 func LoadUserConfiguration(userConfigurationPath string) error {

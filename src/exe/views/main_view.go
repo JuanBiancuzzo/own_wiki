@@ -3,6 +3,7 @@ package views
 import (
 	"github.com/JuanBiancuzzo/own_wiki/src/core/ecv"
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
+	c "github.com/JuanBiancuzzo/own_wiki/src/core/systems/configuration"
 	log "github.com/JuanBiancuzzo/own_wiki/src/core/systems/logging"
 	u "github.com/JuanBiancuzzo/own_wiki/src/core/user"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
@@ -34,6 +35,12 @@ func (mv *MainView) View(world *v.World, yield v.FnYield) {
 
 	userDirectory := ""
 
+	if err := c.LoadUserConfiguration(userDirectory); err != nil {
+		log.Error("Failed to load user configuration, with error: %v", err)
+
+	} else {
+		c.LoadDefaultUserConfiguration()
+	}
 	// Registrar estructura dadas por el usuario, y genera las views
 	userStructureData, err := u.GetUserDefineData(userDirectory)
 	if err != nil {

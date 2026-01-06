@@ -10,6 +10,7 @@ var SystemConfig SystemConfiguration
 
 type SystemConfiguration struct {
 	TargetFrameRate uint64 `json:"TargetFPS"`
+	LoggerDir       string `json:"LoggerPath"`
 }
 
 func LoadSystemConfiguration(userConfigurationPath string) error {

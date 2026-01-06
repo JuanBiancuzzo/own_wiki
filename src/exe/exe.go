@@ -20,7 +20,6 @@ import (
 )
 
 // Cambiarlo a argumento
-const USER_CONFIG_PATH = ""
 const SYSTEM_CONFIG_PATH = ""
 
 //go:generate go run generate.go
@@ -40,16 +39,12 @@ func HandleSigTerm(eventQueue chan e.Event) chan os.Signal {
 }
 
 func main() {
-	if err := c.LoadUserConfiguration(USER_CONFIG_PATH); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load user configuration")
-		return
-	}
 	if err := c.LoadSystemConfiguration(SYSTEM_CONFIG_PATH); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load user configuration")
 		return
 	}
 
-	if err := log.CreateLogger(c.UserConfig.LoggerDir, log.VERBOSE); err != nil {
+	if err := log.CreateLogger(c.SystemConfig.LoggerDir, log.VERBOSE); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load user configuration")
 		return
 	}
