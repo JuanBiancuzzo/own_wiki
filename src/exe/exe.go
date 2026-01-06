@@ -21,6 +21,7 @@ import (
 
 // Cambiarlo a argumento
 const USER_CONFIG_PATH = ""
+const SYSTEM_CONFIG_PATH = ""
 
 //go:generate go run generate.go
 
@@ -40,6 +41,10 @@ func HandleSigTerm(eventQueue chan e.Event) chan os.Signal {
 
 func main() {
 	if err := c.LoadUserConfiguration(USER_CONFIG_PATH); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load user configuration")
+		return
+	}
+	if err := c.LoadSystemConfiguration(SYSTEM_CONFIG_PATH); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load user configuration")
 		return
 	}
@@ -70,7 +75,7 @@ func main() {
 
 	go func() {
 		// Esto fuerza a que cada iteración como mínimo dure 1/FrameRate
-		ticker := time.NewTicker(time.Duration(1000/c.UserConfig.TargetFrameRate) * time.Millisecond)
+		ticker := time.NewTicker(time.Duration(1000/c.SystemConfig.TargetFrameRate) * time.Millisecond)
 
 		acumulatedEvents := []e.Event{}
 		keepReading := true

@@ -9,8 +9,6 @@ import (
 var UserConfig UserConfiguration
 
 type UserConfiguration struct {
-	TargetFrameRate uint64 `json:"TargetFPS"`
-
 	LoggerDir string `json:"LoggerPath"`
 }
 
