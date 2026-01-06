@@ -10,27 +10,30 @@ import (
 )
 
 type UserPluginWalker struct {
-	plugin       api.UserStructureData
-	outputEvents v.EventHandler
-	request      v.RequestView
+	plugin api.UserStructureData
+	data   api.OWData
 }
 
-func (uw *UserPluginWalker) InitializeView(view v.View, world *v.World) {
-	if err := uw.plugin.InitializeView(view, world, uw.outputEvents, uw.request); err != nil {
+func NewUserPluginWalker(plugin api.UserStructureData, data api.OWData) *UserPluginWalker {
+	return &UserPluginWalker{
+		plugin: plugin,
+		data:   data,
+	}
+}
+
+func (uw *UserPluginWalker) InitializeView(view v.View[api.OWData]) {
+	world := v.NewWorld(v.WorldConfiguration(0))
+	if err := uw.plugin.InitializeView(view, world, uw.data); err != nil {
 		log.Error("Failed to initialize view '%v', with error: %v", view, err)
 	}
 }
 
-func (uw *UserPluginWalker) Preload(uid v.ViewId, view v.View) {
-	if err := uw.plugin.Prelaod(uid, view); err != nil {
-		log.Error("Failed to preload the view '%v' of uid: %d, with error: %v", view, uid, err)
-	}
-}
-
-func (uw *UserPluginWalker) WalkScene(events []e.Event) {
+func (uw *UserPluginWalker) WalkScene(events []e.Event) bool {
 	if err := uw.plugin.WalkScene(events); err != nil {
 		log.Error("Failed to walk the scene in the client, with error: %v", err)
+		return false
 	}
+	return true
 }
 
 func (uw *UserPluginWalker) Render() v.SceneRepresentation {

@@ -11,7 +11,7 @@ type ViewWalker[Data any] interface {
 	InitializeView(view View[Data])
 
 	// Avanza la escena el siguiente frame
-	WalkScene(events []e.Event)
+	WalkScene(events []e.Event) bool
 
 	// Renderiza el frame
 	Render() SceneRepresentation
@@ -52,20 +52,22 @@ func (lw *LocalWalker[Data]) InitializeView(view View[Data]) {
 	}(lw.World, lw.Data, yield, lw.NextView)
 }
 
-func (lw *LocalWalker[Data]) WalkScene(events []e.Event) {
+func (lw *LocalWalker[Data]) WalkScene(events []e.Event) bool {
 	lw.EventChannel <- events
-
-	keepAdvancing := true
-
-	for keepAdvancing {
+	for {
 		select {
 		case <-lw.FrameChannel:
-			keepAdvancing = false
+			return true
 
 		case view := <-lw.NextView:
+			if view == nil {
+				return false
+			}
+
 			lw.InitializeView(view)
 		}
 	}
+
 }
 
 func (lw *LocalWalker[Data]) Render() SceneRepresentation {

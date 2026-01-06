@@ -1,19 +1,20 @@
 package views
 
 import (
+	"github.com/JuanBiancuzzo/own_wiki/src/core/api"
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 )
 
 type MainView struct {
-	userView v.ViewWalker
+	UserView v.ViewWalker[api.OWData]
 }
 
-func (mv *MainView) Preload(outputEvents v.EventHandler) {
+func (mv *MainView) Preload(data api.OWData) {
 	// Se deberia preloadear cosas de la configuracion
 }
 
-func (mv *MainView) View(world *v.World, outputEvents v.EventHandler, requestView v.RequestView, yield v.FnYield) v.View {
+func (mv *MainView) View(world *v.World, data api.OWData, yield v.FnYield) v.View[api.OWData] {
 	world.Clear()
 
 	mainLayout := world.MainCamera.ScreenLayout
@@ -23,7 +24,7 @@ func (mv *MainView) View(world *v.World, outputEvents v.EventHandler, requestVie
 
 	// Idea, asociar un world a un walker, de esa forma podemos hacer
 	// que directamente se renderise el world, llama al walker
-	userScene := v.NewScene(mv.userView)
+	userScene := v.NewScene(mv.UserView)
 	mainLayout.Add(userScene)
 
 	for events := range yield() {
@@ -35,7 +36,7 @@ func (mv *MainView) View(world *v.World, outputEvents v.EventHandler, requestVie
 			unconsume = append(unconsume, event)
 		}
 
-		mv.userView.WalkScene(unconsume)
+		mv.UserView.WalkScene(unconsume)
 	}
 
 	return nil
