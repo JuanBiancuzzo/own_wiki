@@ -28,7 +28,7 @@ type OwnWikiUserStructure struct {
 
 	Importer *Importer
 
-	Walker v.ViewWalker
+	Walker v.ViewWalker[api.OWData]
 }
 
 func NewOwnWiki() *OwnWikiUserStructure {
@@ -136,13 +136,8 @@ func (o *OwnWikiUserStructure) FinishImporing() error {
 }
 
 // ---+--- View Management ---+---
-func (o *OwnWikiUserStructure) InitializeView(initialView v.View, world *v.World, outputEvents v.EventHandler, request v.RequestView) error {
-	o.Walker = v.NewLocalWalker(initialView, world, outputEvents, request)
-	return nil
-}
-
-func (o *OwnWikiUserStructure) Prelaod(uid v.ViewId, view v.View) error {
-	o.Walker.Preload(uid, view)
+func (o *OwnWikiUserStructure) InitializeView(initialView v.View[api.OWData], world *v.World, data api.OWData) error {
+	o.Walker = v.NewLocalWalker(initialView, world, data)
 	return nil
 }
 

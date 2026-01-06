@@ -1,15 +1,15 @@
 package views
 
-type Scene struct {
-	Walker ViewWalker
+type Scene[Data any] struct {
+	Walker ViewWalker[Data]
 }
 
-func NewScene(walker ViewWalker) *Scene {
-	return &Scene{
+func NewScene[Data any](walker ViewWalker[Data]) *Scene[Data] {
+	return &Scene[Data]{
 		Walker: walker,
 	}
 }
 
-func (s *Scene) Render() SceneRepresentation {
+func (s *Scene[_]) Render() SceneRepresentation {
 	return s.Walker.Render()
 }

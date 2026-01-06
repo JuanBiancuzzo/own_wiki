@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 	s "github.com/JuanBiancuzzo/own_wiki/src/shared"
 )
@@ -49,7 +50,7 @@ type BookView struct {
 func (bv *BookView) Preload(outputEvents v.EventHandler) {}
 
 // Lo puedo hacer como parte de mi cliente
-func (bv *BookView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
+func (bv *BookView) View(world *v.World, outputEvents v.EventHandler, requestView v.RequestView, yield v.FnYield) v.View {
 	return nil
 }
 
@@ -61,7 +62,7 @@ type FilterLibraryView struct {
 
 func (fv *FilterLibraryView) Preload(outputEvents v.EventHandler) {}
 
-func (fv *FilterLibraryView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
+func (fv *FilterLibraryView) View(world *v.World, outputEvents v.EventHandler, requestView v.RequestView, yield v.FnYield) v.View {
 	return nil
 }
 
@@ -69,7 +70,7 @@ func (fv *FilterLibraryView) View(world *v.World, outputEvents v.EventHandler, y
 type LibraryView struct {
 	Books s.Iterator[BookComponent]
 
-	generalReviews *v.ViewWaker
+	reviewView v.View
 }
 
 func (lv *LibraryView) Preload(outputEvents v.EventHandler) {
@@ -79,23 +80,26 @@ func (lv *LibraryView) Preload(outputEvents v.EventHandler) {
 	// Esto implica que deberia haber un evento que defina el inicio de la precarga, ya que sino, se ejecutara este e
 	// inmediatamente despues la view
 
-	// Preload de FilterLibraryView con n elementos limitados, y de esa forma tenerlos
-	reviewsView := &FilterLibraryView{s.NewLimit([]ReviewComponent{}, 5)}
-	reviewsView.Preload(outputEvents)
-
-	lv.generalReviews = v.NewViewWaker(reviewsView)
+	lv.reviewView = &FilterLibraryView{s.NewLimit([]ReviewComponent{}, 5)}
+	// mandar evento preload esta view
+	// outputEvents.PushEvent(e.PreloadView(lv.reviewView))
 }
 
-func (lv *LibraryView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
+func (lv *LibraryView) View(world *v.World, outputEvents v.EventHandler, requestView v.RequestView, yield v.FnYield) v.View {
+
+	// Deberia chequear si fue preloadeada, pero como hacemos para que este nuevo walker tenga
+	// registro de que fue preloadeado
+	generalReviews := v.NewLocalWalker(lv.reviewView, world, outputEvents, requestView)
 
 	// Esto lo implementamos como un request a la api del sistema
 	_ = lv.Books.Request(20)
 
 	// Al final se quiere mostrar la view, FilterLibraryView
+	generalReviews.WalkScene([]e.Event{})
 
 	return &LibraryView{
 		Books: s.NewIterator([]BookComponent{
-			// All seria vacio
+			// Vacio sería dejarlo vacio
 
 			// Where condicion simple
 			{Author: "Jose"},
@@ -111,6 +115,7 @@ func (lv *LibraryView) View(world *v.World, outputEvents v.EventHandler, yield v
 			{Author: "%son"},
 
 			// Como manejar un rango, y como manejar si quiero recibir todos pero de a poco?
+			//  -> Con s.Limit y s.Iterator
 		}),
 	}
 }

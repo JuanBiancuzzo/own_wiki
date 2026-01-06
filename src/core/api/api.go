@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
+	q "github.com/JuanBiancuzzo/own_wiki/src/core/query"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 )
 
@@ -43,6 +44,16 @@ type UploadEntity interface {
 	Upload(entity any) error
 }
 
+type Entity any
+
+type OWData interface {
+	QueryEntity(q.QueryRequest) Entity
+
+	QueryAll(q.QueryRequest) []Entity
+
+	SendEvent(e.Event)
+}
+
 type UserStructureData interface {
 	// ---+--- Register ---+---
 	// Carga el plugin definido por el usuario,
@@ -64,14 +75,12 @@ type UserStructureData interface {
 	// ---+--- View Management ---+---
 	// La view initial esta llena con la información default esperada de no tener
 	// datos incluidos en esa view
-	InitializeView(initialView v.View, world *v.World, outputEvents v.EventHandler, request v.RequestView) error
+	InitializeView(initialView v.View[OWData], world *v.World, data OWData) error
 
 	// Avanza la escena al siguiente frame, pidiendo una nueva view si es necesario
 	WalkScene(events []e.Event) error
 
-	// Indica que se debe precarlar la view
-	Prelaod(uid v.ViewId, view v.View) error
-
+	// Renderiza el mundo definido por el usuario
 	RenderScene() (v.SceneRepresentation, error)
 }
 

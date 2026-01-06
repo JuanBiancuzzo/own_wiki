@@ -13,7 +13,7 @@ func (mv *MainView) Preload(outputEvents v.EventHandler) {
 	// Se deberia preloadear cosas de la configuracion
 }
 
-func (mv *MainView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
+func (mv *MainView) View(world *v.World, outputEvents v.EventHandler, requestView v.RequestView, yield v.FnYield) v.View {
 	world.Clear()
 
 	mainLayout := world.MainCamera.ScreenLayout
