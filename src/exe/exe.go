@@ -9,17 +9,19 @@ import (
 
 	_ "embed"
 
-	// p "github.com/JuanBiancuzzo/own_wiki/src/exe/platforms"
+	ps "github.com/JuanBiancuzzo/own_wiki/src/exe/platforms"
 	vs "github.com/JuanBiancuzzo/own_wiki/src/exe/views"
 
-	"github.com/JuanBiancuzzo/own_wiki/src/core/api"
-	"github.com/JuanBiancuzzo/own_wiki/src/core/ecv"
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
-	u "github.com/JuanBiancuzzo/own_wiki/src/core/user"
+	p "github.com/JuanBiancuzzo/own_wiki/src/core/platform"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 
+	c "github.com/JuanBiancuzzo/own_wiki/src/core/systems/configuration"
 	log "github.com/JuanBiancuzzo/own_wiki/src/core/systems/logging"
 )
+
+// Cambiarlo a argumento
+const USER_CONFIG_PATH = ""
 
 func HandleSigTerm(eventQueue chan e.Event) chan os.Signal {
 	signals := make(chan os.Signal, 1)
@@ -40,18 +42,15 @@ func main() {
 	sigTermChannel := HandleSigTerm(eventQueue)
 	defer close(sigTermChannel)
 
-	// Registrar estructura dadas por el usuario, y genera las views
-	userStructureData, err := u.GetUserDefineData(config.UserDefineDataDirectory)
-	if err != nil {
-		log.Error("Failed to get user define data plugin, with error: '%v'", err)
+	if err := c.LoadUserConfiguration(USER_CONFIG_PATH); err != nil {
+		log.Error("Failed to load user configuration")
 		return
 	}
-	defer userStructureData.Close()
 
-	var ecv *ecv.ECV
-	if ecv, err = userStructureData.RegisterStructures(); err != nil {
-		log.Error("Failed to get components from user, with error: '%v'", err)
-		return
+	var platform p.Platform
+	switch "Terminal" {
+	case "Terminal":
+		platform = ps.NewTerminalPlatform()
 	}
 
 	var wg sync.WaitGroup
@@ -62,13 +61,12 @@ func main() {
 		log.Debug("Platform finished to handle input")
 	}()
 
-	wg.Add(1)
 	eventsPerFrame := make(chan []e.Event)
 	defer close(eventsPerFrame)
 
 	go func() {
 		// Esto fuerza a que cada iteración como mínimo dure 1/FrameRate
-		ticker := time.NewTicker(time.Duration(1000/config.TargetFrameRate) * time.Millisecond)
+		ticker := time.NewTicker(time.Duration(1000/c.UserConfig.TargetFrameRate) * time.Millisecond)
 
 		acumulatedEvents := []e.Event{}
 		keepReading := true
@@ -89,25 +87,15 @@ func main() {
 				acumulatedEvents = []e.Event{}
 			}
 		}
-
 		close(eventQueue)
-		wg.Done()
 		log.Debug("Events handler for scene close")
 	}()
 
-	mainView := &vs.MainView{
-		UserView: vs.NewUserPluginWalker(userStructureData.Plugin, ecv),
-	}
-	mainWalker := v.NewLocalWalker[api.OWData](mainView, v.NewWorld(v.WorldConfiguration(0)), ecv)
-
-	for events := range eventsPerFrame {
-		if !mainWalker.WalkScene(events) {
-			break
-		}
-
-		scene := mainWalker.Render()
-		platform.Render(scene)
+	var yield v.FnYield = func() <-chan []e.Event {
+		return eventsPerFrame
 	}
 
-	log.Debug("Loop finished")
+	mainView := vs.NewMainView()
+	mainView.View(v.NewWorld(v.WorldConfiguration(0)), yield)
+	log.Info("Finish the main loop, closing app")
 }

@@ -1,20 +1,20 @@
 package views
 
 import (
-	"github.com/JuanBiancuzzo/own_wiki/src/core/api"
+	"github.com/JuanBiancuzzo/own_wiki/src/core/ecv"
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
+	log "github.com/JuanBiancuzzo/own_wiki/src/core/systems/logging"
+	u "github.com/JuanBiancuzzo/own_wiki/src/core/user"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 )
 
-type MainView struct {
-	UserView v.ViewWalker[api.OWData]
+type MainView struct{}
+
+func NewMainView() *MainView {
+	return &MainView{}
 }
 
-func (mv *MainView) Preload(data api.OWData) {
-	// Se deberia preloadear cosas de la configuracion
-}
-
-func (mv *MainView) View(world *v.World, data api.OWData, yield v.FnYield) v.View[api.OWData] {
+func (mv *MainView) View(world *v.World, yield v.FnYield) {
 	world.Clear()
 
 	mainLayout := world.MainCamera.ScreenLayout
@@ -22,9 +22,36 @@ func (mv *MainView) View(world *v.World, data api.OWData, yield v.FnYield) v.Vie
 	// Usariamos la informacion de configuracion para mostrar informacion
 	// como el nombre del prjecto, configuracion, path, archivos, etc
 
-	// Idea, asociar un world a un walker, de esa forma podemos hacer
-	// que directamente se renderise el world, llama al walker
-	userScene := v.NewScene(mv.UserView)
+	for events := range yield() {
+		for event := range events {
+			// Ver los eventos y establecer que hacer
+			_ = event
+		}
+	}
+
+	// -----------------------------------
+	// Obtenemos la información del usuario para buscar el plugin
+
+	userDirectory := ""
+
+	// Registrar estructura dadas por el usuario, y genera las views
+	userStructureData, err := u.GetUserDefineData(userDirectory)
+	if err != nil {
+		log.Error("Failed to get user define data plugin, with error: '%v'", err)
+		// Volvemos a preguntar que proyecto quiere porque no esta bien el proyecto que eligió
+	}
+	defer userStructureData.Close()
+
+	var ecv *ecv.ECV
+	if ecv, err = userStructureData.RegisterStructures(); err != nil {
+		log.Error("Failed to get components from user, with error: '%v'", err)
+		// Notificamos que el proyecto no puede ser cargado, permitirle hacer un reload del proyecto
+		// por si ya lo modifico para que funcione
+	}
+
+	userWalker := NewUserPluginWalker(userStructureData.Plugin, ecv)
+
+	userScene := v.NewScene(userWalker)
 	mainLayout.Add(userScene)
 
 	for events := range yield() {
@@ -36,8 +63,6 @@ func (mv *MainView) View(world *v.World, data api.OWData, yield v.FnYield) v.Vie
 			unconsume = append(unconsume, event)
 		}
 
-		mv.UserView.WalkScene(unconsume)
+		userWalker.WalkScene(unconsume)
 	}
-
-	return nil
 }
