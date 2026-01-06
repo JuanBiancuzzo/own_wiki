@@ -1,13 +1,17 @@
+//go:build terminal
+// +build terminal
+
 package platforms
 
 import (
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
+	p "github.com/JuanBiancuzzo/own_wiki/src/core/platform"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 )
 
 type TerminalPlatform struct{}
 
-func NewTerminalPlatform() *TerminalPlatform {
+func GetPlatformImplementation() p.Platform {
 	return &TerminalPlatform{}
 }
 

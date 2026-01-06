@@ -1,13 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
-
-	_ "embed"
 
 	ps "github.com/JuanBiancuzzo/own_wiki/src/exe/platforms"
 	vs "github.com/JuanBiancuzzo/own_wiki/src/exe/views"
@@ -22,6 +21,8 @@ import (
 
 // Cambiarlo a argumento
 const USER_CONFIG_PATH = ""
+
+//go:generate go run generate.go
 
 func HandleSigTerm(eventQueue chan e.Event) chan os.Signal {
 	signals := make(chan os.Signal, 1)
@@ -38,20 +39,23 @@ func HandleSigTerm(eventQueue chan e.Event) chan os.Signal {
 }
 
 func main() {
-	eventQueue := make(chan e.Event)
-	sigTermChannel := HandleSigTerm(eventQueue)
-	defer close(sigTermChannel)
-
 	if err := c.LoadUserConfiguration(USER_CONFIG_PATH); err != nil {
-		log.Error("Failed to load user configuration")
+		fmt.Fprintf(os.Stderr, "Failed to load user configuration")
 		return
 	}
 
-	var platform p.Platform
-	switch "Terminal" {
-	case "Terminal":
-		platform = ps.NewTerminalPlatform()
+	if err := log.CreateLogger(c.UserConfig.LoggerDir, log.VERBOSE); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load user configuration")
+		return
 	}
+	defer log.Close()
+
+	var platform p.Platform = ps.GetPlatformImplementation()
+	platform.Close()
+
+	eventQueue := make(chan e.Event)
+	sigTermChannel := HandleSigTerm(eventQueue)
+	defer close(sigTermChannel)
 
 	var wg sync.WaitGroup
 	wg.Add(1)

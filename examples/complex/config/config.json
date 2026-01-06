@@ -1,3 +1,4 @@
 {
-    "TargetFPS": 60
+    "TargetFPS": 60,
+    "LoggerPath": "./logs"
 }
