@@ -10,7 +10,7 @@ type Renderable interface {
 
 type SceneRepresentation any
 
-type FnYield func() []e.Event
+type FnYield func() <-chan []e.Event
 
 /*
 Lo que busco es crear una interfaz de una view, esta deberia recibir un "mundo" el cual

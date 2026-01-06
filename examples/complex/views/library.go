@@ -4,6 +4,7 @@ import (
 	c "github.com/JuanBiancuzzo/own_wiki/examples/complex/components"
 	e "github.com/JuanBiancuzzo/own_wiki/examples/complex/entities"
 
+	q "github.com/JuanBiancuzzo/own_wiki/src/core/query"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 	s "github.com/JuanBiancuzzo/own_wiki/src/shared"
 )
@@ -26,25 +27,39 @@ func NewBookView(book c.BookComponent) *BookView {
 	}
 }
 
-func (bv *BookView) Preload(outputEvents v.EventHandler) {}
+func (bv *BookView) Preload(data s.OWData) {
+	if book, ok := data.Query(bv.Book).(e.BookEntity); ok {
+		bv.Book = book
 
-func (bv *BookView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
+	} else {
+		data.SendEvent("Failed to get data for book filter review")
+	}
+}
+
+func (bv *BookView) View(world *v.World, data s.OWData, yield v.FnYield) v.View[s.OWData] {
 	return nil
 }
 
 type LibraryView struct {
-	Books s.Iterator[c.BookComponent]
+	Books q.Iterator[c.BookComponent]
 }
 
 func NewLibraryView() *LibraryView {
 	return &LibraryView{
-		Books: s.NewIterator([]c.BookComponent{}),
+		Books: q.NewIterator([]c.BookComponent{}),
 	}
 }
 
-func (lv *LibraryView) Preload(outputEvents v.EventHandler) {}
+func (lv *LibraryView) Preload(data s.OWData) {
+	if books, ok := data.Query(lv.Books).(q.Iterator[c.BookComponent]); ok {
+		lv.Books = books
 
-func (lv *LibraryView) View(world *v.World, outputEvents v.EventHandler, yield v.FnYield) v.View {
+	} else {
+		data.SendEvent("Failed to get data for book filter review")
+	}
+}
+
+func (lv *LibraryView) View(world *v.World, data s.OWData, yield v.FnYield) v.View[s.OWData] {
 	// Se buscan los libros
 	libraryBooks := lv.Books.Request(20)
 

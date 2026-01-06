@@ -42,7 +42,7 @@ func GetReferencesComponents() []s.ComponentInformation {
 
 type ReferenceComponent struct {
 	Type   ReferenceType
-	Number uint
+	Number uint // Esta es la clave unica
 }
 
 type ReferenceBookComponent struct {

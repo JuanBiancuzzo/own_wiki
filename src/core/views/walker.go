@@ -41,9 +41,9 @@ func (lw *LocalWalker[Data]) InitializeView(view View[Data]) {
 	lw.NextView = closeAndCreate(lw.NextView)
 	lw.FrameChannel = closeAndCreate(lw.FrameChannel)
 
-	var yield FnYield = func() []e.Event {
+	var yield FnYield = func() <-chan []e.Event {
 		lw.FrameChannel <- true
-		return <-lw.EventChannel
+		return lw.EventChannel
 	}
 
 	view.Preload(lw.Data)
