@@ -2,7 +2,7 @@ syntax = "proto3";
 package own_wiki;
 option go_package = "./proto";
 
-// Messages
+// --- Messages ---
 
 message Empty {}
 
@@ -18,7 +18,7 @@ message LoadPluginResponse {
 message RegisterStructuresResponse {
     bool has_error = 1;
     string error_reson = 2;
-    // Ver como hacer con el ecv
+    ECV ecv = 3;
 }
 
 message InitializeImportRequest {
@@ -31,7 +31,7 @@ message ProcessFileRequest {
 
 message InitializeViewRequest {
     string initial_view = 1;
-    // Ver como hacer con el world
+    WorldConfiguration world_configuration = 2;
     uint32 data_server = 3;
 }
 
@@ -44,7 +44,7 @@ message RenderSceneResponse {
 }
 
 message UploadRequest {
-
+    EntityDescription entity = 1;
 }
 
 message QueryRequest {
@@ -52,14 +52,21 @@ message QueryRequest {
 }
 
 message QueryResponse {
-
+    EntityDescription entity = 1;
 }
 
 message SendEventRequest {
     Event event = 1;
 }
 
-// Structs
+// --- Structs ---
+
+// Builder del ecv, describe el sistema de componentes, entidades y views
+message ECV {}
+
+message EntityDescription {}
+
+message WorldConfiguration {}
 
 message Event {
   oneof source {
@@ -68,7 +75,7 @@ message Event {
   }
 }
 
-// Services
+// --- Services ---
 
 service UserStructureData {
     rpc LoadPlugin(LoadPluginRequest) returns (LoadPluginResponse);

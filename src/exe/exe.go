@@ -96,7 +96,8 @@ func main() {
 	}
 
 	mainView := vs.NewMainView()
-	mainView.View(v.NewWorld(v.WorldConfiguration(0)), yield)
+	// TODO: Cambiar a la configuracion del sistema
+	mainView.View(v.NewWorld(v.DefaultWorldConfiguration()), yield)
 	log.Info("Finish the main loop, closing app")
 
 	close(eventQueue)

@@ -61,7 +61,7 @@ func (up *UserPlugin) RegisterStructures() (*ecv.ECV, error) {
 		return nil, errors.New(info.ErrorReason)
 
 	} else {
-		return info.Ecv, nil
+		return info.Ecv.BuildECV()
 	}
 }
 

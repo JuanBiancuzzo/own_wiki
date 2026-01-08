@@ -27,7 +27,7 @@ func NewErrorLoadPath(reason string, args ...any) ErrorLoadPath {
 type ReturnRegisterStructure struct {
 	HasError    bool
 	ErrorReason string
-	Ecv         *ecv.ECV
+	Ecv         ecv.ECVBuilder
 }
 
 func NewErrorRegisterStructure(reason string, args ...any) ReturnRegisterStructure {
@@ -37,11 +37,7 @@ func NewErrorRegisterStructure(reason string, args ...any) ReturnRegisterStructu
 	}
 }
 
-func ReturnStructure(system *ecv.ECV) ReturnRegisterStructure {
-	if system == nil {
-		return NewErrorRegisterStructure("No system register")
-	}
-
+func ReturnStructure(system ecv.ECVBuilder) ReturnRegisterStructure {
 	return ReturnRegisterStructure{
 		HasError: false,
 		Ecv:      system,

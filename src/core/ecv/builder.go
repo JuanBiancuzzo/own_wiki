@@ -1,5 +1,9 @@
 package ecv
 
+import "fmt"
+
+type EntityDescription struct{}
+
 type ECVBuilder struct {
 }
 
@@ -23,6 +27,14 @@ func (ecv *ECVBuilder) RegisterView(view any, main bool) error {
 	return nil
 }
 
-func (ecv *ECVBuilder) BuildECV() (*ECV, error) {
+func (ecv ECVBuilder) Verify() bool {
+	return false
+}
+
+func (ecv ECVBuilder) BuildECV() (*ECV, error) {
+	if !ecv.Verify() {
+		return nil, fmt.Errorf("Failed to build ecv")
+	}
+
 	return &ECV{}, nil
 }

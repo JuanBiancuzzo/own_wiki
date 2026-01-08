@@ -102,12 +102,10 @@ func (o *OwnWikiUserStructure) RegisterStructures() (api.ReturnRegisterStructure
 		}
 	}
 
-	if system, err := builder.BuildECV(); err != nil {
-		return api.NewErrorRegisterStructure("Failed to build the system, with error: %v", err), nil
-
-	} else {
-		return api.ReturnStructure(system), nil
+	if !builder.Verify() {
+		return api.NewErrorRegisterStructure("Failed to build the system"), nil
 	}
+	return api.ReturnStructure(*builder), nil
 }
 
 // ---+--- Importing ---+---
@@ -116,7 +114,8 @@ func (o *OwnWikiUserStructure) InitializeImport(uploader api.UploadEntity) error
 
 	process := func(file file_loader.File) {
 		for _, entity := range o.Plugin.ProcessFile(shared.File(file)) {
-			uploader.Upload(entity)
+			_ = entity // pasarlo a la descripcion de una entidad, tal vez con el builder
+			uploader.Upload(ecv.EntityDescription{})
 		}
 	}
 
@@ -136,9 +135,12 @@ func (o *OwnWikiUserStructure) FinishImporing() error {
 }
 
 // ---+--- View Management ---+---
-func (o *OwnWikiUserStructure) InitializeView(initialView string, world *v.World, data api.OWData) error {
+func (o *OwnWikiUserStructure) InitializeView(initialView string, worldConfiguration v.WorldConfiguration, data api.OWData) error {
 	viewValue := reflect.New(o.Views[initialView])
 	view := viewValue.Interface().(v.View[api.OWData]) // panics if the view given isnt a view
+
+	world := v.NewWorld(worldConfiguration)
+
 	o.Walker = v.NewLocalWalker((view), world, data)
 	return nil
 }

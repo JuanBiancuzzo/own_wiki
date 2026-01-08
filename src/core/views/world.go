@@ -1,6 +1,10 @@
 package views
 
-type WorldConfiguration any
+type WorldConfiguration struct{}
+
+func DefaultWorldConfiguration() WorldConfiguration {
+	return WorldConfiguration{}
+}
 
 type World struct {
 	MainCamera Camera

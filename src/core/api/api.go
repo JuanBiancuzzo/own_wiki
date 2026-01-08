@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 
+	"github.com/JuanBiancuzzo/own_wiki/src/core/ecv"
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
 	q "github.com/JuanBiancuzzo/own_wiki/src/core/query"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
@@ -41,11 +42,11 @@ siguientes views. Los eventos pueden ser:
 */
 
 type UploadEntity interface {
-	Upload(entity any) error
+	Upload(entity ecv.EntityDescription) error
 }
 
 type OWData interface {
-	Query(q.QueryRequest) (any, error)
+	Query(q.QueryRequest) (ecv.EntityDescription, error)
 
 	SendEvent(e.Event) error
 }
@@ -71,7 +72,7 @@ type UserStructureData interface {
 	// ---+--- View Management ---+---
 	// La view initial esta llena con la información default esperada de no tener
 	// datos incluidos en esa view
-	InitializeView(initialView string, world *v.World, data OWData) error
+	InitializeView(initialView string, worldConfiguration v.WorldConfiguration, data OWData) error
 
 	// Avanza la escena al siguiente frame, pidiendo una nueva view si es necesario
 	WalkScene(events []e.Event) error
