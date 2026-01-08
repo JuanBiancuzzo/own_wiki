@@ -1,5 +1,9 @@
 package views
 
-type Camera struct {
-	ScreenLayout *Layout
+type camera struct {
+	ScreenLayout *layout
+}
+
+func newCamera() *camera {
+	return &camera{}
 }

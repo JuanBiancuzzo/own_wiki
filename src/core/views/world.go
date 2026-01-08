@@ -7,7 +7,7 @@ func DefaultWorldConfiguration() WorldConfiguration {
 }
 
 type World struct {
-	MainCamera Camera
+	MainCamera camera
 }
 
 func NewWorld(configuration WorldConfiguration) *World {
@@ -16,6 +16,6 @@ func NewWorld(configuration WorldConfiguration) *World {
 
 func (w *World) Clear() {}
 
-func (w *World) Render() SceneRepresentation {
+func (w *World) Render() SceneDescription {
 	return nil
 }

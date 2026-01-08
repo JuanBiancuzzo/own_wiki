@@ -2,10 +2,10 @@ package views
 
 // Crear un layout engine
 
-type Layout struct{}
+type layout struct{}
 
-func NewLayout() *Layout {
-	return &Layout{}
+func newLayout() *layout {
+	return &layout{}
 }
 
-func (l *Layout) Add(element Renderable) {}
+func (l *layout) Add(element Renderable) {}

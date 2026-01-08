@@ -1,15 +1,23 @@
 package views
 
-type Scene[Data any] struct {
-	Walker ViewWalker[Data]
+import e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
+
+type scene struct {
+	InnerWorld *World
 }
 
-func NewScene[Data any](walker ViewWalker[Data]) *Scene[Data] {
-	return &Scene[Data]{
-		Walker: walker,
+func newScene(view View, worldConfig WorldConfiguration) *scene {
+	world := NewWorld(worldConfig)
+
+	return &scene{
+		InnerWorld: world,
 	}
 }
 
-func (s *Scene[_]) Render() SceneRepresentation {
-	return s.Walker.Render()
+func (s scene) StepView(events []e.Event) bool {
+	return false
+}
+
+func (s scene) Render() SceneDescription {
+	return s.InnerWorld.Render()
 }
