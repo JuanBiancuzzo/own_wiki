@@ -1,0 +1,94 @@
+syntax = "proto3";
+package own_wiki;
+option go_package = "./proto";
+
+// Messages
+
+message Empty {}
+
+message LoadPluginRequest {
+    string path = 1;
+}
+
+message LoadPluginResponse {
+    bool has_error = 1;
+    string error_reason = 2;
+}
+
+message RegisterStructuresResponse {
+    bool has_error = 1;
+    string error_reson = 2;
+    // Ver como hacer con el ecv
+}
+
+message InitializeImportRequest {
+    uint32 upload_server = 1;
+}
+
+message ProcessFileRequest {
+    string file = 1;
+}
+
+message InitializeViewRequest {
+    string initial_view = 1;
+    // Ver como hacer con el world
+    uint32 data_server = 3;
+}
+
+message WalkSceneRequest {
+    repeated Event events = 1;
+}
+
+message RenderSceneResponse {
+    // User oneof
+}
+
+message UploadRequest {
+
+}
+
+message QueryRequest {
+
+}
+
+message QueryResponse {
+
+}
+
+message SendEventRequest {
+    Event event = 1;
+}
+
+// Structs
+
+message Event {
+  oneof source {
+    string local_path = 1;
+    string url = 2;
+  }
+}
+
+// Services
+
+service UserStructureData {
+    rpc LoadPlugin(LoadPluginRequest) returns (LoadPluginResponse);
+    rpc RegisterStructures(Empty) returns (RegisterStructuresResponse);
+
+    rpc InitializeImport(InitializeImportRequest) returns (Empty);
+    rpc ProcessFile(ProcessFileRequest) returns (Empty);
+    rpc FinishImporting(Empty) returns (Empty);
+
+    rpc InitializeView(InitializeViewRequest) returns (Empty);
+    rpc WalkScene(WalkSceneRequest) returns (Empty);
+    rpc RenderScene(Empty) returns (RenderSceneResponse);
+}
+
+
+service UploadEntity {
+    rpc Upload(UploadRequest) returns (Empty);
+}
+
+service OWData {
+    rpc Query(QueryRequest) returns (QueryResponse);
+    rpc SendEvent(SendEventRequest) returns (Empty);
+}

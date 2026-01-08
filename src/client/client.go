@@ -136,8 +136,10 @@ func (o *OwnWikiUserStructure) FinishImporing() error {
 }
 
 // ---+--- View Management ---+---
-func (o *OwnWikiUserStructure) InitializeView(initialView v.View[api.OWData], world *v.World, data api.OWData) error {
-	o.Walker = v.NewLocalWalker(initialView, world, data)
+func (o *OwnWikiUserStructure) InitializeView(initialView string, world *v.World, data api.OWData) error {
+	viewValue := reflect.New(o.Views[initialView])
+	view := viewValue.Interface().(v.View[api.OWData]) // panics if the view given isnt a view
+	o.Walker = v.NewLocalWalker((view), world, data)
 	return nil
 }
 

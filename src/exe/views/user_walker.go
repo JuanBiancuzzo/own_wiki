@@ -1,6 +1,8 @@
 package views
 
 import (
+	"reflect"
+
 	"github.com/JuanBiancuzzo/own_wiki/src/core/api"
 
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
@@ -23,7 +25,9 @@ func NewUserPluginWalker(plugin api.UserStructureData, data api.OWData) *UserPlu
 
 func (uw *UserPluginWalker) InitializeView(view v.View[api.OWData]) {
 	world := v.NewWorld(v.WorldConfiguration(0))
-	if err := uw.plugin.InitializeView(view, world, uw.data); err != nil {
+
+	viewName := reflect.TypeOf(view).Name()
+	if err := uw.plugin.InitializeView(viewName, world, uw.data); err != nil {
 		log.Error("Failed to initialize view '%v', with error: %v", view, err)
 	}
 }

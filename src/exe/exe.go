@@ -97,8 +97,8 @@ func main() {
 
 	mainView := vs.NewMainView()
 	mainView.View(v.NewWorld(v.WorldConfiguration(0)), yield)
-
 	log.Info("Finish the main loop, closing app")
+
 	close(eventQueue)
 	wg.Wait()
 }

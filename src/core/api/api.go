@@ -45,9 +45,9 @@ type UploadEntity interface {
 }
 
 type OWData interface {
-	Query(q.QueryRequest) any
+	Query(q.QueryRequest) (any, error)
 
-	SendEvent(e.Event)
+	SendEvent(e.Event) error
 }
 
 type UserStructureData interface {
@@ -71,7 +71,7 @@ type UserStructureData interface {
 	// ---+--- View Management ---+---
 	// La view initial esta llena con la información default esperada de no tener
 	// datos incluidos en esa view
-	InitializeView(initialView v.View[OWData], world *v.World, data OWData) error
+	InitializeView(initialView string, world *v.World, data OWData) error
 
 	// Avanza la escena al siguiente frame, pidiendo una nueva view si es necesario
 	WalkScene(events []e.Event) error

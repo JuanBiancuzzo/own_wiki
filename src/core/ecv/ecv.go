@@ -7,8 +7,10 @@ import (
 
 type ECV struct{}
 
-func (ecv *ECV) Query(q.QueryRequest) any {
-	return nil
+func (ecv *ECV) Query(q.QueryRequest) (any, error) {
+	return nil, nil
 }
 
-func (ecv *ECV) SendEvent(e.Event) {}
+func (ecv *ECV) SendEvent(e.Event) error {
+	return nil
+}
