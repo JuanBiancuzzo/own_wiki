@@ -22,8 +22,6 @@ import (
 // Cambiarlo a argumento
 const SYSTEM_CONFIG_PATH = ""
 
-//go:generate go run generate.go
-
 func HandleSigTerm(eventQueue chan e.Event) chan os.Signal {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
@@ -65,12 +63,11 @@ func main() {
 		log.Debug("Platform finished to handle input")
 	}()
 
-	eventsPerFrame := make(chan []e.Event)
-	defer close(eventsPerFrame)
-
+	// Asi podemos trabajar en el siguiente framtes, antes de terminar de renderizar el frame anterior
+	eventsPerFrame := make(chan []e.Event, 2)
 	go func() {
 		// Esto fuerza a que cada iteración como mínimo dure 1/FrameRate
-		ticker := time.NewTicker(time.Duration(1000/c.SystemConfig.TargetFrameRate) * time.Millisecond)
+		ticker := time.NewTicker(time.Duration(1000*1000/c.SystemConfig.TargetFrameRate) * time.Microsecond)
 
 		acumulatedEvents := []e.Event{}
 		keepReading := true
@@ -85,13 +82,12 @@ func main() {
 				acumulatedEvents = append(acumulatedEvents, events)
 
 			case <-ticker.C:
-				eventsPerFrame <- []e.Event{}
-
-				// Simula eliminar los eventos utilizados
+				eventsPerFrame <- acumulatedEvents
 				acumulatedEvents = []e.Event{}
 			}
 		}
-		close(eventQueue)
+
+		close(eventsPerFrame)
 		log.Debug("Events handler for scene close")
 	}()
 
@@ -101,5 +97,8 @@ func main() {
 
 	mainView := vs.NewMainView()
 	mainView.View(v.NewWorld(v.WorldConfiguration(0)), yield)
+
 	log.Info("Finish the main loop, closing app")
+	close(eventQueue)
+	wg.Wait()
 }

@@ -30,7 +30,6 @@ func (mv *MainView) View(world *v.World, yield v.FnYield) {
 		}
 	}
 
-	// -----------------------------------
 	// Obtenemos la información del usuario para buscar el plugin
 
 	userDirectory := ""
