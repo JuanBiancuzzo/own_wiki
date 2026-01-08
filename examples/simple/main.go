@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
 	q "github.com/JuanBiancuzzo/own_wiki/src/core/query"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 	s "github.com/JuanBiancuzzo/own_wiki/src/shared"
@@ -44,72 +43,50 @@ type BookView struct {
 	Review ReviewEntity
 }
 
-func (bv *BookView) Preload(data s.OWData) {
-	if book, ok := data.Query(bv.Review).(ReviewEntity); ok {
-		bv.Review = book
-
-	} else {
-		data.SendEvent("Failed to get data for book review")
-	}
-}
-
-func (bv *BookView) View(world *v.World, data s.OWData, yield v.FnYield) v.View[s.OWData] {
+func (bv *BookView) View(world *v.World, creator v.ObjectCreator, yield v.FnYield) v.View {
 	return nil
 }
 
-// En el caso de hacer una referencia a componentes, y/u operaciones a entidades
-// se toma como una nueva entidad anonima
 type FilterLibraryView struct {
-	BookReviews q.Limit[ReviewComponent] // Esto se coincidera una entitdad anonima
+	// This allows the user to get a fix amount of elements
+	BookReviews q.Limit[ReviewComponent]
 }
 
-func (fv *FilterLibraryView) Preload(data s.OWData) {
-	if books, ok := data.Query(fv.BookReviews).(q.Limit[ReviewComponent]); ok {
-		fv.BookReviews = books
-
-	} else {
-		data.SendEvent("Failed to get data for book filter review")
+func NewFilterLibraryView(amount int) *FilterLibraryView {
+	return &FilterLibraryView{
+		BookReviews: q.NewLimit([]ReviewComponent{}, amount),
 	}
 }
 
-func (fv *FilterLibraryView) View(world *v.World, data s.OWData, yield v.FnYield) v.View[s.OWData] {
+func (fv *FilterLibraryView) View(world *v.World, creator v.ObjectCreator, yield v.FnYield) v.View {
 	return nil
 }
 
-// Aca el usuario no lo puede llenar para filtrar como dije antes
 type LibraryView struct {
+	// This allows the user to request async an amount of new elements
 	Books q.Iterator[BookComponent]
-
-	reviewView v.View[s.OWData]
 }
 
-func (lv *LibraryView) Preload(data s.OWData) {
-	if books, ok := data.Query(lv.Books).(q.Iterator[BookComponent]); ok {
-		lv.Books = books
+func (lv *LibraryView) View(world *v.World, creator v.ObjectCreator, yield v.FnYield) v.View {
 
-	} else {
-		data.SendEvent("Failed to get data for book filter review")
-	}
+	// We create a scene to show a view within this view
+	scene := creator.NewScene(NewFilterLibraryView(5), v.DefaultWorldConfiguration())
 
-	// Por otro lado se podria ir precargando imagenes, o buildeando cosas que fueran necesarias a lo largo de la view
-	// Esto implica que deberia haber un evento que defina el inicio de la precarga, ya que sino, se ejecutara este e
-	// inmediatamente despues la view
-
-	lv.reviewView = &FilterLibraryView{q.NewLimit([]ReviewComponent{}, 5)}
-	lv.reviewView.Preload(data)
-}
-
-func (lv *LibraryView) View(world *v.World, data s.OWData, yield v.FnYield) v.View[s.OWData] {
-
-	// Deberia chequear si fue preloadeada, pero como hacemos para que este nuevo walker tenga
-	// registro de que fue preloadeado
-	generalReviews := v.NewLocalWalker(lv.reviewView, world, data)
+	// We add the scene to the world os that it is render
+	world.MainCamera.ScreenLayout.Add(scene)
 
 	// Esto lo implementamos como un request a la api del sistema
 	_ = lv.Books.Request(20)
 
-	// Al final se quiere mostrar la view, FilterLibraryView
-	generalReviews.WalkScene([]e.Event{})
+	for events := range yield() {
+		// ...
+
+		if false { // We go to the next view with a given condition
+			break
+		}
+
+		scene.StepView(events)
+	}
 
 	return &LibraryView{
 		Books: q.NewIterator([]BookComponent{
@@ -142,13 +119,6 @@ func (*UserDefineStructure) RegisterComponents() []s.ComponentInformation {
 		s.GetComponentInformation[BookComponent](),
 		s.GetComponentInformation[ChapterComponent](),
 		s.GetComponentInformation[ReviewComponent](),
-	}
-}
-
-func (*UserDefineStructure) RegisterEntities() []s.EntityInformation {
-	return []s.EntityInformation{
-		s.GetEntityInformation[BookEntity](),
-		s.GetEntityInformation[ReviewEntity](),
 	}
 }
 
