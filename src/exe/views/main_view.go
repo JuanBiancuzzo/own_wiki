@@ -57,7 +57,11 @@ func (mv *MainView) View(world *v.World, yield v.FnYield) {
 
 	userWalker := NewUserPluginWalker(userStructureData.Plugin, ecv)
 
+	// Esto es la clave, tiene que estar dentro de una escena
+	// por lo tanto siempre podemos hacer que una view, sea forzosamente inicializada,
+	// porque tiene que crearse con una escena
 	userScene := v.NewScene(userWalker)
+
 	mainLayout.Add(userScene)
 
 	for events := range yield() {

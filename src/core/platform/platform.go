@@ -8,7 +8,7 @@ import (
 type Platform interface {
 	HandleInput(chan e.Event)
 
-	Render(v.SceneRepresentation)
+	Render(v.SceneDescription)
 
 	Close()
 }

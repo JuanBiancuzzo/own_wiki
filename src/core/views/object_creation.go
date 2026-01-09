@@ -1,22 +1,22 @@
 package views
 
 type ObjectCreator interface {
-	NewScene(view View, worldConfig WorldConfiguration) *scene
-	NewCamera() *camera
+	NewScene(view View, worldConfig WorldConfiguration) *Scene
+	NewCamera() *Camera
 
-	NewLayout() *layout
+	NewLayout() *Layout
 }
 
 type DefaultObjectCreator struct{}
 
-func (DefaultObjectCreator) NewScene(view View, worldConfig WorldConfiguration) *scene {
-	return newScene(view, worldConfig)
+func (DefaultObjectCreator) NewScene(view View, worldConfig WorldConfiguration) *Scene {
+	return DefaultNewScene(view, worldConfig)
 }
 
-func (DefaultObjectCreator) NewCamera() *camera {
+func (DefaultObjectCreator) NewCamera() *Camera {
 	return newCamera()
 }
 
-func (DefaultObjectCreator) NewLayout() *layout {
+func (DefaultObjectCreator) NewLayout() *Layout {
 	return newLayout()
 }

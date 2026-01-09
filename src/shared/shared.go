@@ -15,13 +15,6 @@ func GetComponentInformation[C any]() ComponentInformation {
 	return reflect.TypeOf(component)
 }
 
-type EntityInformation reflect.Type
-
-func GetEntityInformation[E any]() EntityInformation {
-	var entity E
-	return reflect.TypeOf(entity)
-}
-
 type Entity any
 
 type ViewInformation reflect.Type
@@ -44,9 +37,6 @@ type UserDefineStructure interface {
 	// The components are the smallest data storage given by the system. They can depende on
 	// each other, but there has to be a way to constructe them with out an infinite loop
 	RegisterComponents() []ComponentInformation
-
-	// Entities are the composite of components, which are capable of being shown
-	RegisterEntities() []EntityInformation
 
 	// Views are the representation of a entity to be shown by the program in the platform
 	// define at compilation time

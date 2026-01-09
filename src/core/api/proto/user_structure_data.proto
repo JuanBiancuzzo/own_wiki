@@ -44,7 +44,7 @@ message RenderSceneResponse {
 }
 
 message UploadRequest {
-    EntityDescription entity = 1;
+    ComponentDescription component = 1;
 }
 
 message QueryRequest {
@@ -63,6 +63,8 @@ message SendEventRequest {
 
 // Builder del ecv, describe el sistema de componentes, entidades y views
 message ECV {}
+
+message ComponentDescription {}
 
 message EntityDescription {}
 

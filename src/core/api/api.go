@@ -7,7 +7,6 @@ import (
 
 	"github.com/JuanBiancuzzo/own_wiki/src/core/ecv"
 	e "github.com/JuanBiancuzzo/own_wiki/src/core/events"
-	q "github.com/JuanBiancuzzo/own_wiki/src/core/query"
 	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 )
 
@@ -41,12 +40,12 @@ siguientes views. Los eventos pueden ser:
   	  * Eliminar un componente
 */
 
-type UploadEntity interface {
-	Upload(entity ecv.EntityDescription) error
+type Uploader interface {
+	Upload(component ecv.ComponentDescription) error
 }
 
 type OWData interface {
-	Query(q.QueryRequest) (ecv.EntityDescription, error)
+	Query(ecv.EntityDescription) (ecv.EntityDescription, error)
 
 	SendEvent(e.Event) error
 }
@@ -61,7 +60,7 @@ type UserStructureData interface {
 
 	// ---+--- Importing ---+---
 	// Inicializar el proceso de importacion de archivos
-	InitializeImport(uploader UploadEntity) error
+	InitializeImport(uploader Uploader) error
 
 	// Recibe la informacion de un path a un archivo importado
 	ProcessFile(file string) error
@@ -70,15 +69,18 @@ type UserStructureData interface {
 	FinishImporing() error
 
 	// ---+--- View Management ---+---
+	// Inicializamos todos los datos previos para crear y usar views
+	InitializeViewManeger(worldConfiguration v.WorldConfiguration, data OWData) error
+
 	// La view initial esta llena con la información default esperada de no tener
 	// datos incluidos en esa view
-	InitializeView(initialView string, worldConfiguration v.WorldConfiguration, data OWData) error
+	InitializeView(initialView string) error
 
 	// Avanza la escena al siguiente frame, pidiendo una nueva view si es necesario
 	WalkScene(events []e.Event) error
 
 	// Renderiza el mundo definido por el usuario
-	RenderScene() (v.SceneRepresentation, error)
+	RenderScene() (v.SceneDescription, error)
 }
 
 // This is the implementation of plugin.Plugin so we can serve/consume this.

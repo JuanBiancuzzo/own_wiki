@@ -8,11 +8,11 @@ RUN go mod tidy
 
 ARG TARGET_PLATFORM = "terminal" 
 
+# Genera los scripts de grpc
+RUN protoc --proto_path=proto proto/*.proto --go_out=. --go-grpc_out=.
+
 ARG TARGETOS
 ARG TARGETARCH
-
-# Generamos el ejecutable que se quiere probar a partir de la configuración dada
-RUN go generate ./...
 
 # Compilamos el exe
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \

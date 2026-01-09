@@ -3,6 +3,7 @@ package main
 import (
 	p "plugin"
 	"reflect"
+	"sync"
 
 	"github.com/hashicorp/go-plugin"
 
@@ -28,10 +29,14 @@ type OwnWikiUserStructure struct {
 
 	Importer *Importer
 
-	Walker v.ViewWalker[api.OWData]
+	World           *v.World
+	ObjectCreator   v.ObjectCreator
+	EventQueue      chan []e.Event
+	WaitInitialView *sync.WaitGroup
 }
 
 func NewOwnWiki() *OwnWikiUserStructure {
+	var waitGroup sync.WaitGroup
 	return &OwnWikiUserStructure{
 		Plugin: nil,
 
@@ -41,7 +46,10 @@ func NewOwnWiki() *OwnWikiUserStructure {
 
 		Importer: nil,
 
-		Walker: nil,
+		World:           nil,
+		ObjectCreator:   nil,
+		EventQueue:      nil,
+		WaitInitialView: &waitGroup,
 	}
 }
 
@@ -109,13 +117,13 @@ func (o *OwnWikiUserStructure) RegisterStructures() (api.ReturnRegisterStructure
 }
 
 // ---+--- Importing ---+---
-func (o *OwnWikiUserStructure) InitializeImport(uploader api.UploadEntity) error {
+func (o *OwnWikiUserStructure) InitializeImport(uploader api.Uploader) error {
 	o.Importer = NewImporter()
 
 	process := func(file file_loader.File) {
 		for _, entity := range o.Plugin.ProcessFile(shared.File(file)) {
 			_ = entity // pasarlo a la descripcion de una entidad, tal vez con el builder
-			uploader.Upload(ecv.EntityDescription{})
+			uploader.Upload(ecv.ComponentDescription{})
 		}
 	}
 
@@ -135,23 +143,61 @@ func (o *OwnWikiUserStructure) FinishImporing() error {
 }
 
 // ---+--- View Management ---+---
-func (o *OwnWikiUserStructure) InitializeView(initialView string, worldConfiguration v.WorldConfiguration, data api.OWData) error {
+func (o *OwnWikiUserStructure) InitializeViewManeger(worldConfiguration v.WorldConfiguration, system api.OWData) error {
+	o.World = v.NewWorld(worldConfiguration)
+	o.ObjectCreator = NewObjectCreatorClient(func(view v.View) v.View {
+		nameRequestedView := reflect.TypeOf(view).Name()
+
+		// Obtenemos la información necesaria que necesita la view
+		entityRequested := o.Views[nameRequestedView]
+		entityData, err := system.Query(entityRequested)
+
+		// Agregar esa data a la view dada
+
+		return view
+	})
+
+	o.WaitInitialView.Add(1)
+
+	return nil
+}
+
+func (o *OwnWikiUserStructure) InitializeView(initialView string, viewData ecv.EntityDescription, system api.OWData) error {
 	viewValue := reflect.New(o.Views[initialView])
-	view := viewValue.Interface().(v.View[api.OWData]) // panics if the view given isnt a view
+	view := viewValue.Interface().(v.View) // panics if the view given isnt a view
 
-	world := v.NewWorld(worldConfiguration)
+	o.EventQueue = make(chan []e.Event)
+	o.WaitInitialView.Done()
 
-	o.Walker = v.NewLocalWalker((view), world, data)
+	// Agregar la data a la view
+	go func() {
+		nextView := view.View(o.World, o.ObjectCreator, func() <-chan []e.Event {
+			return o.EventQueue
+		})
+		o.WaitInitialView.Add(1)
+
+		// Lo cerramos para que las views internas terminen de procesar
+		close(o.EventQueue)
+
+		// Request new view
+		if nextView != nil {
+			system.SendEvent("Load nextView as {nextView}")
+		} else {
+			system.SendEvent("No new view was created")
+		}
+	}()
+
 	return nil
 }
 
 func (o *OwnWikiUserStructure) WalkScene(events []e.Event) error {
-	o.Walker.WalkScene(events)
+	o.WaitInitialView.Wait()
+	o.EventQueue <- events
 	return nil
 }
 
-func (o *OwnWikiUserStructure) RenderScene() (v.SceneRepresentation, error) {
-	return o.Walker.Render(), nil
+func (o *OwnWikiUserStructure) RenderScene() (v.SceneDescription, error) {
+	return o.World.Render(), nil
 }
 
 // ---+--- Extra functionality ---+---
