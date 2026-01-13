@@ -29,9 +29,14 @@ message ProcessFileRequest {
     string file = 1;
 }
 
+message InitializeViewManegerRequest {
+    WorldConfiguration world_configuration = 1;
+    uint32 data_server = 2;
+}
+
 message InitializeViewRequest {
     string initial_view = 1;
-    WorldConfiguration world_configuration = 2;
+    EntityDescription viewData = 2;
     uint32 data_server = 3;
 }
 
@@ -87,6 +92,7 @@ service UserStructureData {
     rpc ProcessFile(ProcessFileRequest) returns (Empty);
     rpc FinishImporting(Empty) returns (Empty);
 
+    rpc InitializeViewManeger(InitializeViewManegerRequest) return (Empty);
     rpc InitializeView(InitializeViewRequest) returns (Empty);
     rpc WalkScene(WalkSceneRequest) returns (Empty);
     rpc RenderScene(Empty) returns (RenderSceneResponse);

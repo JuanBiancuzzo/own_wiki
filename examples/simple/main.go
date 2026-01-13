@@ -2,7 +2,7 @@ package plugin
 
 import (
 	q "github.com/JuanBiancuzzo/own_wiki/src/core/query"
-	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
+	. "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 	s "github.com/JuanBiancuzzo/own_wiki/src/shared"
 )
 
@@ -17,7 +17,7 @@ type BookComponent struct {
 type ChapterComponent struct {
 	Book   *BookComponent
 	Number int
-	Name   s.Option[string]
+	Name   q.Option[string]
 }
 
 type ReviewComponent struct {
@@ -43,7 +43,7 @@ type BookView struct {
 	Review ReviewEntity
 }
 
-func (bv *BookView) View(world *v.World, creator v.ObjectCreator, yield v.FnYield) v.View {
+func (bv *BookView) View(world *World, creator ObjectCreator, yield FnYield) View {
 	return nil
 }
 
@@ -58,7 +58,7 @@ func NewFilterLibraryView(amount int) *FilterLibraryView {
 	}
 }
 
-func (fv *FilterLibraryView) View(world *v.World, creator v.ObjectCreator, yield v.FnYield) v.View {
+func (fv *FilterLibraryView) View(world *World, creator ObjectCreator, yield FnYield) View {
 	return nil
 }
 
@@ -67,10 +67,10 @@ type LibraryView struct {
 	Books q.Iterator[BookComponent]
 }
 
-func (lv *LibraryView) View(world *v.World, creator v.ObjectCreator, yield v.FnYield) v.View {
+func (lv *LibraryView) View(world *World, creator ObjectCreator, yield FnYield) View {
 
 	// We create a scene to show a view within this view
-	scene := creator.NewScene(NewFilterLibraryView(5), v.DefaultWorldConfiguration())
+	scene := creator.NewScene(NewFilterLibraryView(5), world.GetConfiguration())
 
 	// We add the scene to the world os that it is render
 	world.MainCamera.ScreenLayout.Add(scene)

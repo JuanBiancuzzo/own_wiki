@@ -70,11 +70,11 @@ type UserStructureData interface {
 
 	// ---+--- View Management ---+---
 	// Inicializamos todos los datos previos para crear y usar views
-	InitializeViewManeger(worldConfiguration v.WorldConfiguration, data OWData) error
+	InitializeViewManeger(worldConfiguration v.WorldConfiguration, system OWData) error
 
 	// La view initial esta llena con la información default esperada de no tener
 	// datos incluidos en esa view
-	InitializeView(initialView string) error
+	InitializeView(initialView string, viewData ecv.EntityDescription, system OWData) error
 
 	// Avanza la escena al siguiente frame, pidiendo una nueva view si es necesario
 	WalkScene(events []e.Event) error

@@ -7,6 +7,7 @@ import (
 
 	"github.com/JuanBiancuzzo/own_wiki/src/core/api"
 	"github.com/JuanBiancuzzo/own_wiki/src/core/ecv"
+	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 	plugin "github.com/hashicorp/go-plugin"
 )
 
@@ -68,6 +69,39 @@ func (up *UserPlugin) RegisterStructures() (*ecv.ECV, error) {
 // Implementar importar archivos al programa
 
 // Implementar las views
+func (up *UserPlugin) InitializeViewManeger(worldConfig v.WorldConfiguration) error {
+	// ver como tener el system OWData
+	var system api.OWData
+
+	if err := up.Plugin.InitializeViewManeger(worldConfig, system); err != nil {
+		return fmt.Errorf("Failed to initialize view manager of user, with error: %v", err)
+	}
+
+	return nil
+}
+
+// InitializeView(initialView string, viewData ecv.EntityDescription, system OWData) error
+func (up *UserPlugin) InitializeView(view string, entity any) error {
+	// ver como tener el system OWData
+	var system api.OWData
+
+	// Cambiar entityData a ecv.EntityDescription
+	var entityData ecv.EntityDescription
+	_ = entity
+
+	if err := up.Plugin.InitializeView(view, entityData, system); err != nil {
+		return fmt.Errorf("Failed to initialize view of user %q, with error: %v", view, err)
+	}
+
+	return nil
+}
+
+func (up *UserPlugin) SendEvents(events []e.Event) error {
+	if err := up.Plugin.WalkScene(events); err != nil {
+		return fmt.Errorf("Failed to send events to user, with error: %v", err)
+	}
+	return nil
+}
 
 func (up *UserPlugin) Close() {
 	up.client.Kill()

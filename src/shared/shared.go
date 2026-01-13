@@ -5,7 +5,7 @@ import (
 
 	api "github.com/JuanBiancuzzo/own_wiki/src/core/api"
 	"github.com/JuanBiancuzzo/own_wiki/src/core/systems/file_loader"
-	v "github.com/JuanBiancuzzo/own_wiki/src/core/views"
+	. "github.com/JuanBiancuzzo/own_wiki/src/core/views"
 )
 
 type ComponentInformation reflect.Type
@@ -21,12 +21,10 @@ type ViewInformation reflect.Type
 
 type OWData api.OWData
 
-func GetViewInformation[V v.View[OWData]]() ViewInformation {
+func GetViewInformation[V View]() ViewInformation {
 	var view V
 	return reflect.TypeOf(view)
 }
-
-type Option[T any] struct{}
 
 type File file_loader.File
 

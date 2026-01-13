@@ -21,6 +21,8 @@ SELECT * FROM BookEntity WHERE BookEntity.Book.Author == "Jose" OR BookEntity.Bo
 */
 type QueryRequest any
 
+type Option[T any] struct{}
+
 type Iterator[T any] struct{}
 
 func NewIterator[T any](elements []T) Iterator[T] {
