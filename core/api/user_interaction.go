@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"net"
 
 	c "github.com/JuanBiancuzzo/own_wiki/core/systems/configuration"
 
@@ -11,11 +12,15 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type UserInteraction struct {
+type userInteraction struct {
 	pb.UnimplementedUserInteractionServer
 }
 
-func (*UserInteraction) LoadPlugin(ctx context.Context, loadPluginRequest *pb.LoadPluginRequest) (*pb.LoadPluginResponse, error) {
+func newUserInteraction() *userInteraction {
+	return &userInteraction{}
+}
+
+func (*userInteraction) LoadPlugin(ctx context.Context, loadPluginRequest *pb.LoadPluginRequest) (*pb.LoadPluginResponse, error) {
 	// We would need to find the executable (build as a plugin) and save the reference to that plugin.
 	// With the plugin, we should call the necesary function to define the structures given by the user
 	// This should be the components, and the views. Then the components should be return
@@ -23,14 +28,14 @@ func (*UserInteraction) LoadPlugin(ctx context.Context, loadPluginRequest *pb.Lo
 	return nil, nil
 }
 
-func (*UserInteraction) ImportFiles(importFileStream pb.UserInteraction_ImportFilesServer) error {
+func (*userInteraction) ImportFiles(importFileStream pb.UserInteraction_ImportFilesServer) error {
 	// We could send via a channel the file paths needed, and via a gorouting be processing them as the
 	// user defines. Finally, via another channel, send the component description to the stream
 
 	return nil
 }
 
-func (*UserInteraction) Render(renderStream pb.UserInteraction_RenderServer) error {
+func (*userInteraction) Render(renderStream pb.UserInteraction_RenderServer) error {
 	// First, we would need to create the SystemInteractionClient to get the Query and SendEvent functions.
 	// We would need the view register in the LoadPlugin function, and create the gorouting to continuously
 	// be able to send events, and get the scene render
@@ -38,8 +43,36 @@ func (*UserInteraction) Render(renderStream pb.UserInteraction_RenderServer) err
 	return nil
 }
 
-func (*UserInteraction) Close() {
+func (*userInteraction) Close() {
 	// Close the plugin
+}
+
+type UserInteractionServer struct {
+	listener net.Listener
+	server   *grpc.Server
+}
+
+func NewUserInteractionServer(config c.UserInteractionConfig) (*UserInteractionServer, error) {
+	direction := fmt.Sprintf("%s:%d", config.Ip, config.Port)
+	lis, err := net.Listen(config.Protocol, direction)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create listener server for UserInteraction at %s, with error: %v", direction, err)
+	}
+
+	grpcServer := grpc.NewServer()
+	pb.RegisterUserInteractionServer(grpcServer, newUserInteraction())
+
+	return &UserInteractionServer{
+		listener: lis,
+		server:   grpcServer,
+	}, nil
+}
+
+func (us *UserInteractionServer) Serve() error {
+	if err := us.server.Serve(us.listener); err != nil {
+		return fmt.Errorf("failed to serve UserInteraction, with error: %v", err)
+	}
+	return nil
 }
 
 type UserInteractionClient struct {
