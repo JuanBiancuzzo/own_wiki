@@ -21,9 +21,9 @@ func newUserInteraction() *userInteraction {
 }
 
 func (*userInteraction) LoadPlugin(ctx context.Context, loadPluginRequest *pb.LoadPluginRequest) (*pb.LoadPluginResponse, error) {
-	// We would need to find the executable (build as a plugin) and save the reference to that plugin.
-	// With the plugin, we should call the necesary function to define the structures given by the user
-	// This should be the components, and the views. Then the components should be return
+	// We would need to find the files (build it as a plugin), then load it and keep the reference to that plugin.
+	// With the plugin, we should call the necesary function to define the structures given by the user. This should
+	// be the components, and the views. Then the components should be return
 
 	return nil, nil
 }
