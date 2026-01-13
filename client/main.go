@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/JuanBiancuzzo/own_wiki/core/api"
+
 	c "github.com/JuanBiancuzzo/own_wiki/core/systems/configuration"
 	log "github.com/JuanBiancuzzo/own_wiki/core/systems/logger"
 )
@@ -25,4 +27,17 @@ func main() {
 		return
 	}
 	defer log.Close()
+
+	log.Debug("Creating UserInteraction serve, with config: %#v", configuration.UserInteraction)
+	userServer, err := api.NewUserInteractionServer(configuration.UserInteraction)
+	if err != nil {
+		log.Error("Failed to create UserInteraction server, with error: %v", err)
+		return
+	}
+
+	log.Info("Serving UserInteraction at %s:%d", configuration.UserInteraction.Ip, configuration.UserInteraction.Port)
+	if err = userServer.Serve(); err != nil {
+		log.Error("Failed to serve UserInteraction server, with error: %v", err)
+		return
+	}
 }
