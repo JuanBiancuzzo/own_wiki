@@ -25,4 +25,18 @@ func main() {
 		return
 	}
 	defer log.Close()
+
+	/*  1. Initialize the app view
+	 	2. Load all the program information, as in that projects are known
+		3. Select a known project o create a new one
+		4. Create client process (if possible create a hot reloadable process)
+		5. Build userPlugin as plugin
+		6. Create UserInteractionClient
+			1. LoadPlugin(path) Components
+			2. Set database base in component data
+			3. Create SystemInteractionServer
+			if user selects import files, and selects a path:
+				4. Import files
+			5. Set up user plugin render loop
+	*/
 }
