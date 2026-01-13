@@ -2,8 +2,13 @@ package api
 
 import (
 	"context"
+	"fmt"
+
+	c "github.com/JuanBiancuzzo/own_wiki/core/systems/configuration"
 
 	pb "github.com/JuanBiancuzzo/own_wiki/core/api/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type UserInteraction struct {
@@ -35,4 +40,47 @@ func (*UserInteraction) Render(renderStream pb.UserInteraction_RenderServer) err
 
 func (*UserInteraction) Close() {
 	// Close the plugin
+}
+
+type UserInteractionClient struct {
+	conn *grpc.ClientConn
+	user pb.UserInteractionClient
+}
+
+func NewUserInteractionClient(config c.UserInteractionConfig) (*UserInteractionClient, error) {
+	transportCredentials := grpc.WithTransportCredentials(insecure.NewCredentials())
+	direction := fmt.Sprintf("%s:%d", config.Ip, config.Port)
+
+	conn, err := grpc.NewClient(direction, transportCredentials)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gRPC client for UserInteraction at %s, with error: %v", direction, err)
+	}
+
+	return &UserInteractionClient{
+		conn: conn,
+		user: pb.NewUserInteractionClient(conn),
+	}, nil
+}
+
+// TODO: Change LoadPluginResponse to be the structures of components
+func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath string) (*pb.LoadPluginResponse, error) {
+	return uc.user.LoadPlugin(ctx, &pb.LoadPluginRequest{
+		PluginPath: pluginPath,
+	})
+}
+
+// TODO: Change the function to accept a channel of string (send filePaths), and a channel to get the information
+// to load to the database
+func (uc *UserInteractionClient) ImportFiles(ctx context.Context) (pb.UserInteraction_ImportFilesClient, error) {
+	return uc.user.ImportFiles(ctx)
+}
+
+// TODO: Change the function to accept a channel for events (as in core/events/Event) to send, and a channel to get
+// the scene representation
+func (uc *UserInteractionClient) Render(ctx context.Context) (pb.UserInteraction_RenderClient, error) {
+	return uc.user.Render(ctx)
+}
+
+func (uc *UserInteractionClient) Close() {
+	uc.conn.Close()
 }
