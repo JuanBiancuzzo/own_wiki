@@ -3,6 +3,7 @@ package logger
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 type Verbosity string
@@ -14,11 +15,13 @@ const (
 )
 
 const DEFAULT_CAPACITY = 25
+const DEFAULT_FORMAT = time.UnixDate
 
 type LoggerConfiguration struct {
 	LogPath         string    `json:"log_path,omitempty"`
 	Verbosity       Verbosity `json:"verbosity"`
 	MessageCapacity uint      `json:"message_capacity,omitempty"`
+	DateFormat      string    `json:"date_format,omitempty"`
 }
 
 func (lc *LoggerConfiguration) UnmarshalJSON(data []byte) error {
@@ -30,6 +33,11 @@ func (lc *LoggerConfiguration) UnmarshalJSON(data []byte) error {
 	// Now we check if the capacity is valid
 	if lc.MessageCapacity == 0 {
 		lc.MessageCapacity = DEFAULT_CAPACITY
+	}
+
+	// If no date format was set, then the default will be use
+	if lc.DateFormat == "" {
+		lc.DateFormat = DEFAULT_FORMAT
 	}
 
 	return nil
