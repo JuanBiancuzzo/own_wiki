@@ -19,20 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	UserInteraction_LoadPlugin_FullMethodName         = "/api.UserInteraction/LoadPlugin"
-	UserInteraction_RegisterComponents_FullMethodName = "/api.UserInteraction/RegisterComponents"
-	UserInteraction_ImportFiles_FullMethodName        = "/api.UserInteraction/ImportFiles"
-	UserInteraction_Render_FullMethodName             = "/api.UserInteraction/Render"
+	UserInteraction_LoadPlugin_FullMethodName  = "/api.UserInteraction/LoadPlugin"
+	UserInteraction_ImportFiles_FullMethodName = "/api.UserInteraction/ImportFiles"
+	UserInteraction_Render_FullMethodName      = "/api.UserInteraction/Render"
 )
 
 // UserInteractionClient is the client API for UserInteraction service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UserInteractionClient interface {
-	// Loads the user code given by a path
-	LoadPlugin(ctx context.Context, in *LoadPluginRequest, opts ...grpc.CallOption) (*Empty, error)
-	// Lets the user define structures to sava the data
-	RegisterComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*RegisterComponentsResponse, error)
+	// Loads the user code given by a path, and register the component structures to save the data
+	LoadPlugin(ctx context.Context, in *LoadPluginRequest, opts ...grpc.CallOption) (*LoadPluginResponse, error)
 	// Lets the user load data from files and returns the component data
 	ImportFiles(ctx context.Context, opts ...grpc.CallOption) (UserInteraction_ImportFilesClient, error)
 	// Lets the user render the data, and changes its behaviour given the events of the system
@@ -47,18 +44,9 @@ func NewUserInteractionClient(cc grpc.ClientConnInterface) UserInteractionClient
 	return &userInteractionClient{cc}
 }
 
-func (c *userInteractionClient) LoadPlugin(ctx context.Context, in *LoadPluginRequest, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
+func (c *userInteractionClient) LoadPlugin(ctx context.Context, in *LoadPluginRequest, opts ...grpc.CallOption) (*LoadPluginResponse, error) {
+	out := new(LoadPluginResponse)
 	err := c.cc.Invoke(ctx, UserInteraction_LoadPlugin_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *userInteractionClient) RegisterComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*RegisterComponentsResponse, error) {
-	out := new(RegisterComponentsResponse)
-	err := c.cc.Invoke(ctx, UserInteraction_RegisterComponents_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -131,10 +119,8 @@ func (x *userInteractionRenderClient) Recv() (*RenderResponse, error) {
 // All implementations must embed UnimplementedUserInteractionServer
 // for forward compatibility
 type UserInteractionServer interface {
-	// Loads the user code given by a path
-	LoadPlugin(context.Context, *LoadPluginRequest) (*Empty, error)
-	// Lets the user define structures to sava the data
-	RegisterComponents(context.Context, *Empty) (*RegisterComponentsResponse, error)
+	// Loads the user code given by a path, and register the component structures to save the data
+	LoadPlugin(context.Context, *LoadPluginRequest) (*LoadPluginResponse, error)
 	// Lets the user load data from files and returns the component data
 	ImportFiles(UserInteraction_ImportFilesServer) error
 	// Lets the user render the data, and changes its behaviour given the events of the system
@@ -146,11 +132,8 @@ type UserInteractionServer interface {
 type UnimplementedUserInteractionServer struct {
 }
 
-func (UnimplementedUserInteractionServer) LoadPlugin(context.Context, *LoadPluginRequest) (*Empty, error) {
+func (UnimplementedUserInteractionServer) LoadPlugin(context.Context, *LoadPluginRequest) (*LoadPluginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoadPlugin not implemented")
-}
-func (UnimplementedUserInteractionServer) RegisterComponents(context.Context, *Empty) (*RegisterComponentsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RegisterComponents not implemented")
 }
 func (UnimplementedUserInteractionServer) ImportFiles(UserInteraction_ImportFilesServer) error {
 	return status.Errorf(codes.Unimplemented, "method ImportFiles not implemented")
@@ -185,24 +168,6 @@ func _UserInteraction_LoadPlugin_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserInteractionServer).LoadPlugin(ctx, req.(*LoadPluginRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _UserInteraction_RegisterComponents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserInteractionServer).RegisterComponents(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserInteraction_RegisterComponents_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserInteractionServer).RegisterComponents(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -269,10 +234,6 @@ var UserInteraction_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoadPlugin",
 			Handler:    _UserInteraction_LoadPlugin_Handler,
-		},
-		{
-			MethodName: "RegisterComponents",
-			Handler:    _UserInteraction_RegisterComponents_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

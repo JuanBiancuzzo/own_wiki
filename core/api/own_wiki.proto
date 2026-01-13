@@ -14,11 +14,8 @@ option go_package = "github.com/JuanBiancuzzo/own_wiki/core";
         * Render the scene as intende by the user
 */
 service UserInteraction {
-    // Loads the user code given by a path
-    rpc LoadPlugin(LoadPluginRequest) returns (Empty);
-
-    // Lets the user define structures to sava the data
-    rpc RegisterComponents(Empty) returns (RegisterComponentsResponse);
+    // Loads the user code given by a path, and register the component structures to save the data
+    rpc LoadPlugin(LoadPluginRequest) returns (LoadPluginResponse);
 
     // Lets the user load data from files and returns the component data
     rpc ImportFiles(stream ImportedFilesRequest) returns (stream ImportFilesResponse);
@@ -52,7 +49,7 @@ message LoadPluginRequest {
 }
 
 // Gives the component structures define by the user
-message RegisterComponentsResponse {
+message LoadPluginResponse {
     repeated ComponentStructure components = 1;
 }
 
