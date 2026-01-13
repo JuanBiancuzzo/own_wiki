@@ -10,14 +10,27 @@ import (
 	"time"
 )
 
+type Level string
+
+const (
+	LV_DEBUG = "Debug"
+	LV_INFO  = "Info"
+	LV_ERROR = "Error"
+	LV_FATAL = "Fatal"
+)
+
 type messageInfo struct {
 	Time    string `json:"time"`
 	Message string `json:"message"`
-	Level   string `json:"level"`
+	Level   Level  `json:"level"`
 	Trace   string `json:"trace"`
 }
 
-type FnCreateMessageInfo func(message, level, filename string, lineNumber int) messageInfo
+func (mi messageInfo) String() string {
+	return fmt.Sprintf("{\n\tMessage: %s\n\tTime: %s\n\tLevel: %s\n\tTrace: %s\n}", mi.Message, mi.Time, string(mi.Level), mi.Trace)
+}
+
+type FnCreateMessageInfo func(level Level, message, filename string, lineNumber int) messageInfo
 
 type loggerInfo struct {
 	MsgChannel    chan messageInfo
@@ -55,8 +68,11 @@ func CreateLogger(config LoggerConfiguration) (err error) {
 
 	go func(messageChannel chan messageInfo, wg *sync.WaitGroup) {
 		for message := range messageChannel {
-			if byteMessage, err := json.Marshal(message); err == nil {
-				file.Write(append(byteMessage, byte('\n')))
+			if byteMessage, err := json.Marshal(message); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to marshal message %q, with error: %v", message.String(), err)
+
+			} else if _, err = file.Write(append(byteMessage, byte('\n'))); err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to write to log file at %q, with the message %q, with error: %v", config.LogPath, string(byteMessage), err)
 			}
 		}
 		wg.Done()
@@ -68,7 +84,7 @@ func CreateLogger(config LoggerConfiguration) (err error) {
 		File:          file,
 		WaitWriteFile: &waitWriteFile,
 
-		CreateMessage: func(message, level, filename string, lineNumber int) messageInfo {
+		CreateMessage: func(level Level, message, filename string, lineNumber int) messageInfo {
 			return messageInfo{
 				Message: message,
 				Time:    time.Now().Format(config.DateFormat),
@@ -88,8 +104,7 @@ func Info(format string, args ...any) {
 
 	if _, filePath, lineNumber, ok := runtime.Caller(1); ok {
 		logger.MsgChannel <- logger.CreateMessage(
-			fmt.Sprintf(format, args...),
-			"Info", filePath, lineNumber,
+			LV_INFO, fmt.Sprintf(format, args...), filePath, lineNumber,
 		)
 	}
 }
@@ -101,8 +116,7 @@ func Debug(format string, args ...any) {
 
 	if _, filePath, lineNumber, ok := runtime.Caller(1); ok {
 		logger.MsgChannel <- logger.CreateMessage(
-			fmt.Sprintf(format, args...),
-			"Debug", filePath, lineNumber,
+			LV_DEBUG, fmt.Sprintf(format, args...), filePath, lineNumber,
 		)
 	}
 }
@@ -114,8 +128,7 @@ func Error(format string, args ...any) {
 
 	if _, filePath, lineNumber, ok := runtime.Caller(1); ok {
 		logger.MsgChannel <- logger.CreateMessage(
-			fmt.Sprintf(format, args...),
-			"Error", filePath, lineNumber,
+			LV_ERROR, fmt.Sprintf(format, args...), filePath, lineNumber,
 		)
 	}
 }
@@ -127,8 +140,7 @@ func Fatal(format string, args ...any) {
 
 	if _, filePath, lineNumber, ok := runtime.Caller(1); ok {
 		logger.MsgChannel <- logger.CreateMessage(
-			fmt.Sprintf(format, args...),
-			"Fatal", filePath, lineNumber,
+			LV_FATAL, fmt.Sprintf(format, args...), filePath, lineNumber,
 		)
 	}
 }
