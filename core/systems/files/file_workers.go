@@ -13,6 +13,7 @@ const DEFAULT_FILE_AMOUNT = 20
 func newFileWorker(workFiles FnWorkFile, waitFiles *sync.WaitGroup) chan string {
 	filePaths := make(chan string, DEFAULT_FILE_AMOUNT)
 
+	waitFiles.Add(1)
 	go func(filePaths chan string, workFiles FnWorkFile, waitFiles *sync.WaitGroup) {
 		for filePath := range filePaths {
 			if file, err := NewFile(filePath); err != nil {
@@ -30,8 +31,6 @@ func newFileWorker(workFiles FnWorkFile, waitFiles *sync.WaitGroup) chan string 
 }
 
 func WorkFilesRoundRobin(filePaths chan string, amountWorkers uint, workFile FnWorkFile, waitFiles *sync.WaitGroup) {
-	waitFiles.Add(int(amountWorkers))
-
 	channelsFilePaths := make([]chan string, amountWorkers)
 	for i := range amountWorkers {
 		channelsFilePaths[i] = newFileWorker(workFile, waitFiles)

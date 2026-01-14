@@ -9,6 +9,9 @@ import (
 
 	db "github.com/JuanBiancuzzo/own_wiki/core/database"
 	c "github.com/JuanBiancuzzo/own_wiki/core/systems/configuration"
+	f "github.com/JuanBiancuzzo/own_wiki/core/systems/files"
+	log "github.com/JuanBiancuzzo/own_wiki/core/systems/logger"
+	"github.com/JuanBiancuzzo/own_wiki/shared"
 
 	pb "github.com/JuanBiancuzzo/own_wiki/core/api/proto"
 	"google.golang.org/grpc"
@@ -17,10 +20,20 @@ import (
 
 type userInteraction struct {
 	pb.UnimplementedUserInteractionServer
+
+	Plugin shared.UserDefineStructure
+
+	FilePathCapacity  uint
+	ComponentCapacity uint
+	AmountFileWorkers uint
 }
 
-func newUserInteraction() *userInteraction {
-	return &userInteraction{}
+func newUserInteraction(config c.UserInteractionConfig) *userInteraction {
+	return &userInteraction{
+		FilePathCapacity:  uint(config.FilePathCapacity),
+		ComponentCapacity: uint(config.ComponentCapacity),
+		AmountFileWorkers: uint(config.AmountFileWorkers),
+	}
 }
 
 func (*userInteraction) LoadPlugin(ctx context.Context, loadPluginRequest *pb.LoadPluginRequest) (*pb.LoadPluginResponse, error) {
@@ -31,12 +44,49 @@ func (*userInteraction) LoadPlugin(ctx context.Context, loadPluginRequest *pb.Lo
 	return nil, nil
 }
 
-func (*userInteraction) ImportFiles(importFileStream pb.UserInteraction_ImportFilesServer) error {
-	// We could send via a channel the file paths needed, and via a gorouting be processing them as the
-	// user defines. Finally, via another channel, send the component description to the stream
+// TODO: Finish the implementation to convert from EntityDescription to ComponentDescription
+func (ui *userInteraction) ImportFiles(importFileStream pb.UserInteraction_ImportFilesServer) error {
+	receiveFilePaths := make(chan string, ui.FilePathCapacity)
+	sendComponents := make(chan *pb.ComponentDescription, ui.ComponentCapacity)
 
-	// using own_wiki/core/systems/files/WorkFilesRoundRobin we could call the shared.ProcessFile(file File) []EntityDescription
-	// function, and concurrently process all the files via channels
+	pluginExe := func(file f.File) {
+		for range ui.Plugin.ProcessFile(shared.File(file)) {
+			sendComponents <- &pb.ComponentDescription{}
+		}
+	}
+
+	var waitFiles sync.WaitGroup
+
+	// Receive filePaths
+	waitFiles.Go(func() {
+		for {
+			if fileRequest, err := importFileStream.Recv(); err == io.EOF {
+				break
+
+			} else if err != nil {
+				log.Warn("Error while receiving filePaths, with error: %v", err)
+				break
+
+			} else {
+				receiveFilePaths <- fileRequest.GetFilePath()
+			}
+		}
+		close(receiveFilePaths)
+	})
+
+	// sending componentDescriptions
+	waitFiles.Go(func() {
+		for component := range sendComponents {
+			if err := importFileStream.Send(&pb.ImportFilesResponse{Component: component}); err != nil {
+				log.Warn("Error while sendign ImportFileResponse, with error: %v", err)
+			}
+		}
+	})
+
+	f.WorkFilesRoundRobin(receiveFilePaths, ui.AmountFileWorkers, pluginExe, &waitFiles)
+
+	waitFiles.Wait()
+	log.Info("Finish importing files")
 
 	return nil
 }
@@ -66,7 +116,7 @@ func NewUserInteractionServer(config c.UserInteractionConfig) (*UserInteractionS
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterUserInteractionServer(grpcServer, newUserInteraction())
+	pb.RegisterUserInteractionServer(grpcServer, newUserInteraction(config))
 
 	return &UserInteractionServer{
 		listener: lis,
