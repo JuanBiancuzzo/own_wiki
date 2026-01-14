@@ -206,7 +206,13 @@ type EntityDescription *pb.ComponentDescription
 func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths chan string, receiveEntity chan EntityDescription) error {
 	stream, err := uc.User.ImportFiles(ctx)
 	if err != nil {
+		// We close the channel because there is no entity to be send
 		close(receiveEntity)
+
+		// We consume all the files send
+		for range sendFilePaths {
+		}
+
 		return fmt.Errorf("Failed to create ImportFiles stream, with error: %v", err)
 	}
 
@@ -219,6 +225,7 @@ func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths 
 
 		for filePath := range receiveFiles {
 			if errorOccurred {
+				// We need to consume all the file send
 				continue
 			}
 
