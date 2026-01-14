@@ -94,6 +94,7 @@ message SendEventRequest {
 }
 
 // --- Pending to define ---
+
 message Event {}
 
 message FrameInformation {}

@@ -1,5 +1,9 @@
 package shared
 
+import (
+	f "github.com/JuanBiancuzzo/own_wiki/core/systems/files"
+)
+
 // Represents the structure of a component, this defines the structure of the data to be save
 type ComponentStructure any
 
@@ -10,7 +14,7 @@ type ViewInformation any
 type EntityDescription any
 
 // Is the string representation of a file, and its metadata
-type File string
+type File f.File
 
 /*
 This interface lets the user define the components, each entity and view for the project.
