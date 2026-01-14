@@ -21,26 +21,26 @@ const (
 )
 
 // The primitive types of a field
-type FieldType int32
+type PrimiteFieldType int32
 
 const (
-	FieldType_INT    FieldType = 0
-	FieldType_STRING FieldType = 1
-	FieldType_CHAR   FieldType = 2
-	FieldType_BOOL   FieldType = 3
-	FieldType_DATE   FieldType = 4
+	PrimiteFieldType_INT    PrimiteFieldType = 0
+	PrimiteFieldType_STRING PrimiteFieldType = 1
+	PrimiteFieldType_CHAR   PrimiteFieldType = 2
+	PrimiteFieldType_BOOL   PrimiteFieldType = 3
+	PrimiteFieldType_DATE   PrimiteFieldType = 4
 )
 
-// Enum value maps for FieldType.
+// Enum value maps for PrimiteFieldType.
 var (
-	FieldType_name = map[int32]string{
+	PrimiteFieldType_name = map[int32]string{
 		0: "INT",
 		1: "STRING",
 		2: "CHAR",
 		3: "BOOL",
 		4: "DATE",
 	}
-	FieldType_value = map[string]int32{
+	PrimiteFieldType_value = map[string]int32{
 		"INT":    0,
 		"STRING": 1,
 		"CHAR":   2,
@@ -49,31 +49,77 @@ var (
 	}
 )
 
-func (x FieldType) Enum() *FieldType {
-	p := new(FieldType)
+func (x PrimiteFieldType) Enum() *PrimiteFieldType {
+	p := new(PrimiteFieldType)
 	*p = x
 	return p
 }
 
-func (x FieldType) String() string {
+func (x PrimiteFieldType) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (FieldType) Descriptor() protoreflect.EnumDescriptor {
+func (PrimiteFieldType) Descriptor() protoreflect.EnumDescriptor {
 	return file_components_proto_enumTypes[0].Descriptor()
 }
 
-func (FieldType) Type() protoreflect.EnumType {
+func (PrimiteFieldType) Type() protoreflect.EnumType {
 	return &file_components_proto_enumTypes[0]
 }
 
-func (x FieldType) Number() protoreflect.EnumNumber {
+func (x PrimiteFieldType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use FieldType.Descriptor instead.
-func (FieldType) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use PrimiteFieldType.Descriptor instead.
+func (PrimiteFieldType) EnumDescriptor() ([]byte, []int) {
 	return file_components_proto_rawDescGZIP(), []int{0}
+}
+
+type FieldTypeInformation_FieldType int32
+
+const (
+	FieldTypeInformation_PRIMITIVE FieldTypeInformation_FieldType = 0
+	FieldTypeInformation_REFERENCE FieldTypeInformation_FieldType = 1
+)
+
+// Enum value maps for FieldTypeInformation_FieldType.
+var (
+	FieldTypeInformation_FieldType_name = map[int32]string{
+		0: "PRIMITIVE",
+		1: "REFERENCE",
+	}
+	FieldTypeInformation_FieldType_value = map[string]int32{
+		"PRIMITIVE": 0,
+		"REFERENCE": 1,
+	}
+)
+
+func (x FieldTypeInformation_FieldType) Enum() *FieldTypeInformation_FieldType {
+	p := new(FieldTypeInformation_FieldType)
+	*p = x
+	return p
+}
+
+func (x FieldTypeInformation_FieldType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FieldTypeInformation_FieldType) Descriptor() protoreflect.EnumDescriptor {
+	return file_components_proto_enumTypes[1].Descriptor()
+}
+
+func (FieldTypeInformation_FieldType) Type() protoreflect.EnumType {
+	return &file_components_proto_enumTypes[1]
+}
+
+func (x FieldTypeInformation_FieldType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FieldTypeInformation_FieldType.Descriptor instead.
+func (FieldTypeInformation_FieldType) EnumDescriptor() ([]byte, []int) {
+	return file_components_proto_rawDescGZIP(), []int{3, 0}
 }
 
 // Describes the structure of the data define by the user
@@ -130,71 +176,21 @@ func (x *ComponentStructure) GetFields() []*FieldStructure {
 	return nil
 }
 
-// The information necesary to reference a table
-type ReferenceInformation struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	TableName string `protobuf:"bytes,1,opt,name=table_name,json=tableName,proto3" json:"table_name,omitempty"`
-}
-
-func (x *ReferenceInformation) Reset() {
-	*x = ReferenceInformation{}
-	mi := &file_components_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ReferenceInformation) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ReferenceInformation) ProtoMessage() {}
-
-func (x *ReferenceInformation) ProtoReflect() protoreflect.Message {
-	mi := &file_components_proto_msgTypes[1]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ReferenceInformation.ProtoReflect.Descriptor instead.
-func (*ReferenceInformation) Descriptor() ([]byte, []int) {
-	return file_components_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *ReferenceInformation) GetTableName() string {
-	if x != nil {
-		return x.TableName
-	}
-	return ""
-}
-
 // Represents a type of data that could be represented and save by the system
 type FieldStructure struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Types that are assignable to Type:
-	//
-	//	*FieldStructure_Primitive
-	//	*FieldStructure_Reference
-	Type   isFieldStructure_Type `protobuf_oneof:"type"`
-	IsNull bool                  `protobuf:"varint,4,opt,name=is_null,json=isNull,proto3" json:"is_null,omitempty"`
-	IsKey  bool                  `protobuf:"varint,5,opt,name=is_key,json=isKey,proto3" json:"is_key,omitempty"`
+	Name   string                `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Type   *FieldTypeInformation `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	IsNull bool                  `protobuf:"varint,3,opt,name=is_null,json=isNull,proto3" json:"is_null,omitempty"`
+	IsKey  bool                  `protobuf:"varint,4,opt,name=is_key,json=isKey,proto3" json:"is_key,omitempty"`
 }
 
 func (x *FieldStructure) Reset() {
 	*x = FieldStructure{}
-	mi := &file_components_proto_msgTypes[2]
+	mi := &file_components_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -206,7 +202,7 @@ func (x *FieldStructure) String() string {
 func (*FieldStructure) ProtoMessage() {}
 
 func (x *FieldStructure) ProtoReflect() protoreflect.Message {
-	mi := &file_components_proto_msgTypes[2]
+	mi := &file_components_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -219,7 +215,7 @@ func (x *FieldStructure) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldStructure.ProtoReflect.Descriptor instead.
 func (*FieldStructure) Descriptor() ([]byte, []int) {
-	return file_components_proto_rawDescGZIP(), []int{2}
+	return file_components_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *FieldStructure) GetName() string {
@@ -229,23 +225,9 @@ func (x *FieldStructure) GetName() string {
 	return ""
 }
 
-func (m *FieldStructure) GetType() isFieldStructure_Type {
-	if m != nil {
-		return m.Type
-	}
-	return nil
-}
-
-func (x *FieldStructure) GetPrimitive() FieldType {
-	if x, ok := x.GetType().(*FieldStructure_Primitive); ok {
-		return x.Primitive
-	}
-	return FieldType_INT
-}
-
-func (x *FieldStructure) GetReference() *ReferenceInformation {
-	if x, ok := x.GetType().(*FieldStructure_Reference); ok {
-		return x.Reference
+func (x *FieldStructure) GetType() *FieldTypeInformation {
+	if x != nil {
+		return x.Type
 	}
 	return nil
 }
@@ -264,31 +246,199 @@ func (x *FieldStructure) GetIsKey() bool {
 	return false
 }
 
-type isFieldStructure_Type interface {
-	isFieldStructure_Type()
+// The information necesary to reference a table
+type ReferenceInformation struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	TableName string `protobuf:"bytes,1,opt,name=table_name,json=tableName,proto3" json:"table_name,omitempty"`
 }
 
-type FieldStructure_Primitive struct {
-	Primitive FieldType `protobuf:"varint,2,opt,name=primitive,proto3,enum=api.FieldType,oneof"`
+func (x *ReferenceInformation) Reset() {
+	*x = ReferenceInformation{}
+	mi := &file_components_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
 }
 
-type FieldStructure_Reference struct {
+func (x *ReferenceInformation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReferenceInformation) ProtoMessage() {}
+
+func (x *ReferenceInformation) ProtoReflect() protoreflect.Message {
+	mi := &file_components_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReferenceInformation.ProtoReflect.Descriptor instead.
+func (*ReferenceInformation) Descriptor() ([]byte, []int) {
+	return file_components_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ReferenceInformation) GetTableName() string {
+	if x != nil {
+		return x.TableName
+	}
+	return ""
+}
+
+// Represents the type information of the data
+type FieldTypeInformation struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Type FieldTypeInformation_FieldType `protobuf:"varint,1,opt,name=type,proto3,enum=api.FieldTypeInformation_FieldType" json:"type,omitempty"`
+	// Types that are assignable to TypeInformation:
+	//
+	//	*FieldTypeInformation_Primitive
+	//	*FieldTypeInformation_Reference
+	TypeInformation isFieldTypeInformation_TypeInformation `protobuf_oneof:"type_information"`
+}
+
+func (x *FieldTypeInformation) Reset() {
+	*x = FieldTypeInformation{}
+	mi := &file_components_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FieldTypeInformation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FieldTypeInformation) ProtoMessage() {}
+
+func (x *FieldTypeInformation) ProtoReflect() protoreflect.Message {
+	mi := &file_components_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FieldTypeInformation.ProtoReflect.Descriptor instead.
+func (*FieldTypeInformation) Descriptor() ([]byte, []int) {
+	return file_components_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *FieldTypeInformation) GetType() FieldTypeInformation_FieldType {
+	if x != nil {
+		return x.Type
+	}
+	return FieldTypeInformation_PRIMITIVE
+}
+
+func (m *FieldTypeInformation) GetTypeInformation() isFieldTypeInformation_TypeInformation {
+	if m != nil {
+		return m.TypeInformation
+	}
+	return nil
+}
+
+func (x *FieldTypeInformation) GetPrimitive() PrimiteFieldType {
+	if x, ok := x.GetTypeInformation().(*FieldTypeInformation_Primitive); ok {
+		return x.Primitive
+	}
+	return PrimiteFieldType_INT
+}
+
+func (x *FieldTypeInformation) GetReference() *ReferenceInformation {
+	if x, ok := x.GetTypeInformation().(*FieldTypeInformation_Reference); ok {
+		return x.Reference
+	}
+	return nil
+}
+
+type isFieldTypeInformation_TypeInformation interface {
+	isFieldTypeInformation_TypeInformation()
+}
+
+type FieldTypeInformation_Primitive struct {
+	Primitive PrimiteFieldType `protobuf:"varint,2,opt,name=primitive,proto3,enum=api.PrimiteFieldType,oneof"`
+}
+
+type FieldTypeInformation_Reference struct {
 	Reference *ReferenceInformation `protobuf:"bytes,3,opt,name=reference,proto3,oneof"`
 }
 
-func (*FieldStructure_Primitive) isFieldStructure_Type() {}
+func (*FieldTypeInformation_Primitive) isFieldTypeInformation_TypeInformation() {}
 
-func (*FieldStructure_Reference) isFieldStructure_Type() {}
+func (*FieldTypeInformation_Reference) isFieldTypeInformation_TypeInformation() {}
 
+// Represents the composition of components, and the value store
+type EntityDescription struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Entities []*EntityDescription_EntityElement `protobuf:"bytes,1,rep,name=entities,proto3" json:"entities,omitempty"`
+}
+
+func (x *EntityDescription) Reset() {
+	*x = EntityDescription{}
+	mi := &file_components_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EntityDescription) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EntityDescription) ProtoMessage() {}
+
+func (x *EntityDescription) ProtoReflect() protoreflect.Message {
+	mi := &file_components_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EntityDescription.ProtoReflect.Descriptor instead.
+func (*EntityDescription) Descriptor() ([]byte, []int) {
+	return file_components_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *EntityDescription) GetEntities() []*EntityDescription_EntityElement {
+	if x != nil {
+		return x.Entities
+	}
+	return nil
+}
+
+// Represents the data of the component
 type ComponentDescription struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
+
+	Name   string              `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Fields []*FieldDescription `protobuf:"bytes,2,rep,name=fields,proto3" json:"fields,omitempty"`
 }
 
 func (x *ComponentDescription) Reset() {
 	*x = ComponentDescription{}
-	mi := &file_components_proto_msgTypes[3]
+	mi := &file_components_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -300,7 +450,7 @@ func (x *ComponentDescription) String() string {
 func (*ComponentDescription) ProtoMessage() {}
 
 func (x *ComponentDescription) ProtoReflect() protoreflect.Message {
-	mi := &file_components_proto_msgTypes[3]
+	mi := &file_components_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -313,8 +463,302 @@ func (x *ComponentDescription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentDescription.ProtoReflect.Descriptor instead.
 func (*ComponentDescription) Descriptor() ([]byte, []int) {
-	return file_components_proto_rawDescGZIP(), []int{3}
+	return file_components_proto_rawDescGZIP(), []int{5}
 }
+
+func (x *ComponentDescription) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ComponentDescription) GetFields() []*FieldDescription {
+	if x != nil {
+		return x.Fields
+	}
+	return nil
+}
+
+// Represents the data of a field in a query result (array of values)
+type FieldDescription struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name            string                `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	TypeInformation *FieldTypeInformation `protobuf:"bytes,2,opt,name=type_information,json=typeInformation,proto3" json:"type_information,omitempty"`
+	// This should be all of the same type. This is to save space and
+	// not have the type information in the FieldData
+	Data []*FieldDescription_FieldData `protobuf:"bytes,3,rep,name=data,proto3" json:"data,omitempty"`
+}
+
+func (x *FieldDescription) Reset() {
+	*x = FieldDescription{}
+	mi := &file_components_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FieldDescription) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FieldDescription) ProtoMessage() {}
+
+func (x *FieldDescription) ProtoReflect() protoreflect.Message {
+	mi := &file_components_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FieldDescription.ProtoReflect.Descriptor instead.
+func (*FieldDescription) Descriptor() ([]byte, []int) {
+	return file_components_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *FieldDescription) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *FieldDescription) GetTypeInformation() *FieldTypeInformation {
+	if x != nil {
+		return x.TypeInformation
+	}
+	return nil
+}
+
+func (x *FieldDescription) GetData() []*FieldDescription_FieldData {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type EntityDescription_EntityElement struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Types that are assignable to Description:
+	//
+	//	*EntityDescription_EntityElement_Component
+	//	*EntityDescription_EntityElement_Entity
+	Description isEntityDescription_EntityElement_Description `protobuf_oneof:"description"`
+}
+
+func (x *EntityDescription_EntityElement) Reset() {
+	*x = EntityDescription_EntityElement{}
+	mi := &file_components_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EntityDescription_EntityElement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EntityDescription_EntityElement) ProtoMessage() {}
+
+func (x *EntityDescription_EntityElement) ProtoReflect() protoreflect.Message {
+	mi := &file_components_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EntityDescription_EntityElement.ProtoReflect.Descriptor instead.
+func (*EntityDescription_EntityElement) Descriptor() ([]byte, []int) {
+	return file_components_proto_rawDescGZIP(), []int{4, 0}
+}
+
+func (m *EntityDescription_EntityElement) GetDescription() isEntityDescription_EntityElement_Description {
+	if m != nil {
+		return m.Description
+	}
+	return nil
+}
+
+func (x *EntityDescription_EntityElement) GetComponent() *ComponentDescription {
+	if x, ok := x.GetDescription().(*EntityDescription_EntityElement_Component); ok {
+		return x.Component
+	}
+	return nil
+}
+
+func (x *EntityDescription_EntityElement) GetEntity() *EntityDescription {
+	if x, ok := x.GetDescription().(*EntityDescription_EntityElement_Entity); ok {
+		return x.Entity
+	}
+	return nil
+}
+
+type isEntityDescription_EntityElement_Description interface {
+	isEntityDescription_EntityElement_Description()
+}
+
+type EntityDescription_EntityElement_Component struct {
+	Component *ComponentDescription `protobuf:"bytes,1,opt,name=component,proto3,oneof"`
+}
+
+type EntityDescription_EntityElement_Entity struct {
+	Entity *EntityDescription `protobuf:"bytes,2,opt,name=entity,proto3,oneof"`
+}
+
+func (*EntityDescription_EntityElement_Component) isEntityDescription_EntityElement_Description() {}
+
+func (*EntityDescription_EntityElement_Entity) isEntityDescription_EntityElement_Description() {}
+
+// If the type is primitive, then the data is store as that, but
+// if the type is a reference, then is ComponentDescription
+type FieldDescription_FieldData struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Types that are assignable to Data:
+	//
+	//	*FieldDescription_FieldData_Number
+	//	*FieldDescription_FieldData_Text
+	//	*FieldDescription_FieldData_Character
+	//	*FieldDescription_FieldData_Boolean
+	//	*FieldDescription_FieldData_Date
+	//	*FieldDescription_FieldData_Reference
+	Data isFieldDescription_FieldData_Data `protobuf_oneof:"data"`
+}
+
+func (x *FieldDescription_FieldData) Reset() {
+	*x = FieldDescription_FieldData{}
+	mi := &file_components_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FieldDescription_FieldData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FieldDescription_FieldData) ProtoMessage() {}
+
+func (x *FieldDescription_FieldData) ProtoReflect() protoreflect.Message {
+	mi := &file_components_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FieldDescription_FieldData.ProtoReflect.Descriptor instead.
+func (*FieldDescription_FieldData) Descriptor() ([]byte, []int) {
+	return file_components_proto_rawDescGZIP(), []int{6, 0}
+}
+
+func (m *FieldDescription_FieldData) GetData() isFieldDescription_FieldData_Data {
+	if m != nil {
+		return m.Data
+	}
+	return nil
+}
+
+func (x *FieldDescription_FieldData) GetNumber() int32 {
+	if x, ok := x.GetData().(*FieldDescription_FieldData_Number); ok {
+		return x.Number
+	}
+	return 0
+}
+
+func (x *FieldDescription_FieldData) GetText() string {
+	if x, ok := x.GetData().(*FieldDescription_FieldData_Text); ok {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *FieldDescription_FieldData) GetCharacter() string {
+	if x, ok := x.GetData().(*FieldDescription_FieldData_Character); ok {
+		return x.Character
+	}
+	return ""
+}
+
+func (x *FieldDescription_FieldData) GetBoolean() bool {
+	if x, ok := x.GetData().(*FieldDescription_FieldData_Boolean); ok {
+		return x.Boolean
+	}
+	return false
+}
+
+func (x *FieldDescription_FieldData) GetDate() uint32 {
+	if x, ok := x.GetData().(*FieldDescription_FieldData_Date); ok {
+		return x.Date
+	}
+	return 0
+}
+
+func (x *FieldDescription_FieldData) GetReference() *ComponentDescription {
+	if x, ok := x.GetData().(*FieldDescription_FieldData_Reference); ok {
+		return x.Reference
+	}
+	return nil
+}
+
+type isFieldDescription_FieldData_Data interface {
+	isFieldDescription_FieldData_Data()
+}
+
+type FieldDescription_FieldData_Number struct {
+	Number int32 `protobuf:"varint,1,opt,name=number,proto3,oneof"`
+}
+
+type FieldDescription_FieldData_Text struct {
+	Text string `protobuf:"bytes,2,opt,name=text,proto3,oneof"`
+}
+
+type FieldDescription_FieldData_Character struct {
+	Character string `protobuf:"bytes,3,opt,name=character,proto3,oneof"`
+}
+
+type FieldDescription_FieldData_Boolean struct {
+	Boolean bool `protobuf:"varint,4,opt,name=boolean,proto3,oneof"`
+}
+
+type FieldDescription_FieldData_Date struct {
+	Date uint32 `protobuf:"varint,5,opt,name=date,proto3,oneof"`
+}
+
+type FieldDescription_FieldData_Reference struct {
+	Reference *ComponentDescription `protobuf:"bytes,6,opt,name=reference,proto3,oneof"`
+}
+
+func (*FieldDescription_FieldData_Number) isFieldDescription_FieldData_Data() {}
+
+func (*FieldDescription_FieldData_Text) isFieldDescription_FieldData_Data() {}
+
+func (*FieldDescription_FieldData_Character) isFieldDescription_FieldData_Data() {}
+
+func (*FieldDescription_FieldData_Boolean) isFieldDescription_FieldData_Data() {}
+
+func (*FieldDescription_FieldData_Date) isFieldDescription_FieldData_Data() {}
+
+func (*FieldDescription_FieldData_Reference) isFieldDescription_FieldData_Data() {}
 
 var File_components_proto protoreflect.FileDescriptor
 
@@ -325,32 +769,86 @@ var file_components_proto_rawDesc = []byte{
 	0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d,
 	0x65, 0x12, 0x2b, 0x0a, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28,
 	0x0b, 0x32, 0x13, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x53, 0x74, 0x72,
-	0x75, 0x63, 0x74, 0x75, 0x72, 0x65, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x22, 0x35,
-	0x0a, 0x14, 0x52, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x72,
-	0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1d, 0x0a, 0x0a, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x5f,
-	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x74, 0x61, 0x62, 0x6c,
-	0x65, 0x4e, 0x61, 0x6d, 0x65, 0x22, 0xc7, 0x01, 0x0a, 0x0e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x53,
-	0x74, 0x72, 0x75, 0x63, 0x74, 0x75, 0x72, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x2e, 0x0a, 0x09,
-	0x70, 0x72, 0x69, 0x6d, 0x69, 0x74, 0x69, 0x76, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32,
-	0x0e, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x54, 0x79, 0x70, 0x65, 0x48,
-	0x00, 0x52, 0x09, 0x70, 0x72, 0x69, 0x6d, 0x69, 0x74, 0x69, 0x76, 0x65, 0x12, 0x39, 0x0a, 0x09,
-	0x72, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32,
-	0x19, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x52, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x49,
-	0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x00, 0x52, 0x09, 0x72, 0x65,
-	0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x12, 0x17, 0x0a, 0x07, 0x69, 0x73, 0x5f, 0x6e, 0x75,
-	0x6c, 0x6c, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x06, 0x69, 0x73, 0x4e, 0x75, 0x6c, 0x6c,
-	0x12, 0x15, 0x0a, 0x06, 0x69, 0x73, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x05, 0x20, 0x01, 0x28, 0x08,
-	0x52, 0x05, 0x69, 0x73, 0x4b, 0x65, 0x79, 0x42, 0x06, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22,
-	0x16, 0x0a, 0x14, 0x43, 0x6f, 0x6d, 0x70, 0x6f, 0x6e, 0x65, 0x6e, 0x74, 0x44, 0x65, 0x73, 0x63,
-	0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x2a, 0x3e, 0x0a, 0x09, 0x46, 0x69, 0x65, 0x6c, 0x64,
-	0x54, 0x79, 0x70, 0x65, 0x12, 0x07, 0x0a, 0x03, 0x49, 0x4e, 0x54, 0x10, 0x00, 0x12, 0x0a, 0x0a,
-	0x06, 0x53, 0x54, 0x52, 0x49, 0x4e, 0x47, 0x10, 0x01, 0x12, 0x08, 0x0a, 0x04, 0x43, 0x48, 0x41,
-	0x52, 0x10, 0x02, 0x12, 0x08, 0x0a, 0x04, 0x42, 0x4f, 0x4f, 0x4c, 0x10, 0x03, 0x12, 0x08, 0x0a,
-	0x04, 0x44, 0x41, 0x54, 0x45, 0x10, 0x04, 0x42, 0x28, 0x5a, 0x26, 0x67, 0x69, 0x74, 0x68, 0x75,
-	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x4a, 0x75, 0x61, 0x6e, 0x42, 0x69, 0x61, 0x6e, 0x63, 0x75,
-	0x7a, 0x7a, 0x6f, 0x2f, 0x6f, 0x77, 0x6e, 0x5f, 0x77, 0x69, 0x6b, 0x69, 0x2f, 0x63, 0x6f, 0x72,
-	0x65, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x75, 0x63, 0x74, 0x75, 0x72, 0x65, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x22, 0x83,
+	0x01, 0x0a, 0x0e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x75, 0x72,
+	0x65, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x2d, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x54,
+	0x79, 0x70, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x04,
+	0x74, 0x79, 0x70, 0x65, 0x12, 0x17, 0x0a, 0x07, 0x69, 0x73, 0x5f, 0x6e, 0x75, 0x6c, 0x6c, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x06, 0x69, 0x73, 0x4e, 0x75, 0x6c, 0x6c, 0x12, 0x15, 0x0a,
+	0x06, 0x69, 0x73, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x69,
+	0x73, 0x4b, 0x65, 0x79, 0x22, 0x35, 0x0a, 0x14, 0x52, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63,
+	0x65, 0x49, 0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x1d, 0x0a, 0x0a,
+	0x74, 0x61, 0x62, 0x6c, 0x65, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x09, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x4e, 0x61, 0x6d, 0x65, 0x22, 0x80, 0x02, 0x0a, 0x14,
+	0x46, 0x69, 0x65, 0x6c, 0x64, 0x54, 0x79, 0x70, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x37, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0e, 0x32, 0x23, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x54, 0x79,
+	0x70, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x46, 0x69,
+	0x65, 0x6c, 0x64, 0x54, 0x79, 0x70, 0x65, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x12, 0x35, 0x0a,
+	0x09, 0x70, 0x72, 0x69, 0x6d, 0x69, 0x74, 0x69, 0x76, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e,
+	0x32, 0x15, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x50, 0x72, 0x69, 0x6d, 0x69, 0x74, 0x65, 0x46, 0x69,
+	0x65, 0x6c, 0x64, 0x54, 0x79, 0x70, 0x65, 0x48, 0x00, 0x52, 0x09, 0x70, 0x72, 0x69, 0x6d, 0x69,
+	0x74, 0x69, 0x76, 0x65, 0x12, 0x39, 0x0a, 0x09, 0x72, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63,
+	0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x52, 0x65,
+	0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x69,
+	0x6f, 0x6e, 0x48, 0x00, 0x52, 0x09, 0x72, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x22,
+	0x29, 0x0a, 0x09, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x54, 0x79, 0x70, 0x65, 0x12, 0x0d, 0x0a, 0x09,
+	0x50, 0x52, 0x49, 0x4d, 0x49, 0x54, 0x49, 0x56, 0x45, 0x10, 0x00, 0x12, 0x0d, 0x0a, 0x09, 0x52,
+	0x45, 0x46, 0x45, 0x52, 0x45, 0x4e, 0x43, 0x45, 0x10, 0x01, 0x42, 0x12, 0x0a, 0x10, 0x74, 0x79,
+	0x70, 0x65, 0x5f, 0x69, 0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0xe3,
+	0x01, 0x0a, 0x11, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70,
+	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x40, 0x0a, 0x08, 0x65, 0x6e, 0x74, 0x69, 0x74, 0x69, 0x65, 0x73,
+	0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x24, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x45, 0x6e, 0x74,
+	0x69, 0x74, 0x79, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x2e, 0x45,
+	0x6e, 0x74, 0x69, 0x74, 0x79, 0x45, 0x6c, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x08, 0x65, 0x6e,
+	0x74, 0x69, 0x74, 0x69, 0x65, 0x73, 0x1a, 0x8b, 0x01, 0x0a, 0x0d, 0x45, 0x6e, 0x74, 0x69, 0x74,
+	0x79, 0x45, 0x6c, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x12, 0x39, 0x0a, 0x09, 0x63, 0x6f, 0x6d, 0x70,
+	0x6f, 0x6e, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x61, 0x70,
+	0x69, 0x2e, 0x43, 0x6f, 0x6d, 0x70, 0x6f, 0x6e, 0x65, 0x6e, 0x74, 0x44, 0x65, 0x73, 0x63, 0x72,
+	0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x00, 0x52, 0x09, 0x63, 0x6f, 0x6d, 0x70, 0x6f, 0x6e,
+	0x65, 0x6e, 0x74, 0x12, 0x30, 0x0a, 0x06, 0x65, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79,
+	0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x00, 0x52, 0x06, 0x65,
+	0x6e, 0x74, 0x69, 0x74, 0x79, 0x42, 0x0d, 0x0a, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70,
+	0x74, 0x69, 0x6f, 0x6e, 0x22, 0x59, 0x0a, 0x14, 0x43, 0x6f, 0x6d, 0x70, 0x6f, 0x6e, 0x65, 0x6e,
+	0x74, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04,
+	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65,
+	0x12, 0x2d, 0x0a, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x15, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x44, 0x65, 0x73, 0x63,
+	0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x22,
+	0xf4, 0x02, 0x0a, 0x10, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70,
+	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x44, 0x0a, 0x10, 0x74, 0x79, 0x70, 0x65,
+	0x5f, 0x69, 0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x0b, 0x32, 0x19, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x54, 0x79,
+	0x70, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0f, 0x74,
+	0x79, 0x70, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x33,
+	0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1f, 0x2e, 0x61,
+	0x70, 0x69, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74,
+	0x69, 0x6f, 0x6e, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x44, 0x61, 0x74, 0x61, 0x52, 0x04, 0x64,
+	0x61, 0x74, 0x61, 0x1a, 0xd0, 0x01, 0x0a, 0x09, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x44, 0x61, 0x74,
+	0x61, 0x12, 0x18, 0x0a, 0x06, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x05, 0x48, 0x00, 0x52, 0x06, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x12, 0x14, 0x0a, 0x04, 0x74,
+	0x65, 0x78, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x04, 0x74, 0x65, 0x78,
+	0x74, 0x12, 0x1e, 0x0a, 0x09, 0x63, 0x68, 0x61, 0x72, 0x61, 0x63, 0x74, 0x65, 0x72, 0x18, 0x03,
+	0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x09, 0x63, 0x68, 0x61, 0x72, 0x61, 0x63, 0x74, 0x65,
+	0x72, 0x12, 0x1a, 0x0a, 0x07, 0x62, 0x6f, 0x6f, 0x6c, 0x65, 0x61, 0x6e, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x08, 0x48, 0x00, 0x52, 0x07, 0x62, 0x6f, 0x6f, 0x6c, 0x65, 0x61, 0x6e, 0x12, 0x14, 0x0a,
+	0x04, 0x64, 0x61, 0x74, 0x65, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0d, 0x48, 0x00, 0x52, 0x04, 0x64,
+	0x61, 0x74, 0x65, 0x12, 0x39, 0x0a, 0x09, 0x72, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65,
+	0x18, 0x06, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x19, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x43, 0x6f, 0x6d,
+	0x70, 0x6f, 0x6e, 0x65, 0x6e, 0x74, 0x44, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f,
+	0x6e, 0x48, 0x00, 0x52, 0x09, 0x72, 0x65, 0x66, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x42, 0x06,
+	0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x2a, 0x45, 0x0a, 0x10, 0x50, 0x72, 0x69, 0x6d, 0x69, 0x74,
+	0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x54, 0x79, 0x70, 0x65, 0x12, 0x07, 0x0a, 0x03, 0x49, 0x4e,
+	0x54, 0x10, 0x00, 0x12, 0x0a, 0x0a, 0x06, 0x53, 0x54, 0x52, 0x49, 0x4e, 0x47, 0x10, 0x01, 0x12,
+	0x08, 0x0a, 0x04, 0x43, 0x48, 0x41, 0x52, 0x10, 0x02, 0x12, 0x08, 0x0a, 0x04, 0x42, 0x4f, 0x4f,
+	0x4c, 0x10, 0x03, 0x12, 0x08, 0x0a, 0x04, 0x44, 0x41, 0x54, 0x45, 0x10, 0x04, 0x42, 0x28, 0x5a,
+	0x26, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x4a, 0x75, 0x61, 0x6e,
+	0x42, 0x69, 0x61, 0x6e, 0x63, 0x75, 0x7a, 0x7a, 0x6f, 0x2f, 0x6f, 0x77, 0x6e, 0x5f, 0x77, 0x69,
+	0x6b, 0x69, 0x2f, 0x63, 0x6f, 0x72, 0x65, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -365,24 +863,39 @@ func file_components_proto_rawDescGZIP() []byte {
 	return file_components_proto_rawDescData
 }
 
-var file_components_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_components_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_components_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_components_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_components_proto_goTypes = []any{
-	(FieldType)(0),               // 0: api.FieldType
-	(*ComponentStructure)(nil),   // 1: api.ComponentStructure
-	(*ReferenceInformation)(nil), // 2: api.ReferenceInformation
-	(*FieldStructure)(nil),       // 3: api.FieldStructure
-	(*ComponentDescription)(nil), // 4: api.ComponentDescription
+	(PrimiteFieldType)(0),                   // 0: api.PrimiteFieldType
+	(FieldTypeInformation_FieldType)(0),     // 1: api.FieldTypeInformation.FieldType
+	(*ComponentStructure)(nil),              // 2: api.ComponentStructure
+	(*FieldStructure)(nil),                  // 3: api.FieldStructure
+	(*ReferenceInformation)(nil),            // 4: api.ReferenceInformation
+	(*FieldTypeInformation)(nil),            // 5: api.FieldTypeInformation
+	(*EntityDescription)(nil),               // 6: api.EntityDescription
+	(*ComponentDescription)(nil),            // 7: api.ComponentDescription
+	(*FieldDescription)(nil),                // 8: api.FieldDescription
+	(*EntityDescription_EntityElement)(nil), // 9: api.EntityDescription.EntityElement
+	(*FieldDescription_FieldData)(nil),      // 10: api.FieldDescription.FieldData
 }
 var file_components_proto_depIdxs = []int32{
-	3, // 0: api.ComponentStructure.fields:type_name -> api.FieldStructure
-	0, // 1: api.FieldStructure.primitive:type_name -> api.FieldType
-	2, // 2: api.FieldStructure.reference:type_name -> api.ReferenceInformation
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	3,  // 0: api.ComponentStructure.fields:type_name -> api.FieldStructure
+	5,  // 1: api.FieldStructure.type:type_name -> api.FieldTypeInformation
+	1,  // 2: api.FieldTypeInformation.type:type_name -> api.FieldTypeInformation.FieldType
+	0,  // 3: api.FieldTypeInformation.primitive:type_name -> api.PrimiteFieldType
+	4,  // 4: api.FieldTypeInformation.reference:type_name -> api.ReferenceInformation
+	9,  // 5: api.EntityDescription.entities:type_name -> api.EntityDescription.EntityElement
+	8,  // 6: api.ComponentDescription.fields:type_name -> api.FieldDescription
+	5,  // 7: api.FieldDescription.type_information:type_name -> api.FieldTypeInformation
+	10, // 8: api.FieldDescription.data:type_name -> api.FieldDescription.FieldData
+	7,  // 9: api.EntityDescription.EntityElement.component:type_name -> api.ComponentDescription
+	6,  // 10: api.EntityDescription.EntityElement.entity:type_name -> api.EntityDescription
+	7,  // 11: api.FieldDescription.FieldData.reference:type_name -> api.ComponentDescription
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_components_proto_init() }
@@ -390,17 +903,29 @@ func file_components_proto_init() {
 	if File_components_proto != nil {
 		return
 	}
-	file_components_proto_msgTypes[2].OneofWrappers = []any{
-		(*FieldStructure_Primitive)(nil),
-		(*FieldStructure_Reference)(nil),
+	file_components_proto_msgTypes[3].OneofWrappers = []any{
+		(*FieldTypeInformation_Primitive)(nil),
+		(*FieldTypeInformation_Reference)(nil),
+	}
+	file_components_proto_msgTypes[7].OneofWrappers = []any{
+		(*EntityDescription_EntityElement_Component)(nil),
+		(*EntityDescription_EntityElement_Entity)(nil),
+	}
+	file_components_proto_msgTypes[8].OneofWrappers = []any{
+		(*FieldDescription_FieldData_Number)(nil),
+		(*FieldDescription_FieldData_Text)(nil),
+		(*FieldDescription_FieldData_Character)(nil),
+		(*FieldDescription_FieldData_Boolean)(nil),
+		(*FieldDescription_FieldData_Date)(nil),
+		(*FieldDescription_FieldData_Reference)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_components_proto_rawDesc,
-			NumEnums:      1,
-			NumMessages:   4,
+			NumEnums:      2,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -78,7 +78,7 @@ message FieldDescription {
             string text = 2;
             string character = 3;
             bool boolean = 4;
-            uint32 data = 5;
+            uint32 date = 5;
             ComponentDescription reference = 6;
         }
     }
