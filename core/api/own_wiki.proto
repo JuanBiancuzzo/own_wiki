@@ -62,9 +62,9 @@ message ImportedFilesRequest {
     string file_path = 1;
 } 
 
-// Gives the component description define by the user
+// Gives the entity description define by the user
 message ImportFilesResponse {
-    EntityDescription component = 1;
+    EntityDescription entity = 1;
 }
 
 // Gives the list of events that happend in a given frame, and its information

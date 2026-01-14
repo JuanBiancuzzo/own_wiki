@@ -82,7 +82,7 @@ func NewSystemInteractionClient(config c.SystemInteractionConfig) (*SystemIntera
 
 // TODO: Change "in *pb.QueryRequest" and "*pb.QueryResponse", to be the simplest representation, and this function
 // should converted to request and response, respectively
-func (sc *SystemInteractionClient) Query(ctx context.Context, queryDescription *pb.ComponentDescription) (*pb.ComponentDescription, error) {
+func (sc *SystemInteractionClient) Query(ctx context.Context, queryDescription *pb.EntityDescription) (*pb.EntityDescription, error) {
 	// We should define if the query request is an entity (component composition) or a simple component
 	if response, err := sc.system.Query(ctx, &pb.QueryRequest{Query: queryDescription}); err != nil {
 		return nil, err

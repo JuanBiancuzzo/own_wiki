@@ -12,7 +12,7 @@ message ComponentStructure {
 // Represents a type of data that could be represented and save by the system
 message FieldStructure {
     string name = 1;
-    FieldTypeInformation type = 2;
+    FieldTypeInformation type_information = 2;
     bool is_null = 3;
     bool is_key = 4;
 }
@@ -40,7 +40,7 @@ message FieldTypeInformation {
     }
 
     FieldType type = 1;
-    oneof type_information {
+    oneof information {
         PrimiteFieldType primitive = 2;
         ReferenceInformation reference = 3;
     }

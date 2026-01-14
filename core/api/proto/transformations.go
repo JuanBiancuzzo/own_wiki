@@ -6,17 +6,21 @@ import (
 	db "github.com/JuanBiancuzzo/own_wiki/core/database"
 )
 
-func (ft FieldType) GetDataBaseFieldType() (fieldType db.FieldType, err error) {
+func (ft PrimiteFieldType) GetDataBaseFieldType() (fieldType db.FieldType, err error) {
 	switch ft {
-	case FieldType_INT:
+	case PrimiteFieldType_INT:
 		fieldType = db.FT_INT
-	case FieldType_STRING:
+
+	case PrimiteFieldType_STRING:
 		fieldType = db.FT_STRING
-	case FieldType_CHAR:
+
+	case PrimiteFieldType_CHAR:
 		fieldType = db.FT_CHAR
-	case FieldType_BOOL:
+
+	case PrimiteFieldType_BOOL:
 		fieldType = db.FT_BOOL
-	case FieldType_DATE:
+
+	case PrimiteFieldType_DATE:
 		fieldType = db.FT_DATE
 
 	default:
