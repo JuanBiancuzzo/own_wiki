@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
+	"sync"
 
 	db "github.com/JuanBiancuzzo/own_wiki/core/database"
 	c "github.com/JuanBiancuzzo/own_wiki/core/systems/configuration"
@@ -198,10 +200,76 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 	return descriptions, nil
 }
 
-// TODO: Change the function to accept a channel of string (send filePaths), and a channel to get the information
-// to load to the database
-func (uc *UserInteractionClient) ImportFiles(ctx context.Context) (pb.UserInteraction_ImportFilesClient, error) {
-	return uc.User.ImportFiles(ctx)
+// TODO: Change this type to be the correct representation of the ComponentDescription, this should be able to be save in the database
+type EntityDescription *pb.ComponentDescription
+
+func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths chan string, receiveEntity chan EntityDescription) error {
+	stream, err := uc.User.ImportFiles(ctx)
+	if err != nil {
+		close(receiveEntity)
+		return fmt.Errorf("Failed to create ImportFiles stream, with error: %v", err)
+	}
+
+	var waitSendAndReceive sync.WaitGroup
+	errorChannel := make(chan error, 2)
+
+	waitSendAndReceive.Add(1)
+	go func(receiveFiles chan string, stream pb.UserInteraction_ImportFilesClient, wg *sync.WaitGroup) {
+		errorOccurred := false
+
+		for filePath := range receiveFiles {
+			if errorOccurred {
+				continue
+			}
+
+			if err := stream.Send(&pb.ImportedFilesRequest{FilePath: filePath}); err != nil {
+				errorOccurred = true
+				errorChannel <- fmt.Errorf("Error while sending file, with error: %v", err)
+			}
+		}
+
+		if !errorOccurred {
+			errorChannel <- nil
+		}
+
+		stream.CloseSend()
+		wg.Done()
+	}(sendFilePaths, stream, &waitSendAndReceive)
+
+	waitSendAndReceive.Add(1)
+	go func(sendEntity chan EntityDescription, stream pb.UserInteraction_ImportFilesClient, wg *sync.WaitGroup) {
+		for {
+			if response, err := stream.Recv(); err == io.EOF {
+				errorChannel <- nil
+				break
+
+			} else if err != nil {
+				errorChannel <- fmt.Errorf("Error while receiving entity information, with error: %v", err)
+				break
+
+			} else {
+				sendEntity <- response.GetComponent()
+			}
+		}
+
+		close(sendEntity)
+		wg.Done()
+	}(receiveEntity, stream, &waitSendAndReceive)
+
+	firstError, secondError := <-errorChannel, <-errorChannel
+	waitSendAndReceive.Wait()
+
+	if firstError != nil && secondError != nil {
+		return fmt.Errorf("Got the errors: %v, and %v", firstError, secondError)
+
+	} else if firstError != nil {
+		return firstError
+
+	} else if secondError != nil {
+		return secondError
+	}
+
+	return nil
 }
 
 // TODO: Change the function to accept a channel for events (as in core/events/Event) to send, and a channel to get
