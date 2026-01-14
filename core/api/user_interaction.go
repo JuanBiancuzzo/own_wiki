@@ -191,7 +191,7 @@ func dfs(name string, tableNames map[string]*seenComponent, exec func(*pb.Compon
 	return exec(component)
 }
 
-func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath string) (descriptions []db.TableDescription, err error) {
+func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath string) (descriptions []db.TableStructure, err error) {
 	response, err := uc.User.LoadPlugin(ctx, &pb.LoadPluginRequest{PluginPath: pluginPath})
 	if err != nil {
 		return descriptions, fmt.Errorf("Failed to load plugin at %q and get component data, with error: %v", pluginPath, err)
@@ -206,7 +206,7 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 		tableNames[name] = &seenComponent{Component: component, Seen: ST_NOT_SEEN}
 	}
 
-	nameTables := make(map[string]*db.TableDescription)
+	nameTables := make(map[string]*db.TableStructure)
 	exec := func(component *pb.ComponentStructure) error {
 		name := component.GetName()
 		fieldStructures := component.GetFields()
@@ -245,7 +245,7 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 		}
 	}
 
-	descriptions = make([]db.TableDescription, 0, len(nameTables))
+	descriptions = make([]db.TableStructure, 0, len(nameTables))
 	for _, table := range nameTables {
 		descriptions[len(descriptions)] = *table
 	}

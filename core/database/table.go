@@ -11,13 +11,13 @@ const (
 	FT_REF
 )
 
-type TableDescription struct {
+type TableStructure struct {
 	Name   string
 	Fields []Field
 }
 
-func NewTableDescription(name string, fields []Field) *TableDescription {
-	return &TableDescription{
+func NewTableDescription(name string, fields []Field) *TableStructure {
+	return &TableStructure{
 		Name:   name,
 		Fields: fields,
 	}
@@ -26,7 +26,7 @@ func NewTableDescription(name string, fields []Field) *TableDescription {
 type Field struct {
 	Name      string
 	Type      FieldType
-	Reference *TableDescription
+	Reference *TableStructure
 	IsNull    bool
 	IsKey     bool
 }
@@ -41,7 +41,7 @@ func NewPrimitiveField(name string, fieldType FieldType, isNull, isKey bool) Fie
 	}
 }
 
-func NewReferencesField(name string, reference *TableDescription, isNull, isKey bool) Field {
+func NewReferencesField(name string, reference *TableStructure, isNull, isKey bool) Field {
 	return Field{
 		Name:      name,
 		Type:      FT_REF,
