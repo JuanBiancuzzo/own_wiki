@@ -15,6 +15,7 @@ type Level string
 const (
 	LV_DEBUG = "Debug"
 	LV_INFO  = "Info"
+	LV_WARN  = "Warn"
 	LV_ERROR = "Error"
 	LV_FATAL = "Fatal"
 )
@@ -98,49 +99,33 @@ func CreateLogger(config LoggerConfiguration) (err error) {
 }
 
 func Info(format string, args ...any) {
-	if logger == nil {
-		return
-	}
-
-	if _, filePath, lineNumber, ok := runtime.Caller(1); ok {
-		logger.MsgChannel <- logger.CreateMessage(
-			LV_INFO, fmt.Sprintf(format, args...), filePath, lineNumber,
-		)
-	}
+	sendMessage(LV_INFO, format, args...)
 }
 
 func Debug(format string, args ...any) {
-	if logger == nil || logger.Verbosity == NORMAL {
-		return
-	}
+	sendMessage(LV_DEBUG, format, args...)
+}
 
-	if _, filePath, lineNumber, ok := runtime.Caller(1); ok {
-		logger.MsgChannel <- logger.CreateMessage(
-			LV_DEBUG, fmt.Sprintf(format, args...), filePath, lineNumber,
-		)
-	}
+func Warn(format string, args ...any) {
+	sendMessage(LV_WARN, format, args...)
 }
 
 func Error(format string, args ...any) {
-	if logger == nil {
-		return
-	}
-
-	if _, filePath, lineNumber, ok := runtime.Caller(1); ok {
-		logger.MsgChannel <- logger.CreateMessage(
-			LV_ERROR, fmt.Sprintf(format, args...), filePath, lineNumber,
-		)
-	}
+	sendMessage(LV_ERROR, format, args...)
 }
 
 func Fatal(format string, args ...any) {
-	if logger == nil {
+	sendMessage(LV_FATAL, format, args...)
+}
+
+func sendMessage(level Level, format string, args ...any) {
+	if logger == nil || (logger.Verbosity == NORMAL && level == LV_DEBUG) {
 		return
 	}
 
-	if _, filePath, lineNumber, ok := runtime.Caller(1); ok {
+	if _, filePath, lineNumber, ok := runtime.Caller(2); ok {
 		logger.MsgChannel <- logger.CreateMessage(
-			LV_FATAL, fmt.Sprintf(format, args...), filePath, lineNumber,
+			level, fmt.Sprintf(format, args...), filePath, lineNumber,
 		)
 	}
 }
