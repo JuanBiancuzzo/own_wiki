@@ -35,6 +35,9 @@ func (*userInteraction) ImportFiles(importFileStream pb.UserInteraction_ImportFi
 	// We could send via a channel the file paths needed, and via a gorouting be processing them as the
 	// user defines. Finally, via another channel, send the component description to the stream
 
+	// using own_wiki/core/systems/files/WorkFilesRoundRobin we could call the shared.ProcessFile(file File) []EntityDescription
+	// function, and concurrently process all the files via channels
+
 	return nil
 }
 
