@@ -16,10 +16,37 @@ type TableDescription struct {
 	Fields []Field
 }
 
+func NewTableDescription(name string, fields []Field) *TableDescription {
+	return &TableDescription{
+		Name:   name,
+		Fields: fields,
+	}
+}
+
 type Field struct {
 	Name      string
 	Type      FieldType
 	Reference *TableDescription
 	IsNull    bool
 	IsKey     bool
+}
+
+func NewPrimitiveField(name string, fieldType FieldType, isNull, isKey bool) Field {
+	return Field{
+		Name:      name,
+		Type:      fieldType,
+		Reference: nil,
+		IsNull:    isNull,
+		IsKey:     isKey,
+	}
+}
+
+func NewReferencesField(name string, reference *TableDescription, isNull, isKey bool) Field {
+	return Field{
+		Name:      name,
+		Type:      FT_REF,
+		Reference: reference,
+		IsNull:    isNull,
+		IsKey:     isKey,
+	}
 }

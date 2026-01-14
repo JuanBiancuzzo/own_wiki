@@ -109,7 +109,7 @@ type seenComponent struct {
 	Seen      seenType
 }
 
-func dfs(name string, tableNames map[string]*seenComponent, exec func(*pb.ComponentStructure)) bool {
+func dfs(name string, tableNames map[string]*seenComponent, exec func(*pb.ComponentStructure) error) error {
 	seenComponent := tableNames[name]
 	seenComponent.Seen = ST_SEEN
 
@@ -123,18 +123,17 @@ func dfs(name string, tableNames map[string]*seenComponent, exec func(*pb.Compon
 
 		switch refComponent.Seen {
 		case ST_NOT_SEEN:
-			if dfs(refTableName, tableNames, exec) {
-				return true
+			if err := dfs(refTableName, tableNames, exec); err != nil {
+				return err
 			}
 
 		case ST_SEEN:
-			return true
+			return fmt.Errorf("In the table %s got a cycle", name)
 		}
 	}
 
-	exec(component)
 	seenComponent.Seen = ST_COMPLETED
-	return false
+	return exec(component)
 }
 
 func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath string) (descriptions []db.TableDescription, err error) {
@@ -153,48 +152,32 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 	}
 
 	nameTables := make(map[string]*db.TableDescription)
-	exec := func(component *pb.ComponentStructure) {
+	exec := func(component *pb.ComponentStructure) error {
 		name := component.GetName()
 		fieldStructures := component.GetFields()
 		fields := make([]db.Field, len(fieldStructures))
 
 		for i, fieldStructure := range fieldStructures {
-			var fieldType db.FieldType
-			var reference *db.TableDescription = nil
+			fieldName := fieldStructure.GetName()
+			fieldIsNull := fieldStructure.GetIsNull()
+			fieldIsKey := fieldStructure.GetIsKey()
 
 			switch value := fieldStructure.GetType().(type) {
 			case *pb.FieldStructure_Primitive:
-				switch value.Primitive {
-				case pb.FieldType_INT:
-					fieldType = db.FT_INT
-				case pb.FieldType_STRING:
-					fieldType = db.FT_STRING
-				case pb.FieldType_CHAR:
-					fieldType = db.FT_CHAR
-				case pb.FieldType_BOOL:
-					fieldType = db.FT_BOOL
-				case pb.FieldType_DATE:
-					fieldType = db.FT_DATE
+				fieldType, err := value.Primitive.GetDataBaseFieldType()
+				if err != nil {
+					return fmt.Errorf("Primitive type failed, with error: %v", err)
 				}
+				fields[i] = db.NewPrimitiveField(fieldName, fieldType, fieldIsNull, fieldIsKey)
 
 			case *pb.FieldStructure_Reference:
-				fieldType = db.FT_REF
-				reference = nameTables[value.Reference.GetTableName()]
-			}
-
-			fields[i] = db.Field{
-				Name:      fieldStructure.GetName(),
-				Type:      fieldType,
-				Reference: reference,
-				IsNull:    fieldStructure.GetIsNull(),
-				IsKey:     fieldStructure.GetIsKey(),
+				reference := nameTables[value.Reference.GetTableName()]
+				fields[i] = db.NewReferencesField(fieldName, reference, fieldIsNull, fieldIsKey)
 			}
 		}
 
-		nameTables[name] = &db.TableDescription{
-			Name:   name,
-			Fields: fields,
-		}
+		nameTables[name] = db.NewTableDescription(name, fields)
+		return nil
 	}
 
 	for _, component := range tableNames {
@@ -202,8 +185,8 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 			continue
 		}
 
-		if dfs(component.Component.GetName(), tableNames, exec) {
-			return descriptions, fmt.Errorf("Failed to create tables, the tables create a cycle of references")
+		if err := dfs(component.Component.GetName(), tableNames, exec); err != nil {
+			return descriptions, fmt.Errorf("Failed to create tables, with error: %v", err)
 		}
 	}
 
