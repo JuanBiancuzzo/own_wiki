@@ -17,8 +17,9 @@ type TableDescription struct {
 }
 
 type Field struct {
-	Name   string
-	Type   FieldType
-	IsNull bool
-	IsKey  bool
+	Name      string
+	Type      FieldType
+	Reference *TableDescription
+	IsNull    bool
+	IsKey     bool
 }

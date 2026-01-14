@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	db "github.com/JuanBiancuzzo/own_wiki/core/database"
 	c "github.com/JuanBiancuzzo/own_wiki/core/systems/configuration"
 
 	pb "github.com/JuanBiancuzzo/own_wiki/core/api/proto"
@@ -76,8 +77,8 @@ func (us *UserInteractionServer) Serve() error {
 }
 
 type UserInteractionClient struct {
-	conn *grpc.ClientConn
-	user pb.UserInteractionClient
+	Conn *grpc.ClientConn
+	User pb.UserInteractionClient
 }
 
 func NewUserInteractionClient(config c.UserInteractionConfig) (*UserInteractionClient, error) {
@@ -90,30 +91,142 @@ func NewUserInteractionClient(config c.UserInteractionConfig) (*UserInteractionC
 	}
 
 	return &UserInteractionClient{
-		conn: conn,
-		user: pb.NewUserInteractionClient(conn),
+		Conn: conn,
+		User: pb.NewUserInteractionClient(conn),
 	}, nil
 }
 
-// TODO: Change LoadPluginResponse to be the structures of components
-func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath string) (*pb.LoadPluginResponse, error) {
-	return uc.user.LoadPlugin(ctx, &pb.LoadPluginRequest{
-		PluginPath: pluginPath,
-	})
+type seenType int
+
+const (
+	ST_NOT_SEEN = iota
+	ST_SEEN
+	ST_COMPLETED
+)
+
+type seenComponent struct {
+	Component *pb.ComponentStructure
+	Seen      seenType
+}
+
+func dfs(name string, tableNames map[string]*seenComponent, exec func(*pb.ComponentStructure)) bool {
+	seenComponent := tableNames[name]
+	seenComponent.Seen = ST_SEEN
+
+	component := seenComponent.Component
+	for _, field := range component.GetFields() {
+		if _, ok := field.GetType().(*pb.FieldStructure_Reference); !ok {
+			continue
+		}
+		refTableName := field.GetReference().GetTableName()
+		refComponent := tableNames[refTableName]
+
+		switch refComponent.Seen {
+		case ST_NOT_SEEN:
+			if dfs(refTableName, tableNames, exec) {
+				return true
+			}
+
+		case ST_SEEN:
+			return true
+		}
+	}
+
+	exec(component)
+	seenComponent.Seen = ST_COMPLETED
+	return false
+}
+
+func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath string) (descriptions []db.TableDescription, err error) {
+	response, err := uc.User.LoadPlugin(ctx, &pb.LoadPluginRequest{PluginPath: pluginPath})
+	if err != nil {
+		return descriptions, fmt.Errorf("Failed to load plugin at %q and get component data, with error: %v", pluginPath, err)
+	}
+
+	tableNames := make(map[string]*seenComponent)
+	for _, component := range response.GetComponents() {
+		name := component.GetName()
+		if _, ok := tableNames[name]; ok {
+			return descriptions, fmt.Errorf("Failed to create tables, there are multiple tables with the same name (atleast %s)", name)
+		}
+		tableNames[name] = &seenComponent{Component: component, Seen: ST_NOT_SEEN}
+	}
+
+	nameTables := make(map[string]*db.TableDescription)
+	exec := func(component *pb.ComponentStructure) {
+		name := component.GetName()
+		fieldStructures := component.GetFields()
+		fields := make([]db.Field, len(fieldStructures))
+
+		for i, fieldStructure := range fieldStructures {
+			var fieldType db.FieldType
+			var reference *db.TableDescription = nil
+
+			switch value := fieldStructure.GetType().(type) {
+			case *pb.FieldStructure_Primitive:
+				switch value.Primitive {
+				case pb.FieldType_INT:
+					fieldType = db.FT_INT
+				case pb.FieldType_STRING:
+					fieldType = db.FT_STRING
+				case pb.FieldType_CHAR:
+					fieldType = db.FT_CHAR
+				case pb.FieldType_BOOL:
+					fieldType = db.FT_BOOL
+				case pb.FieldType_DATE:
+					fieldType = db.FT_DATE
+				}
+
+			case *pb.FieldStructure_Reference:
+				fieldType = db.FT_REF
+				reference = nameTables[value.Reference.GetTableName()]
+			}
+
+			fields[i] = db.Field{
+				Name:      fieldStructure.GetName(),
+				Type:      fieldType,
+				Reference: reference,
+				IsNull:    fieldStructure.GetIsNull(),
+				IsKey:     fieldStructure.GetIsKey(),
+			}
+		}
+
+		nameTables[name] = &db.TableDescription{
+			Name:   name,
+			Fields: fields,
+		}
+	}
+
+	for _, component := range tableNames {
+		if component.Seen == ST_COMPLETED {
+			continue
+		}
+
+		if dfs(component.Component.GetName(), tableNames, exec) {
+			return descriptions, fmt.Errorf("Failed to create tables, the tables create a cycle of references")
+		}
+	}
+
+	descriptions = make([]db.TableDescription, 0, len(nameTables))
+	for _, table := range nameTables {
+		descriptions[len(descriptions)] = *table
+	}
+
+	return descriptions, nil
 }
 
 // TODO: Change the function to accept a channel of string (send filePaths), and a channel to get the information
 // to load to the database
 func (uc *UserInteractionClient) ImportFiles(ctx context.Context) (pb.UserInteraction_ImportFilesClient, error) {
-	return uc.user.ImportFiles(ctx)
+	return uc.User.ImportFiles(ctx)
 }
 
 // TODO: Change the function to accept a channel for events (as in core/events/Event) to send, and a channel to get
 // the scene representation
 func (uc *UserInteractionClient) Render(ctx context.Context) (pb.UserInteraction_RenderClient, error) {
-	return uc.user.Render(ctx)
+	return uc.User.Render(ctx)
 }
 
 func (uc *UserInteractionClient) Close() {
-	uc.conn.Close()
+	uc.Conn.Close()
 }
