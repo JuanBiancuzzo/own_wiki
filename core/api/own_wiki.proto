@@ -3,6 +3,10 @@ package api;
 
 option go_package = "github.com/JuanBiancuzzo/own_wiki/core"; 
 
+// ---+--- Imports ---+---
+
+import "components.proto";
+
 // ---+--- Services ---+---
 
 /*
@@ -90,11 +94,6 @@ message SendEventRequest {
 }
 
 // --- Pending to define ---
-
-message ComponentStructure {}
-
-message ComponentDescription {}
-
 message Event {}
 
 message FrameInformation {}
