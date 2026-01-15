@@ -97,10 +97,13 @@ func GetFromDataBaseDataAmount(da db.DataAmount) (amount ComponentDescription_Da
 func GetFieldData(fieldType db.FieldType, data any) (dataValue *FieldDescription_FieldData, err error) {
 	value := &FieldDescription_ConcreteFieldData{}
 
+	isConcrete := false
+
 	switch fieldType {
 	case db.FT_INT:
 		if number, ok := data.(int); ok {
 			value.Data = &FieldDescription_ConcreteFieldData_Number{Number: int32(number)}
+			isConcrete = true
 
 		} else if number, ok := data.(*int); !ok {
 			err = fmt.Errorf("data value is not an int, and as a number it should be")
@@ -112,6 +115,7 @@ func GetFieldData(fieldType db.FieldType, data any) (dataValue *FieldDescription
 	case db.FT_STRING:
 		if text, ok := data.(string); ok {
 			value.Data = &FieldDescription_ConcreteFieldData_Text{Text: text}
+			isConcrete = true
 
 		} else if text, ok := data.(*string); !ok {
 			err = fmt.Errorf("data value is not an string, and as a text it should be")
@@ -123,6 +127,7 @@ func GetFieldData(fieldType db.FieldType, data any) (dataValue *FieldDescription
 	case db.FT_CHAR:
 		if character, ok := data.(string); ok {
 			value.Data = &FieldDescription_ConcreteFieldData_Character{Character: character}
+			isConcrete = true
 
 		} else if character, ok := data.(*string); !ok {
 			err = fmt.Errorf("data value is not an string, and as a character it should be")
@@ -134,6 +139,7 @@ func GetFieldData(fieldType db.FieldType, data any) (dataValue *FieldDescription
 	case db.FT_BOOL:
 		if boolean, ok := data.(bool); ok {
 			value.Data = &FieldDescription_ConcreteFieldData_Boolean{Boolean: boolean}
+			isConcrete = true
 
 		} else if boolean, ok := data.(*bool); !ok {
 			err = fmt.Errorf("data value is not an bool, and as a boolean it should be")
@@ -145,6 +151,7 @@ func GetFieldData(fieldType db.FieldType, data any) (dataValue *FieldDescription
 	case db.FT_DATE:
 		if date, ok := data.(uint); ok {
 			value.Data = &FieldDescription_ConcreteFieldData_Date{Date: uint32(date)}
+			isConcrete = true
 
 		} else if date, ok := data.(*uint); !ok {
 			err = fmt.Errorf("data value is not an uint, and as a date it should be")
@@ -172,18 +179,24 @@ func GetFieldData(fieldType db.FieldType, data any) (dataValue *FieldDescription
 		err = fmt.Errorf("field %d is not define", fieldType)
 	}
 
-	if _, ok := data.(*any); !ok {
+	if isConcrete {
 		dataValue = &FieldDescription_FieldData{
 			Data: &FieldDescription_FieldData_Concrete{Concrete: value},
 		}
 
-	} else {
+	} else if value.Data != nil {
 		dataValue = &FieldDescription_FieldData{
 			Data: &FieldDescription_FieldData_Nullable{
 				Nullable: &FieldDescription_NullableFieldData{Data: value},
 			},
 		}
 
+	} else {
+		dataValue = &FieldDescription_FieldData{
+			Data: &FieldDescription_FieldData_Nullable{
+				Nullable: &FieldDescription_NullableFieldData{Data: nil},
+			},
+		}
 	}
 
 	return dataValue, err
