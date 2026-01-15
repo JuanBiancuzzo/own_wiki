@@ -1,4 +1,4 @@
-name: Go CI
+name: Testing
 
 on: [push, pull_request]
 

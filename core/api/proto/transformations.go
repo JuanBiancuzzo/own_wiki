@@ -172,7 +172,7 @@ func GetFieldData(fieldType db.FieldType, data any) (dataValue *FieldDescription
 		err = fmt.Errorf("field %d is not define", fieldType)
 	}
 
-	if _, ok := data.(*any); ok {
+	if _, ok := data.(*any); !ok {
 		dataValue = &FieldDescription_FieldData{
 			Data: &FieldDescription_FieldData_Concrete{Concrete: value},
 		}

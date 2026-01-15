@@ -24,6 +24,8 @@ const (
 type PrimitiveFieldType int32
 
 const (
+	// First are the not nullable, and then the nullable, this is to be
+	// able to get the nullability of the type by the NULL_INT value
 	PrimitiveFieldType_INT         PrimitiveFieldType = 0
 	PrimitiveFieldType_STRING      PrimitiveFieldType = 1
 	PrimitiveFieldType_CHAR        PrimitiveFieldType = 2
