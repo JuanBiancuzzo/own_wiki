@@ -262,7 +262,7 @@ func ConvertToComponentDescription(tableData *db.TableData) (*EntityDescription_
 			for row := range dataRows {
 				value := tableData.Data[i+row*amountFields]
 				if dataValue, err := GetFieldData(fieldData.Type, value); err != nil {
-					return nil, fmt.Errorf("field data in invalid, with error: %v", err)
+					return nil, fmt.Errorf("field data is invalid, with error: %v", err)
 
 				} else {
 					dataArray[row] = dataValue
@@ -327,22 +327,42 @@ func ConvertToEntityDescription(tableElement *db.TableElement) (*EntityDescripti
 	}
 }
 
-func getTypeValue[T any](isNull bool, dataPoint *FieldDescription_FieldData, getValue func(*FieldDescription_ConcreteFieldData) T) any {
+type fnGetValue[T any] func(*FieldDescription_ConcreteFieldData) T
+
+func getTypeValue[T any](isNull bool, dataArray []*FieldDescription_FieldData, getValue fnGetValue[T]) []db.FieldData {
+	data := make([]db.FieldData, len(dataArray))
+
 	if isNull {
-		var x *T = nil
-		if concrete := dataPoint.GetNullable().GetData(); concrete != nil {
-			value := getValue(concrete)
-			x = &value
+		for i, dataValue := range dataArray {
+			var x *T = nil
+			if concrete := dataValue.GetNullable().GetData(); concrete != nil {
+				value := getValue(concrete)
+				x = &value
+			}
+			data[i] = x
 		}
-		return x
+
 	} else {
-		return getValue(dataPoint.GetConcrete())
+		for i, dataValue := range dataArray {
+			data[i] = getValue(dataValue.GetConcrete())
+		}
+
+		return data
 	}
+
+	return data
 }
 
-func (fd *FieldDescription) ConvertToDataPoint() (data db.FieldData, field db.Field, err error) {
+func (fd *FieldDescription) ConvertToDataValues(dataAmount db.DataAmount) (data []db.FieldData, field db.Field, err error) {
 	typeInformation := fd.GetTypeInformation()
-	dataPoint := fd.GetPoint()
+	var dataArray []*FieldDescription_FieldData
+	switch dataAmount {
+	case db.DA_POINT:
+		dataArray = []*FieldDescription_FieldData{fd.GetPoint()}
+
+	case db.DA_ARRAY:
+		dataArray = fd.GetArray().GetDataArray()
+	}
 
 	switch typeInformation.GetType() {
 	case FieldTypeInformation_PRIMITIVE:
@@ -354,27 +374,27 @@ func (fd *FieldDescription) ConvertToDataPoint() (data db.FieldData, field db.Fi
 
 		switch fieldType {
 		case db.FT_INT:
-			data = getTypeValue(isNull, dataPoint, func(concrete *FieldDescription_ConcreteFieldData) int {
+			data = getTypeValue(isNull, dataArray, func(concrete *FieldDescription_ConcreteFieldData) int {
 				return int(concrete.GetNumber())
 			})
 
 		case db.FT_STRING:
-			data = getTypeValue(isNull, dataPoint, func(concrete *FieldDescription_ConcreteFieldData) string {
+			data = getTypeValue(isNull, dataArray, func(concrete *FieldDescription_ConcreteFieldData) string {
 				return concrete.GetText()
 			})
 
 		case db.FT_CHAR:
-			data = getTypeValue(isNull, dataPoint, func(concrete *FieldDescription_ConcreteFieldData) string {
+			data = getTypeValue(isNull, dataArray, func(concrete *FieldDescription_ConcreteFieldData) string {
 				return concrete.GetCharacter()
 			})
 
 		case db.FT_BOOL:
-			data = getTypeValue(isNull, dataPoint, func(concrete *FieldDescription_ConcreteFieldData) bool {
+			data = getTypeValue(isNull, dataArray, func(concrete *FieldDescription_ConcreteFieldData) bool {
 				return concrete.GetBoolean()
 			})
 
 		case db.FT_DATE:
-			data = getTypeValue(isNull, dataPoint, func(concrete *FieldDescription_ConcreteFieldData) uint {
+			data = getTypeValue(isNull, dataArray, func(concrete *FieldDescription_ConcreteFieldData) uint {
 				return uint(concrete.GetDate())
 			})
 		}
@@ -382,47 +402,45 @@ func (fd *FieldDescription) ConvertToDataPoint() (data db.FieldData, field db.Fi
 		// The literal false is for the isKey, that for the date is irrelevant
 		field = db.NewPrimitiveField(fd.GetName(), fieldType, isNull, false)
 
-	case FieldTypeInformation_REFERENCE:
-		switch value := dataPoint.GetData().(type) {
-		case *FieldDescription_FieldData_Nullable:
-			if concrete := value.Nullable.GetData(); concrete == nil {
-				structure := db.TableStructure{
-					Name: typeInformation.GetReference().GetTableName(),
+	/*
+		case FieldTypeInformation_REFERENCE:
+			switch value := dataPoint.GetData().(type) {
+			case *FieldDescription_FieldData_Nullable:
+				if concrete := value.Nullable.GetData(); concrete == nil {
+					structure := db.TableStructure{
+						Name: typeInformation.GetReference().GetTableName(),
+					}
+
+					var table *db.TableData = nil
+					data = table
+					field = db.NewReferencesField(fd.GetName(), &structure, true, false)
+
+				} else if tableData, errRef := concrete.GetReference().ConvertToTableData(); errRef == nil {
+					data = &tableData
+					field = db.NewReferencesField(fd.GetName(), &tableData.Structure, false, false)
+
+				} else {
+					// TODO: handle error
+					err = errRef
 				}
 
-				var table *db.TableData = nil
-				data = table
-				field = db.NewReferencesField(fd.GetName(), &structure, true, false)
+			case *FieldDescription_FieldData_Concrete:
+				if tableData, errRef := value.Concrete.GetReference().ConvertToTableData(); errRef == nil {
+					data = tableData
+					field = db.NewReferencesField(fd.GetName(), &tableData.Structure, false, false)
 
-			} else if tableData, errRef := concrete.GetReference().ConvertToTableData(); errRef == nil {
-				data = &tableData
-				field = db.NewReferencesField(fd.GetName(), &tableData.Structure, false, false)
-
-			} else {
-				// TODO: handle error
-				err = errRef
+				} else {
+					// TODO: handle error
+					err = errRef
+				}
 			}
-
-		case *FieldDescription_FieldData_Concrete:
-			if tableData, errRef := value.Concrete.GetReference().ConvertToTableData(); errRef == nil {
-				data = tableData
-				field = db.NewReferencesField(fd.GetName(), &tableData.Structure, false, false)
-
-			} else {
-				// TODO: handle error
-				err = errRef
-			}
-		}
+	*/
 
 	default:
 		err = fmt.Errorf("Invalid type information, with %d", typeInformation.GetType())
 	}
 
 	return data, field, err
-}
-
-func (fd *FieldDescription) ConvertToDataArray() ([]db.FieldData, db.Field, error) {
-	return []db.FieldData{}, db.Field{}, nil
 }
 
 func (cd *ComponentDescription) ConvertToTableData() (db.TableData, error) {
@@ -437,25 +455,17 @@ func (cd *ComponentDescription) ConvertToTableData() (db.TableData, error) {
 	fields := make([]db.Field, amountFields)
 
 	for i, fieldDescription := range cd.GetFields() {
-		switch dataAmount {
-		case db.DA_POINT:
-			if data[i], fields[i], err = fieldDescription.ConvertToDataPoint(); err != nil {
-				return db.TableData{}, fmt.Errorf("Failed to get DataPoint data and field infomation, with error: %v", err)
-			}
+		dataArray, field, err := fieldDescription.ConvertToDataValues(dataAmount)
+		if err != nil {
+			return db.TableData{}, fmt.Errorf("Failed to get DataArray data and field infomation, with error: %v", err)
 
-		case db.DA_ARRAY:
-			dataArray, field, err := fieldDescription.ConvertToDataArray()
-			if err != nil {
-				return db.TableData{}, fmt.Errorf("Failed to get DataArray data and field infomation, with error: %v", err)
+		} else if len(dataArray) != int(cd.GetRows()) {
+			return db.TableData{}, fmt.Errorf("The amount of data in the arrays (%d) is not the same as the amount of rows (%d)", len(dataArray), cd.Rows)
+		}
 
-			} else if len(dataArray) != int(cd.GetRows()) {
-				return db.TableData{}, fmt.Errorf("The amount of data in the arrays (%d) is not the same as the amount of rows (%d)", len(dataArray), cd.Rows)
-			}
-
-			fields[i] = field
-			for row := range len(dataArray) {
-				data[i+row*amountFields] = dataArray[row]
-			}
+		fields[i] = field
+		for row := range len(dataArray) {
+			data[i+row*amountFields] = dataArray[row]
 		}
 	}
 
