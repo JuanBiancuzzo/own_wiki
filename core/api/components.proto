@@ -19,7 +19,7 @@ message FieldStructure {
 
 
 // The primitive types of a field
-enum PrimiteFieldType {
+enum PrimitiveFieldType {
     INT = 0;
     STRING = 1;
     CHAR = 2;
@@ -41,28 +41,35 @@ message FieldTypeInformation {
 
     FieldType type = 1;
     oneof information {
-        PrimiteFieldType primitive = 2;
+        PrimitiveFieldType primitive = 2;
         ReferenceInformation reference = 3;
     }
 }
 
-// Represents the composition of components, and the value store
+// Represents the construction of a entity, that could be a Component, or a composition of components
 message EntityDescription {
-    message EntityElement {
-        oneof description {
-            ComponentDescription component = 1;
-            EntityDescription entity = 2;
-        }
+    oneof description {
+        ComponentDescription component = 1;
+        ComponentCompositionDescription composition = 2;
     }
-
-    repeated EntityElement entities = 1;
 }
 
+// Represents the composition of components, and it's a recursive definition
+message ComponentCompositionDescription {
+    repeated EntityDescription entities = 1;
+}
 
 // Represents the data of the component
 message ComponentDescription {
     string name = 1;
-    repeated FieldDescription fields = 2;
+
+    enum DataAmount {
+        ONE = 0;
+        ARRAY = 1;
+    }
+
+    DataAmount amount = 2;
+    repeated FieldDescription fields = 3;
 }
 
 // Represents the data of a field in a query result (array of values)
@@ -83,7 +90,14 @@ message FieldDescription {
         }
     }
 
+    message FieldDataArray {
+        repeated FieldData data_array = 1;
+    }
+
     // This should be all of the same type. This is to save space and
     // not have the type information in the FieldData
-    repeated FieldData data = 3;
+    oneof data {
+        FieldData point = 3;
+        FieldDataArray array = 4;
+    }
 }

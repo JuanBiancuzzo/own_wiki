@@ -1,6 +1,7 @@
 package shared
 
 import (
+	db "github.com/JuanBiancuzzo/own_wiki/core/database"
 	f "github.com/JuanBiancuzzo/own_wiki/core/systems/files"
 )
 
@@ -11,7 +12,7 @@ type ComponentStructure any
 type ViewInformation any
 
 // Represents a component or a composition of components (an entity) that holds information
-type EntityDescription any
+type EntityElement db.TableElement
 
 // Is the string representation of a file, and its metadata
 type File f.File
@@ -31,5 +32,5 @@ type UserDefineStructure interface {
 	// Given that when importing file there has to be a way to transform them in entities, this
 	// is where it happends. This also defines what entity is it wanted to be the main menu. If
 	// multiples entities are main menu capable, then it will apear an option to select
-	ProcessFile(file File) []EntityDescription
+	ProcessFile(file File) []EntityElement
 }

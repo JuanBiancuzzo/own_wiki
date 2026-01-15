@@ -36,22 +36,29 @@ func newUserInteraction(config c.UserInteractionConfig) *userInteraction {
 	}
 }
 
-func (*userInteraction) LoadPlugin(ctx context.Context, loadPluginRequest *pb.LoadPluginRequest) (*pb.LoadPluginResponse, error) {
+func (ui *userInteraction) LoadPlugin(ctx context.Context, loadPluginRequest *pb.LoadPluginRequest) (*pb.LoadPluginResponse, error) {
 	// We would need to find the files (build it as a plugin), then load it and keep the reference to that plugin.
 	// With the plugin, we should call the necesary function to define the structures given by the user. This should
 	// be the components, and the views. Then the components should be return
 
+	// We would load the plugin to ui.Plugin that holds the shared.UserDefineStructure interface
+
 	return nil, nil
 }
 
-// TODO: Finish the implementation to convert from EntityDescription to ComponentDescription
 func (ui *userInteraction) ImportFiles(importFileStream pb.UserInteraction_ImportFilesServer) error {
 	receiveFilePaths := make(chan string, ui.FilePathCapacity)
 	sendEntities := make(chan *pb.EntityDescription, ui.ComponentCapacity)
 
 	pluginExe := func(file f.File) {
-		for range ui.Plugin.ProcessFile(shared.File(file)) {
-			sendEntities <- &pb.EntityDescription{}
+		for _, entityDescription := range ui.Plugin.ProcessFile(shared.File(file)) {
+			var tableElement db.TableElement = entityDescription
+			if entity, err := pb.ConvertToEntityDescription(&tableElement); err != nil {
+				log.Error("Failed to convert pb.EntityDescription, with error: %v", err)
+
+			} else {
+				sendEntities <- entity
+			}
 		}
 	}
 
@@ -215,23 +222,20 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 		fieldStructures := component.GetFields()
 		fields := make([]db.Field, len(fieldStructures))
 
-		for i, fieldStructure := range fieldStructures {
-			fieldName := fieldStructure.GetName()
-			fieldIsNull := fieldStructure.GetIsNull()
-			fieldIsKey := fieldStructure.GetIsKey()
+		for i, field := range fieldStructures {
+			typeInformation := field.GetTypeInformation()
 
-			typeInformation := fieldStructure.GetTypeInformation()
 			switch typeInformation.GetType() {
 			case pb.FieldTypeInformation_PRIMITIVE:
 				fieldType, err := typeInformation.GetPrimitive().GetDataBaseFieldType()
 				if err != nil {
 					return fmt.Errorf("Primitive type failed, with error: %v", err)
 				}
-				fields[i] = db.NewPrimitiveField(fieldName, fieldType, fieldIsNull, fieldIsKey)
+				fields[i] = db.NewPrimitiveField(field.GetName(), fieldType, field.GetIsNull(), field.GetIsKey())
 
 			case pb.FieldTypeInformation_REFERENCE:
 				reference := nameTables[typeInformation.GetReference().GetTableName()]
-				fields[i] = db.NewReferencesField(fieldName, reference, fieldIsNull, fieldIsKey)
+				fields[i] = db.NewReferencesField(field.GetName(), reference, field.GetIsNull(), field.GetIsKey())
 			}
 		}
 
