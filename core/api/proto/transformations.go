@@ -6,7 +6,12 @@ import (
 	db "github.com/JuanBiancuzzo/own_wiki/core/database"
 )
 
-func (ft PrimitiveFieldType) GetDataBaseFieldType() (fieldType db.FieldType, err error) {
+func (ft PrimitiveFieldType) GetDataBaseFieldType() (fieldType db.FieldType, isNull bool, err error) {
+	isNull = ft >= PrimitiveFieldType_NULL_INT
+	if isNull {
+		ft -= PrimitiveFieldType_NULL_INT
+	}
+
 	switch ft {
 	case PrimitiveFieldType_INT:
 		fieldType = db.FT_INT
@@ -27,10 +32,10 @@ func (ft PrimitiveFieldType) GetDataBaseFieldType() (fieldType db.FieldType, err
 		err = fmt.Errorf("Field %d not define", ft)
 	}
 
-	return fieldType, err
+	return fieldType, isNull, err
 }
 
-func GetFromDataBaseFieldType(ft db.FieldType) (fieldType PrimitiveFieldType, err error) {
+func GetFromDataBaseFieldType(ft db.FieldType, isNull bool) (fieldType PrimitiveFieldType, err error) {
 	switch ft {
 	case db.FT_INT:
 		fieldType = PrimitiveFieldType_INT
@@ -51,7 +56,27 @@ func GetFromDataBaseFieldType(ft db.FieldType) (fieldType PrimitiveFieldType, er
 		err = fmt.Errorf("Field %d is not define", ft)
 	}
 
+	if isNull {
+		// As the NULL_INT is the first nullable element, then all the next ones are ofset by the db.FieldType
+		fieldType += PrimitiveFieldType_NULL_INT
+	}
+
 	return fieldType, err
+}
+
+func (da ComponentDescription_DataAmount) GetDataBaseAmount() (dataAmount db.DataAmount, err error) {
+	switch da {
+	case ComponentDescription_ONE:
+		dataAmount = db.DA_POINT
+
+	case ComponentDescription_ARRAY:
+		dataAmount = db.DA_ARRAY
+
+	default:
+		err = fmt.Errorf("Data amount %d is not define", da)
+	}
+
+	return dataAmount, err
 }
 
 func GetFromDataBaseDataAmount(da db.DataAmount) (amount ComponentDescription_DataAmount, err error) {
@@ -70,64 +95,95 @@ func GetFromDataBaseDataAmount(da db.DataAmount) (amount ComponentDescription_Da
 }
 
 func GetFieldData(fieldType db.FieldType, data any) (dataValue *FieldDescription_FieldData, err error) {
-	dataValue = &FieldDescription_FieldData{}
+	value := &FieldDescription_ConcreteFieldData{}
 
 	switch fieldType {
 	case db.FT_INT:
-		if number, ok := data.(int); !ok {
+		if number, ok := data.(int); ok {
+			value.Data = &FieldDescription_ConcreteFieldData_Number{Number: int32(number)}
+
+		} else if number, ok := data.(*int); !ok {
 			err = fmt.Errorf("data value is not an int, and as a number it should be")
 
-		} else {
-			dataValue.Data = &FieldDescription_FieldData_Number{Number: int32(number)}
+		} else if number != nil {
+			value.Data = &FieldDescription_ConcreteFieldData_Number{Number: int32(*number)}
 		}
 
 	case db.FT_STRING:
-		if text, ok := data.(string); !ok {
+		if text, ok := data.(string); ok {
+			value.Data = &FieldDescription_ConcreteFieldData_Text{Text: text}
+
+		} else if text, ok := data.(*string); !ok {
 			err = fmt.Errorf("data value is not an string, and as a text it should be")
 
-		} else {
-			dataValue.Data = &FieldDescription_FieldData_Text{Text: text}
+		} else if text != nil { // its a *string and its not nil, then the value.Data is not nil
+			value.Data = &FieldDescription_ConcreteFieldData_Text{Text: *text}
 		}
 
 	case db.FT_CHAR:
-		if character, ok := data.(string); !ok {
+		if character, ok := data.(string); ok {
+			value.Data = &FieldDescription_ConcreteFieldData_Character{Character: character}
+
+		} else if character, ok := data.(*string); !ok {
 			err = fmt.Errorf("data value is not an string, and as a character it should be")
 
-		} else {
-			dataValue.Data = &FieldDescription_FieldData_Character{Character: character}
+		} else if character != nil {
+			value.Data = &FieldDescription_ConcreteFieldData_Character{Character: *character}
 		}
 
 	case db.FT_BOOL:
-		if boolean, ok := data.(bool); !ok {
+		if boolean, ok := data.(bool); ok {
+			value.Data = &FieldDescription_ConcreteFieldData_Boolean{Boolean: boolean}
+
+		} else if boolean, ok := data.(*bool); !ok {
 			err = fmt.Errorf("data value is not an bool, and as a boolean it should be")
 
-		} else {
-			dataValue.Data = &FieldDescription_FieldData_Boolean{Boolean: boolean}
+		} else if boolean != nil {
+			value.Data = &FieldDescription_ConcreteFieldData_Boolean{Boolean: *boolean}
 		}
 
 	case db.FT_DATE:
-		if date, ok := data.(uint); !ok {
+		if date, ok := data.(uint); ok {
+			value.Data = &FieldDescription_ConcreteFieldData_Date{Date: uint32(date)}
+
+		} else if date, ok := data.(*uint); !ok {
 			err = fmt.Errorf("data value is not an uint, and as a date it should be")
 
-		} else {
-			dataValue.Data = &FieldDescription_FieldData_Date{Date: uint32(date)}
+		} else if date != nil {
+			value.Data = &FieldDescription_ConcreteFieldData_Date{Date: uint32(*date)}
 		}
 
 	case db.FT_REF:
 		if reference, ok := data.(*db.TableData); !ok {
 			err = fmt.Errorf("data value is not an pointer to the table data, and as a reference it should be")
 
+		} else if reference == nil {
+
 		} else if refComponent, errComp := ConvertToComponentDescription(reference); errComp != nil {
 			err = fmt.Errorf("failed to create reference component, with error: %v", errComp)
 
 		} else {
-			dataValue.Data = &FieldDescription_FieldData_Reference{
+			value.Data = &FieldDescription_ConcreteFieldData_Reference{
 				Reference: refComponent.Component,
 			}
 		}
 
 	default:
 		err = fmt.Errorf("field %d is not define", fieldType)
+	}
+
+	if _, ok := data.(*any); ok {
+		dataValue = &FieldDescription_FieldData{
+			Data: &FieldDescription_FieldData_Concrete{Concrete: value},
+		}
+
+	} else {
+		dataValue = &FieldDescription_FieldData{
+			Data: &FieldDescription_FieldData_Nullable{
+				Nullable: &FieldDescription_NullableFieldData{Data: value},
+			},
+		}
+
 	}
 
 	return dataValue, err
@@ -148,7 +204,7 @@ func ConvertToComponentDescription(tableData *db.TableData) (*EntityDescription_
 		var fieldTypeInformation *FieldTypeInformation
 		switch fieldData.Type {
 		case db.FT_INT, db.FT_STRING, db.FT_CHAR, db.FT_BOOL, db.FT_DATE:
-			primitiveType, err := GetFromDataBaseFieldType(fieldData.Type)
+			primitiveType, err := GetFromDataBaseFieldType(fieldData.Type, fieldData.IsNull)
 			if err != nil {
 				return nil, fmt.Errorf("invalid type of primitive in %s field, with error: %v", fieldData.Name, err)
 			}
@@ -210,6 +266,7 @@ func ConvertToComponentDescription(tableData *db.TableData) (*EntityDescription_
 		Component: &ComponentDescription{
 			Name:   tableData.Structure.Name,
 			Amount: dataAmount,
+			Rows:   int32(dataRows),
 			Fields: fields,
 		},
 	}, nil
@@ -255,4 +312,161 @@ func ConvertToEntityDescription(tableElement *db.TableElement) (*EntityDescripti
 	default:
 		return nil, fmt.Errorf("Table element is not a data o composition type")
 	}
+}
+
+func getTypeValue[T any](isNull bool, dataPoint *FieldDescription_FieldData, getValue func(*FieldDescription_ConcreteFieldData) T) any {
+	if isNull {
+		var x *T = nil
+		if concrete := dataPoint.GetNullable().GetData(); concrete != nil {
+			value := getValue(concrete)
+			x = &value
+		}
+		return x
+	} else {
+		return getValue(dataPoint.GetConcrete())
+	}
+}
+
+func (fd *FieldDescription) ConvertToDataPoint() (data db.FieldData, field db.Field, err error) {
+	typeInformation := fd.GetTypeInformation()
+	dataPoint := fd.GetPoint()
+
+	switch typeInformation.GetType() {
+	case FieldTypeInformation_PRIMITIVE:
+		fieldType, isNull, errFT := typeInformation.GetPrimitive().GetDataBaseFieldType()
+		if errFT != nil {
+			err = fmt.Errorf("Failed to get field type, with error: %v", err)
+			break
+		}
+
+		switch fieldType {
+		case db.FT_INT:
+			data = getTypeValue(isNull, dataPoint, func(concrete *FieldDescription_ConcreteFieldData) int {
+				return int(concrete.GetNumber())
+			})
+
+		case db.FT_STRING:
+			data = getTypeValue(isNull, dataPoint, func(concrete *FieldDescription_ConcreteFieldData) string {
+				return concrete.GetText()
+			})
+
+		case db.FT_CHAR:
+			data = getTypeValue(isNull, dataPoint, func(concrete *FieldDescription_ConcreteFieldData) string {
+				return concrete.GetCharacter()
+			})
+
+		case db.FT_BOOL:
+			data = getTypeValue(isNull, dataPoint, func(concrete *FieldDescription_ConcreteFieldData) bool {
+				return concrete.GetBoolean()
+			})
+
+		case db.FT_DATE:
+			data = getTypeValue(isNull, dataPoint, func(concrete *FieldDescription_ConcreteFieldData) uint {
+				return uint(concrete.GetDate())
+			})
+		}
+
+		// The literal false is for the isKey, that for the date is irrelevant
+		field = db.NewPrimitiveField(fd.GetName(), fieldType, isNull, false)
+
+	case FieldTypeInformation_REFERENCE:
+		switch value := dataPoint.GetData().(type) {
+		case *FieldDescription_FieldData_Nullable:
+			if concrete := value.Nullable.GetData(); concrete == nil {
+				structure := db.TableStructure{
+					Name: typeInformation.GetReference().GetTableName(),
+				}
+
+				var table *db.TableData = nil
+				data = table
+				field = db.NewReferencesField(fd.GetName(), &structure, true, false)
+
+			} else if tableData, errRef := concrete.GetReference().ConvertToTableData(); errRef == nil {
+				data = &tableData
+				field = db.NewReferencesField(fd.GetName(), &tableData.Structure, false, false)
+
+			} else {
+				// TODO: handle error
+				err = errRef
+			}
+
+		case *FieldDescription_FieldData_Concrete:
+			if tableData, errRef := value.Concrete.GetReference().ConvertToTableData(); errRef == nil {
+				data = tableData
+				field = db.NewReferencesField(fd.GetName(), &tableData.Structure, false, false)
+
+			} else {
+				// TODO: handle error
+				err = errRef
+			}
+		}
+
+	default:
+		err = fmt.Errorf("Invalid type information, with %d", typeInformation.GetType())
+	}
+
+	return data, field, err
+}
+
+func (fd *FieldDescription) ConvertToDataArray() ([]db.FieldData, db.Field, error) {
+	return []db.FieldData{}, db.Field{}, nil
+}
+
+func (cd *ComponentDescription) ConvertToTableData() (db.TableData, error) {
+	dataAmount, err := cd.GetAmount().GetDataBaseAmount()
+	if err != nil {
+		return db.TableData{}, fmt.Errorf("Failed to get dataAmount, with error: %v", err)
+	}
+
+	amountFields := len(cd.GetFields())
+
+	data := make([]db.FieldData, int(cd.GetRows())*amountFields)
+	fields := make([]db.Field, amountFields)
+
+	for i, fieldDescription := range cd.GetFields() {
+		switch dataAmount {
+		case db.DA_POINT:
+			if data[i], fields[i], err = fieldDescription.ConvertToDataPoint(); err != nil {
+				return db.TableData{}, fmt.Errorf("Failed to get DataPoint data and field infomation, with error: %v", err)
+			}
+
+		case db.DA_ARRAY:
+			dataArray, field, err := fieldDescription.ConvertToDataArray()
+			if err != nil {
+				return db.TableData{}, fmt.Errorf("Failed to get DataArray data and field infomation, with error: %v", err)
+
+			} else if len(dataArray) != int(cd.GetRows()) {
+				return db.TableData{}, fmt.Errorf("The amount of data in the arrays (%d) is not the same as the amount of rows (%d)", len(dataArray), cd.Rows)
+			}
+
+			fields[i] = field
+			for row := range len(dataArray) {
+				data[i+row*amountFields] = dataArray[row]
+			}
+		}
+	}
+
+	return db.TableData{
+		Structure: db.TableStructure{
+			Name:   cd.GetName(),
+			Fields: fields,
+		},
+		DataAmount: dataAmount,
+		Data:       data,
+	}, nil
+}
+
+func (ed *EntityDescription) ConvertToTableElement() (tableElement db.TableElement, err error) {
+	switch table := ed.GetDescription().(type) {
+	case *EntityDescription_Component:
+		tableElement, err = table.Component.ConvertToTableData()
+
+	case *EntityDescription_Composition:
+		// TODO: Convert composition
+
+	default:
+		err = fmt.Errorf("The entity description is not define")
+	}
+
+	return tableElement, err
 }

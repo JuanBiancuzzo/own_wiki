@@ -20,11 +20,18 @@ message FieldStructure {
 
 // The primitive types of a field
 enum PrimitiveFieldType {
+    // First are the not nullable, and then the nullable, this is to be 
+    // able to get the nullability of the type by the NULL_INT value
     INT = 0;
     STRING = 1;
     CHAR = 2;
     BOOL = 3;
     DATE = 4;
+    NULL_INT = 5;
+    NULL_STRING = 6;
+    NULL_CHAR = 7;
+    NULL_BOOL = 8;
+    NULL_DATE = 9;
 }
 
 // The information necesary to reference a table
@@ -69,7 +76,8 @@ message ComponentDescription {
     }
 
     DataAmount amount = 2;
-    repeated FieldDescription fields = 3;
+    int32 rows = 3;
+    repeated FieldDescription fields = 4;
 }
 
 // Represents the data of a field in a query result (array of values)
@@ -79,7 +87,7 @@ message FieldDescription {
 
     // If the type is primitive, then the data is store as that, but 
     // if the type is a reference, then is ComponentDescription
-    message FieldData {
+    message ConcreteFieldData {
         oneof data {
             int32 number = 1;
             string text = 2;
@@ -87,6 +95,17 @@ message FieldDescription {
             bool boolean = 4;
             uint32 date = 5;
             ComponentDescription reference = 6;
+        }
+    }
+
+    message NullableFieldData {
+        optional ConcreteFieldData data = 1;
+    }
+
+    message FieldData {
+        oneof data {
+            ConcreteFieldData concrete = 1;
+            NullableFieldData nullable = 2;
         }
     }
 

@@ -227,10 +227,14 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 
 			switch typeInformation.GetType() {
 			case pb.FieldTypeInformation_PRIMITIVE:
-				fieldType, err := typeInformation.GetPrimitive().GetDataBaseFieldType()
+				fieldType, isNull, err := typeInformation.GetPrimitive().GetDataBaseFieldType()
 				if err != nil {
 					return fmt.Errorf("Primitive type failed, with error: %v", err)
+
+				} else if field.GetIsNull() != isNull {
+					return fmt.Errorf("The field information of its nullability are different in fieldStructure is %v and in type is %v", field.GetIsNull(), isNull)
 				}
+
 				fields[i] = db.NewPrimitiveField(field.GetName(), fieldType, field.GetIsNull(), field.GetIsKey())
 
 			case pb.FieldTypeInformation_REFERENCE:
