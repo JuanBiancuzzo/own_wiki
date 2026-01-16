@@ -13,7 +13,6 @@ message ComponentStructure {
 enum FieldType {
     INT = 0;
     STRING = 1;
-    CHAR = 2;
     BOOL = 3;
     DATE = 4;
     REFERENCE = 5;
@@ -23,7 +22,7 @@ enum FieldType {
 message FieldStructure {
     string name = 1;
     FieldType type = 2;
-    optional FieldStructure reference = 3;
+    optional ComponentStructure reference = 3;
     bool is_null = 4;
     bool is_key = 5;
 }
@@ -54,22 +53,20 @@ message ComponentDescription {
     FieldsDescription fields = 4;
 }
 
-// Represents the 
+// Represents the array of fields
 message FieldsDescription {
     repeated FieldDescription fields = 5;
 }
 
-// Represents the data of a field in a query result (array of values)
-message FieldDescription {
-
+// Represents the data itself
+message FieldData {
     message ConcreteFieldData {
         oneof data {
             int32 number = 1;
             string text = 2;
-            string character = 3;
-            bool boolean = 4;
-            uint32 date = 5;
-            FieldsDescription reference = 6;
+            bool boolean = 3;
+            uint32 date = 4;
+            FieldsDescription reference = 5;
         }
     }
 
@@ -77,12 +74,15 @@ message FieldDescription {
         optional ConcreteFieldData data = 1;
     }
 
-    message FieldData {
-        oneof data {
-            ConcreteFieldData concrete = 1;
-            NullableFieldData nullable = 2;
-        }
+    oneof data {
+        ConcreteFieldData concrete = 1;
+        NullableFieldData nullable = 2;
     }
+}
+
+// Represents the data of a field in a query result (array of values)
+message FieldDescription {
+
 
     message FieldDataArray {
         repeated FieldData data_array = 1;

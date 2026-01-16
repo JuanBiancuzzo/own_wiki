@@ -1,6 +1,8 @@
 package core
 
-import "time"
+import (
+	"time"
+)
 
 // ---+--- From EntityDescription ---+---
 func NewEntityDescriptionComponent(component *ComponentDescription) *EntityDescription {
@@ -20,7 +22,12 @@ func NewEntityDescriptionComposition(composition *ComponentCompositionDescriptio
 }
 
 // ---+--- ComponentDescription ---+---
-func NewComponentDescriptionPoint(structure *ComponentStructure, fields []*FieldDescription) *ComponentDescription {
+func NewComponentDescriptionPoint(structure *ComponentStructure, data ...*FieldData) *ComponentDescription {
+	fields := make([]*FieldDescription, len(data))
+	for i, dataPoint := range data {
+		fields[i] = NewFieldPoint(dataPoint)
+	}
+
 	return &ComponentDescription{
 		Structure: structure,
 		Amount:    ComponentDescription_POINT,
@@ -31,11 +38,21 @@ func NewComponentDescriptionPoint(structure *ComponentStructure, fields []*Field
 	}
 }
 
-func NewComponentDescriptionArray(structure *ComponentStructure, rows int32, fields []*FieldDescription) *ComponentDescription {
+func NewComponentDescriptionArray(structure *ComponentStructure, data ...[]*FieldData) *ComponentDescription {
+	fields := make([]*FieldDescription, len(data))
+	rows := len(data[0])
+	for i, dataArray := range data {
+		if len(dataArray) < rows {
+			rows = len(dataArray)
+		}
+
+		fields[i] = NewFieldArray(dataArray)
+	}
+
 	return &ComponentDescription{
 		Structure: structure,
 		Amount:    ComponentDescription_ARRAY,
-		Rows:      rows,
+		Rows:      int32(rows),
 		Fields: &FieldsDescription{
 			Fields: fields,
 		},
@@ -61,7 +78,7 @@ func NewPrimitiveStructure(name string, fieldType FieldType, isNull, isKey bool)
 	}
 }
 
-func NewReferenceStructure(name string, reference *FieldStructure, isNull, isKey bool) *FieldStructure {
+func NewReferenceStructure(name string, reference *ComponentStructure, isNull, isKey bool) *FieldStructure {
 	return &FieldStructure{
 		Name:      name,
 		Type:      FieldType_REFERENCE,
@@ -72,7 +89,7 @@ func NewReferenceStructure(name string, reference *FieldStructure, isNull, isKey
 }
 
 // ---+--- FieldDescription ---+---
-func NewFieldPoint(point *FieldDescription_FieldData) *FieldDescription {
+func NewFieldPoint(point *FieldData) *FieldDescription {
 	return &FieldDescription{
 		Data: &FieldDescription_Point{
 			Point: point,
@@ -80,7 +97,7 @@ func NewFieldPoint(point *FieldDescription_FieldData) *FieldDescription {
 	}
 }
 
-func NewFieldArray(array []*FieldDescription_FieldData) *FieldDescription {
+func NewFieldArray(array []*FieldData) *FieldDescription {
 	return &FieldDescription{
 		Data: &FieldDescription_Array{
 			Array: &FieldDescription_FieldDataArray{
@@ -90,130 +107,101 @@ func NewFieldArray(array []*FieldDescription_FieldData) *FieldDescription {
 	}
 }
 
-// ---+--- FieldDescription_FieldData ---+---
-type FnNewConcreteData[T any] func(T) *FieldDescription_FieldData
-type FnNewNullableData[T any] func(*T) *FieldDescription_FieldData
+// ---+--- FieldData ---+---
+type FnNewConcreteData[T any] func(T) *FieldData
+type FnNewConcreteArray[T any] func([]T) *FieldData
+type FnNewNullableData[T any] func(*T) *FieldData
+type FnNewNullableArray[T any] func([]*T) *FieldData
 
-func newFieldConcreteData(concrete *FieldDescription_ConcreteFieldData) *FieldDescription_FieldData {
-	return &FieldDescription_FieldData{
-		Data: &FieldDescription_FieldData_Concrete{
-			Concrete: concrete,
-		},
-	}
-}
-
-func newFieldNullableData(nullable *FieldDescription_ConcreteFieldData) *FieldDescription_FieldData {
-	return &FieldDescription_FieldData{
-		Data: &FieldDescription_FieldData_Nullable{
-			Nullable: &FieldDescription_NullableFieldData{
-				Data: nullable,
+func newConcreteData(data isFieldData_ConcreteFieldData_Data) *FieldData {
+	return &FieldData{
+		Data: &FieldData_Concrete{
+			Concrete: &FieldData_ConcreteFieldData{
+				Data: data,
 			},
 		},
 	}
 }
 
-func NewFieldConcreteNumber(number int) *FieldDescription_FieldData {
-	return newFieldConcreteData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Number{Number: int32(number)},
-	})
+func newNullableData(data isFieldData_ConcreteFieldData_Data) *FieldData {
+	return &FieldData{
+		Data: &FieldData_Nullable{
+			Nullable: &FieldData_NullableFieldData{
+				Data: &FieldData_ConcreteFieldData{
+					Data: data,
+				},
+			},
+		},
+	}
 }
 
-func NewFieldConcreteText(text string) *FieldDescription_FieldData {
-	return newFieldConcreteData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Text{Text: text},
-	})
+type valueConstraint interface {
+	int | string | bool | time.Time |
+		[]*FieldData |
+		*int | *string | *bool | *time.Time
 }
 
-func NewFieldConcreteCharacter(character string) *FieldDescription_FieldData {
-	return newFieldConcreteData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Character{Character: character},
-	})
-}
+func NewFieldData[T valueConstraint](x T) *FieldData {
+	switch value := any(x).(type) {
+	case int:
+		return newConcreteData(&FieldData_ConcreteFieldData_Number{Number: int32(value)})
+	case *int:
+		if value == nil {
+			return newNullableData(nil)
+		}
+		return newNullableData(&FieldData_ConcreteFieldData_Number{Number: int32(*value)})
 
-func NewFieldConcreteBoolean(boolean bool) *FieldDescription_FieldData {
-	return newFieldConcreteData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Boolean{Boolean: boolean},
-	})
-}
+	case string:
+		return newConcreteData(&FieldData_ConcreteFieldData_Text{Text: value})
+	case *string:
+		if value == nil {
+			return newNullableData(nil)
+		}
+		return newNullableData(&FieldData_ConcreteFieldData_Text{Text: *value})
 
-func NewFieldConcreteDate(date time.Time) *FieldDescription_FieldData {
-	return newFieldConcreteData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Date{Date: uint32(date.Unix())},
-	})
-}
+	case bool:
+		return newConcreteData(&FieldData_ConcreteFieldData_Boolean{Boolean: value})
+	case *bool:
+		if value == nil {
+			return newNullableData(nil)
+		}
+		return newNullableData(&FieldData_ConcreteFieldData_Boolean{Boolean: *value})
 
-func NewFieldConcreteReference(fields []*FieldDescription) *FieldDescription_FieldData {
-	return newFieldConcreteData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Reference{
+	case time.Time:
+		return newConcreteData(&FieldData_ConcreteFieldData_Date{Date: uint32(value.Unix())})
+	case *time.Time:
+		if value == nil {
+			return newNullableData(nil)
+		}
+		return newNullableData(&FieldData_ConcreteFieldData_Date{Date: uint32(value.Unix())})
+
+	case []*FieldDescription:
+		return newConcreteData(&FieldData_ConcreteFieldData_Reference{
 			Reference: &FieldsDescription{
-				Fields: fields,
+				Fields: value,
 			},
-		},
-	})
-}
-
-func NewFieldNullableNumber(number *int) *FieldDescription_FieldData {
-	if number == nil {
-		return newFieldNullableData(nil)
-	}
-
-	return newFieldNullableData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Number{Number: int32(*number)},
-	})
-}
-
-func NewFieldNullableText(text *string) *FieldDescription_FieldData {
-	if text == nil {
-		return newFieldNullableData(nil)
-	}
-
-	return newFieldNullableData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Text{Text: *text},
-	})
-}
-
-func NewFieldNullableCharacter(character *string) *FieldDescription_FieldData {
-	if character == nil {
-		return newFieldNullableData(nil)
-	}
-
-	return newFieldNullableData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Character{Character: *character},
-	})
-}
-
-func NewFieldNullableBoolean(boolean *bool) *FieldDescription_FieldData {
-	if boolean == nil {
-		return newFieldNullableData(nil)
-	}
-
-	return newFieldNullableData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Boolean{Boolean: *boolean},
-	})
-}
-
-func NewFieldNullableDate(date *time.Time) *FieldDescription_FieldData {
-	if date == nil {
-		return newFieldNullableData(nil)
-	}
-
-	return newFieldNullableData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Date{Date: uint32(date.Unix())},
-	})
-}
-
-func NewFieldNullableReference(fields []*FieldDescription) *FieldDescription_FieldData {
-	if len(fields) == 0 {
-		return newFieldNullableData(nil)
-	}
-
-	return newFieldNullableData(&FieldDescription_ConcreteFieldData{
-		Data: &FieldDescription_ConcreteFieldData_Reference{
+		})
+	case *[]*FieldDescription:
+		if value == nil {
+			return newNullableData(nil)
+		}
+		return newNullableData(&FieldData_ConcreteFieldData_Reference{
 			Reference: &FieldsDescription{
-				Fields: fields,
+				Fields: *value,
 			},
-		},
-	})
+		})
+
+	default:
+		panic("This is not possible")
+	}
+}
+
+func NewFieldDataArray[T valueConstraint](x ...T) []*FieldData {
+	data := make([]*FieldData, len(x))
+	for i, dataPoint := range x {
+		data[i] = NewFieldData(dataPoint)
+	}
+	return data
 }
 
 // ---+--- ComponentCompositionDescription ---+---
