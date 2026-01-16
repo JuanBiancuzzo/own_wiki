@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/go-test/deep"
 
@@ -58,11 +59,11 @@ func TestConventSimpelTableDataWithSinglePointAndPrimitiveValuesAndNullable(t *t
 	type TestTable struct {
 		Number  Nullable[int]
 		String  string
-		Date    Nullable[uint]
+		Date    Nullable[time.Time]
 	}
 	*/
 	var numberValue int = 1
-	var dateValue *uint = nil
+	var dateValue *time.Time = nil
 
 	var tableElement db.TableElement = db.NewTableData(
 		db.NewTableStructure("TestTable", []db.Field{
@@ -123,7 +124,7 @@ func TestConventSimpelTableDataWithArrayAndPrimitiveValues(t *testing.T) {
 	entityDescriptionExpected := pb.NewEntityDescriptionComponent(
 		pb.NewComponentDescriptionArray("TestTable", 3, []*pb.FieldDescription{
 			pb.NewFieldArray("Number", pb.NewPrimitiveInfo(pb.PFT_INT, true), []*pb.FieldDescription_FieldData{
-				pb.NewFieldNullableNumber(&numbers[0]), nil, pb.NewFieldNullableNumber(&numbers[2]),
+				pb.NewFieldNullableNumber(&numbers[0]), pb.NewFieldNullableNumber(nil), pb.NewFieldNullableNumber(&numbers[2]),
 			}),
 			pb.NewFieldArray("String", pb.NewPrimitiveInfo(pb.PFT_STRING, false), []*pb.FieldDescription_FieldData{
 				pb.NewFieldConcreteText("Primero"), pb.NewFieldConcreteText("Segundo"), pb.NewFieldConcreteText("Tercero"),

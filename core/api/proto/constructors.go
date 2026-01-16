@@ -86,6 +86,15 @@ func NewPrimitiveInfo(primitiveType PrimitiveType, isNullable bool) *FieldTypeIn
 	}
 }
 
+func NewCompletePrimitiveInfo(primitiveType PrimitiveFieldType) *FieldTypeInformation {
+	return &FieldTypeInformation{
+		Type: FieldTypeInformation_PRIMITIVE,
+		Information: &FieldTypeInformation_Primitive{
+			Primitive: primitiveType,
+		},
+	}
+}
+
 func NewReferenceInfo(tableName string, isNullable bool) *FieldTypeInformation {
 	return &FieldTypeInformation{
 		Type: FieldTypeInformation_REFERENCE,
@@ -206,14 +215,14 @@ func NewFieldNullableDate(date *time.Time) *FieldDescription_FieldData {
 	})
 }
 
-func NewFieldNullableReference(refComponent *ComponentDescription) *FieldDescription_FieldData {
+func NewFieldNullableReference(refComponent **ComponentDescription) *FieldDescription_FieldData {
 	if refComponent == nil {
 		return newFieldNullableData(nil)
 	}
 
 	return newFieldNullableData(&FieldDescription_ConcreteFieldData{
 		Data: &FieldDescription_ConcreteFieldData_Reference{
-			Reference: refComponent,
+			Reference: *refComponent,
 		},
 	})
 
