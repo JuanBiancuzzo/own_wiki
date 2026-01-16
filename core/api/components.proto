@@ -9,49 +9,23 @@ message ComponentStructure {
     repeated FieldStructure fields = 2;
 }
 
-// Represents a type of data that could be represented and save by the system
-message FieldStructure {
-    string name = 1;
-    FieldTypeInformation type_information = 2;
-    bool is_null = 3;
-    bool is_key = 4;
-}
-
-
-// The primitive types of a field
-enum PrimitiveFieldType {
-    // First are the not nullable, and then the nullable, this is to be 
-    // able to get the nullability of the type by the NULL_INT value
+// The all possible types of a field
+enum FieldType {
     INT = 0;
     STRING = 1;
     CHAR = 2;
     BOOL = 3;
     DATE = 4;
-    NULL_INT = 5;
-    NULL_STRING = 6;
-    NULL_CHAR = 7;
-    NULL_BOOL = 8;
-    NULL_DATE = 9;
+    REFERENCE = 5;
 }
 
-// The information necesary to reference a table
-message ReferenceInformation {
-    string table_name = 1;
-    bool is_nullable = 2;
-}
-
-// Represents the type information of the data
-message FieldTypeInformation {
-    enum FieldType {
-        PRIMITIVE = 0;
-        REFERENCE = 1;
-    }
-
-    FieldType type = 1;
-    oneof information {
-        PrimitiveFieldType primitive = 2;
-        ReferenceInformation reference = 3;
-    }
+// Represents a type of data that could be represented and save by the system
+message FieldStructure {
+    string name = 1;
+    FieldType type = 2;
+    optional FieldStructure reference = 3;
+    bool is_null = 4;
+    bool is_key = 5;
 }
 
 // Represents the construction of a entity, that could be a Component, or a composition of components
@@ -69,25 +43,26 @@ message ComponentCompositionDescription {
 
 // Represents the data of the component
 message ComponentDescription {
-    string name = 1;
-
     enum DataAmount {
-        ONE = 0;
+        POINT = 0;
         ARRAY = 1;
     }
 
-    DataAmount amount = 2;
-    int32 rows = 3;
-    repeated FieldDescription fields = 4;
+    string name = 1;
+    ComponentStructure structure = 2;
+    DataAmount amount = 3;
+    int32 rows = 4;
+    FieldsDescription fields = 5;
+}
+
+// Represents the 
+message FieldsDescription {
+    repeated FieldDescription fields = 5;
 }
 
 // Represents the data of a field in a query result (array of values)
 message FieldDescription {
-    string name = 1;
-    FieldTypeInformation type_information = 2;
 
-    // If the type is primitive, then the data is store as that, but 
-    // if the type is a reference, then is ComponentDescription
     message ConcreteFieldData {
         oneof data {
             int32 number = 1;
@@ -95,7 +70,7 @@ message FieldDescription {
             string character = 3;
             bool boolean = 4;
             uint32 date = 5;
-            ComponentDescription reference = 6;
+            FieldsDescription reference = 6;
         }
     }
 
@@ -114,10 +89,11 @@ message FieldDescription {
         repeated FieldData data_array = 1;
     }
 
+    string name = 1;
     // This should be all of the same type. This is to save space and
     // not have the type information in the FieldData
     oneof data {
-        FieldData point = 3;
-        FieldDataArray array = 4;
+        FieldData point = 2;
+        FieldDataArray array = 3;
     }
 }
