@@ -11,64 +11,6 @@ import (
 
 // ---+--- helping function ---+---
 
-func createNullableData(concrete *pb.FieldDescription_ConcreteFieldData) *pb.FieldDescription_Point {
-	return &pb.FieldDescription_Point{
-		Point: &pb.FieldDescription_FieldData{
-			Data: &pb.FieldDescription_FieldData_Nullable{
-				Nullable: &pb.FieldDescription_NullableFieldData{
-					Data: concrete,
-				},
-			},
-		},
-	}
-}
-
-func createConcretePointData(concrete *pb.FieldDescription_ConcreteFieldData) *pb.FieldDescription_Point {
-	return &pb.FieldDescription_Point{
-		Point: &pb.FieldDescription_FieldData{
-			Data: &pb.FieldDescription_FieldData_Concrete{
-				Concrete: concrete,
-			},
-		},
-	}
-}
-
-func createConcreteArrayData(concreteArray []*pb.FieldDescription_ConcreteFieldData) *pb.FieldDescription_Array {
-	dataArray := make([]*pb.FieldDescription_FieldData, len(concreteArray))
-	for i, concrete := range concreteArray {
-		dataArray[i] = &pb.FieldDescription_FieldData{
-			Data: &pb.FieldDescription_FieldData_Concrete{
-				Concrete: concrete,
-			},
-		}
-	}
-
-	return &pb.FieldDescription_Array{
-		Array: &pb.FieldDescription_FieldDataArray{
-			DataArray: dataArray,
-		},
-	}
-}
-
-func createNullableArrayData(concreteArray []*pb.FieldDescription_ConcreteFieldData) *pb.FieldDescription_Array {
-	dataArray := make([]*pb.FieldDescription_FieldData, len(concreteArray))
-	for i, concrete := range concreteArray {
-		dataArray[i] = &pb.FieldDescription_FieldData{
-			Data: &pb.FieldDescription_FieldData_Nullable{
-				Nullable: &pb.FieldDescription_NullableFieldData{
-					Data: concrete,
-				},
-			},
-		}
-	}
-
-	return &pb.FieldDescription_Array{
-		Array: &pb.FieldDescription_FieldDataArray{
-			DataArray: dataArray,
-		},
-	}
-}
-
 // ---+--- tests ---+---
 
 func TestConventSimpelTableDataWithSinglePointAndPrimitiveValues(t *testing.T) {
@@ -89,53 +31,13 @@ func TestConventSimpelTableDataWithSinglePointAndPrimitiveValues(t *testing.T) {
 		[]db.FieldData{int(1), "Text", true},
 	)
 
-	entityDescriptionExpected := &pb.EntityDescription{
-		Description: &pb.EntityDescription_Component{
-			Component: &pb.ComponentDescription{
-				Name:   "TestTable",
-				Amount: pb.ComponentDescription_ONE,
-				Rows:   1,
-				Fields: []*pb.FieldDescription{
-					{
-						Name: "Number",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_INT,
-							},
-						},
-						Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
-							Data: &pb.FieldDescription_ConcreteFieldData_Number{Number: 1},
-						}),
-					},
-					{
-						Name: "String",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_STRING,
-							},
-						},
-						Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
-							Data: &pb.FieldDescription_ConcreteFieldData_Text{Text: "Text"},
-						}),
-					},
-					{
-						Name: "Boolean",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_BOOL,
-							},
-						},
-						Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
-							Data: &pb.FieldDescription_ConcreteFieldData_Boolean{Boolean: true},
-						}),
-					},
-				},
-			},
-		},
-	}
+	entityDescriptionExpected := pb.NewEntityDescriptionComponent(
+		pb.NewComponentDescriptionPoint("TestTable", []*pb.FieldDescription{
+			pb.NewFieldPoint("Number", pb.NewPrimitiveInfo(pb.PFT_INT, false), pb.NewFieldConcreteNumber(1)),
+			pb.NewFieldPoint("String", pb.NewPrimitiveInfo(pb.PFT_STRING, false), pb.NewFieldConcreteText("Text")),
+			pb.NewFieldPoint("Boolean", pb.NewPrimitiveInfo(pb.PFT_BOOL, false), pb.NewFieldConcreteBoolean(true)),
+		}),
+	)
 
 	if entityDescription, err := pb.ConvertToEntityDescription(&tableElement); err != nil {
 		t.Errorf("While converting to EntityDescription, got the error: %v", err)
@@ -172,51 +74,13 @@ func TestConventSimpelTableDataWithSinglePointAndPrimitiveValuesAndNullable(t *t
 		[]db.FieldData{&numberValue, "Text", dateValue},
 	)
 
-	entityDescriptionExpected := &pb.EntityDescription{
-		Description: &pb.EntityDescription_Component{
-			Component: &pb.ComponentDescription{
-				Name:   "TestTable",
-				Amount: pb.ComponentDescription_ONE,
-				Rows:   1,
-				Fields: []*pb.FieldDescription{
-					{
-						Name: "Number",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_NULL_INT,
-							},
-						},
-						Data: createNullableData(&pb.FieldDescription_ConcreteFieldData{
-							Data: &pb.FieldDescription_ConcreteFieldData_Number{Number: 1},
-						}),
-					},
-					{
-						Name: "String",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_STRING,
-							},
-						},
-						Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
-							Data: &pb.FieldDescription_ConcreteFieldData_Text{Text: "Text"},
-						}),
-					},
-					{
-						Name: "Date",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_NULL_DATE,
-							},
-						},
-						Data: createNullableData(nil),
-					},
-				},
-			},
-		},
-	}
+	entityDescriptionExpected := pb.NewEntityDescriptionComponent(
+		pb.NewComponentDescriptionPoint("TestTable", []*pb.FieldDescription{
+			pb.NewFieldPoint("Number", pb.NewPrimitiveInfo(pb.PFT_INT, true), pb.NewFieldNullableNumber(&numberValue)),
+			pb.NewFieldPoint("String", pb.NewPrimitiveInfo(pb.PFT_STRING, false), pb.NewFieldConcreteText("Text")),
+			pb.NewFieldPoint("Date", pb.NewPrimitiveInfo(pb.PFT_DATE, true), pb.NewFieldNullableDate(nil)),
+		}),
+	)
 
 	if entityDescription, err := pb.ConvertToEntityDescription(&tableElement); err != nil {
 		t.Errorf("While converting to EntityDescription, got the error: %v", err)
@@ -256,60 +120,19 @@ func TestConventSimpelTableDataWithArrayAndPrimitiveValues(t *testing.T) {
 			&numbers[2], "Tercero", false,
 		},
 	)
-
-	entityDescriptionExpected := &pb.EntityDescription{
-		Description: &pb.EntityDescription_Component{
-			Component: &pb.ComponentDescription{
-				Name:   "TestTable",
-				Amount: pb.ComponentDescription_ARRAY,
-				Rows:   3,
-				Fields: []*pb.FieldDescription{
-					{
-						Name: "Number",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_NULL_INT,
-							},
-						},
-						Data: createNullableArrayData([]*pb.FieldDescription_ConcreteFieldData{
-							{Data: &pb.FieldDescription_ConcreteFieldData_Number{Number: 1}},
-							nil,
-							{Data: &pb.FieldDescription_ConcreteFieldData_Number{Number: 3}},
-						}),
-					},
-					{
-						Name: "String",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_STRING,
-							},
-						},
-						Data: createConcreteArrayData([]*pb.FieldDescription_ConcreteFieldData{
-							{Data: &pb.FieldDescription_ConcreteFieldData_Text{Text: "Primero"}},
-							{Data: &pb.FieldDescription_ConcreteFieldData_Text{Text: "Segundo"}},
-							{Data: &pb.FieldDescription_ConcreteFieldData_Text{Text: "Tercero"}},
-						}),
-					},
-					{
-						Name: "Boolean",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_BOOL,
-							},
-						},
-						Data: createConcreteArrayData([]*pb.FieldDescription_ConcreteFieldData{
-							{Data: &pb.FieldDescription_ConcreteFieldData_Boolean{Boolean: true}},
-							{Data: &pb.FieldDescription_ConcreteFieldData_Boolean{Boolean: true}},
-							{Data: &pb.FieldDescription_ConcreteFieldData_Boolean{Boolean: false}},
-						}),
-					},
-				},
-			},
-		},
-	}
+	entityDescriptionExpected := pb.NewEntityDescriptionComponent(
+		pb.NewComponentDescriptionArray("TestTable", 3, []*pb.FieldDescription{
+			pb.NewFieldArray("Number", pb.NewPrimitiveInfo(pb.PFT_INT, true), []*pb.FieldDescription_FieldData{
+				pb.NewFieldNullableNumber(&numbers[0]), nil, pb.NewFieldNullableNumber(&numbers[2]),
+			}),
+			pb.NewFieldArray("String", pb.NewPrimitiveInfo(pb.PFT_STRING, false), []*pb.FieldDescription_FieldData{
+				pb.NewFieldConcreteText("Primero"), pb.NewFieldConcreteText("Segundo"), pb.NewFieldConcreteText("Tercero"),
+			}),
+			pb.NewFieldArray("Boolean", pb.NewPrimitiveInfo(pb.PFT_BOOL, false), []*pb.FieldDescription_FieldData{
+				pb.NewFieldConcreteBoolean(true), pb.NewFieldConcreteBoolean(true), pb.NewFieldConcreteBoolean(false),
+			}),
+		}),
+	)
 
 	if entityDescription, err := pb.ConvertToEntityDescription(&tableElement); err != nil {
 		t.Errorf("While converting to EntityDescription, got the error: %v", err)

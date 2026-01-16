@@ -20,17 +20,26 @@ func NewEntityDescriptionComposition(composition *ComponentCompositionDescriptio
 }
 
 // ---+--- ComponentDescription ---+---
-func NewComponentDescription(name string, amount ComponentDescription_DataAmount, rows int32, fields []*FieldDescription) *ComponentDescription {
+func NewComponentDescriptionPoint(name string, fields []*FieldDescription) *ComponentDescription {
 	return &ComponentDescription{
 		Name:   name,
-		Amount: amount,
+		Amount: ComponentDescription_ONE,
+		Rows:   1,
+		Fields: fields,
+	}
+}
+
+func NewComponentDescriptionArray(name string, rows int32, fields []*FieldDescription) *ComponentDescription {
+	return &ComponentDescription{
+		Name:   name,
+		Amount: ComponentDescription_ARRAY,
 		Rows:   rows,
 		Fields: fields,
 	}
 }
 
 // ---+--- FieldDescription ---+---
-func NewFieldDescriptionPoint(name string, typeInformation *FieldTypeInformation, point *FieldDescription_FieldData) *FieldDescription {
+func NewFieldPoint(name string, typeInformation *FieldTypeInformation, point *FieldDescription_FieldData) *FieldDescription {
 	return &FieldDescription{
 		Name:            name,
 		TypeInformation: typeInformation,
@@ -40,7 +49,7 @@ func NewFieldDescriptionPoint(name string, typeInformation *FieldTypeInformation
 	}
 }
 
-func NewFieldDescriptionArray(name string, typeInformation *FieldTypeInformation, array []*FieldDescription_FieldData) *FieldDescription {
+func NewFieldArray(name string, typeInformation *FieldTypeInformation, array []*FieldDescription_FieldData) *FieldDescription {
 	return &FieldDescription{
 		Name:            name,
 		TypeInformation: typeInformation,
@@ -53,11 +62,26 @@ func NewFieldDescriptionArray(name string, typeInformation *FieldTypeInformation
 }
 
 // ---+--- TypeInformation ---+---
-func NewFieldTypeInformationPrimitive(primitiveType PrimitiveFieldType) *FieldTypeInformation {
+type PrimitiveType int32
+
+const (
+	PFT_INT    = PrimitiveType(PrimitiveFieldType_INT)
+	PFT_STRING = PrimitiveType(PrimitiveFieldType_STRING)
+	PFT_CHAR   = PrimitiveType(PrimitiveFieldType_CHAR)
+	PFT_BOOL   = PrimitiveType(PrimitiveFieldType_BOOL)
+	PFT_DATE   = PrimitiveType(PrimitiveFieldType_DATE)
+)
+
+func NewPrimitiveInfo(primitiveType PrimitiveType, isNullable bool) *FieldTypeInformation {
+	typeInfo := PrimitiveFieldType(primitiveType)
+	if isNullable {
+		typeInfo += PrimitiveFieldType_NULL_INT
+	}
+
 	return &FieldTypeInformation{
 		Type: FieldTypeInformation_PRIMITIVE,
 		Information: &FieldTypeInformation_Primitive{
-			Primitive: primitiveType,
+			Primitive: typeInfo,
 		},
 	}
 }

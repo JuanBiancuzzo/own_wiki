@@ -190,13 +190,6 @@ func GetFieldData(fieldType db.FieldType, data any) (dataValue *FieldDescription
 				Nullable: &FieldDescription_NullableFieldData{Data: value},
 			},
 		}
-
-	} else {
-		dataValue = &FieldDescription_FieldData{
-			Data: &FieldDescription_FieldData_Nullable{
-				Nullable: &FieldDescription_NullableFieldData{Data: nil},
-			},
-		}
 	}
 
 	return dataValue, err
