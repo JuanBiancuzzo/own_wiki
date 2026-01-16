@@ -48,11 +48,10 @@ message ComponentDescription {
         ARRAY = 1;
     }
 
-    string name = 1;
-    ComponentStructure structure = 2;
-    DataAmount amount = 3;
-    int32 rows = 4;
-    FieldsDescription fields = 5;
+    ComponentStructure structure = 1;
+    DataAmount amount = 2;
+    int32 rows = 3;
+    FieldsDescription fields = 4;
 }
 
 // Represents the 
@@ -89,11 +88,10 @@ message FieldDescription {
         repeated FieldData data_array = 1;
     }
 
-    string name = 1;
     // This should be all of the same type. This is to save space and
     // not have the type information in the FieldData
     oneof data {
-        FieldData point = 2;
-        FieldDataArray array = 3;
+        FieldData point = 1;
+        FieldDataArray array = 2;
     }
 }

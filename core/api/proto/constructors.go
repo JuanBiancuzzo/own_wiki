@@ -20,39 +20,68 @@ func NewEntityDescriptionComposition(composition *ComponentCompositionDescriptio
 }
 
 // ---+--- ComponentDescription ---+---
-func NewComponentDescriptionPoint(name string, fields []*FieldDescription) *ComponentDescription {
+func NewComponentDescriptionPoint(structure *ComponentStructure, fields []*FieldDescription) *ComponentDescription {
 	return &ComponentDescription{
+		Structure: structure,
+		Amount:    ComponentDescription_POINT,
+		Rows:      1,
+		Fields: &FieldsDescription{
+			Fields: fields,
+		},
+	}
+}
+
+func NewComponentDescriptionArray(structure *ComponentStructure, rows int32, fields []*FieldDescription) *ComponentDescription {
+	return &ComponentDescription{
+		Structure: structure,
+		Amount:    ComponentDescription_ARRAY,
+		Rows:      rows,
+		Fields: &FieldsDescription{
+			Fields: fields,
+		},
+	}
+}
+
+// ---+--- ComponentStructure ---+---
+func NewComponentStructure(name string, fields []*FieldStructure) *ComponentStructure {
+	return &ComponentStructure{
 		Name:   name,
-		Amount: ComponentDescription_ONE,
-		Rows:   1,
 		Fields: fields,
 	}
 }
 
-func NewComponentDescriptionArray(name string, rows int32, fields []*FieldDescription) *ComponentDescription {
-	return &ComponentDescription{
-		Name:   name,
-		Amount: ComponentDescription_ARRAY,
-		Rows:   rows,
-		Fields: fields,
+// ---+--- FieldStructure ---+---
+func NewPrimitiveStructure(name string, fieldType FieldType, isNull, isKey bool) *FieldStructure {
+	return &FieldStructure{
+		Name:      name,
+		Type:      fieldType,
+		Reference: nil,
+		IsNull:    isNull,
+		IsKey:     isKey,
+	}
+}
+
+func NewReferenceStructure(name string, reference *FieldStructure, isNull, isKey bool) *FieldStructure {
+	return &FieldStructure{
+		Name:      name,
+		Type:      FieldType_REFERENCE,
+		Reference: reference,
+		IsNull:    isNull,
+		IsKey:     isKey,
 	}
 }
 
 // ---+--- FieldDescription ---+---
-func NewFieldPoint(name string, typeInformation *FieldTypeInformation, point *FieldDescription_FieldData) *FieldDescription {
+func NewFieldPoint(point *FieldDescription_FieldData) *FieldDescription {
 	return &FieldDescription{
-		Name:            name,
-		TypeInformation: typeInformation,
 		Data: &FieldDescription_Point{
 			Point: point,
 		},
 	}
 }
 
-func NewFieldArray(name string, typeInformation *FieldTypeInformation, array []*FieldDescription_FieldData) *FieldDescription {
+func NewFieldArray(array []*FieldDescription_FieldData) *FieldDescription {
 	return &FieldDescription{
-		Name:            name,
-		TypeInformation: typeInformation,
 		Data: &FieldDescription_Array{
 			Array: &FieldDescription_FieldDataArray{
 				DataArray: array,
@@ -61,53 +90,10 @@ func NewFieldArray(name string, typeInformation *FieldTypeInformation, array []*
 	}
 }
 
-// ---+--- TypeInformation ---+---
-type PrimitiveType int32
-
-const (
-	PFT_INT    = PrimitiveType(PrimitiveFieldType_INT)
-	PFT_STRING = PrimitiveType(PrimitiveFieldType_STRING)
-	PFT_CHAR   = PrimitiveType(PrimitiveFieldType_CHAR)
-	PFT_BOOL   = PrimitiveType(PrimitiveFieldType_BOOL)
-	PFT_DATE   = PrimitiveType(PrimitiveFieldType_DATE)
-)
-
-func NewPrimitiveInfo(primitiveType PrimitiveType, isNullable bool) *FieldTypeInformation {
-	typeInfo := PrimitiveFieldType(primitiveType)
-	if isNullable {
-		typeInfo += PrimitiveFieldType_NULL_INT
-	}
-
-	return &FieldTypeInformation{
-		Type: FieldTypeInformation_PRIMITIVE,
-		Information: &FieldTypeInformation_Primitive{
-			Primitive: typeInfo,
-		},
-	}
-}
-
-func NewCompletePrimitiveInfo(primitiveType PrimitiveFieldType) *FieldTypeInformation {
-	return &FieldTypeInformation{
-		Type: FieldTypeInformation_PRIMITIVE,
-		Information: &FieldTypeInformation_Primitive{
-			Primitive: primitiveType,
-		},
-	}
-}
-
-func NewReferenceInfo(tableName string, isNullable bool) *FieldTypeInformation {
-	return &FieldTypeInformation{
-		Type: FieldTypeInformation_REFERENCE,
-		Information: &FieldTypeInformation_Reference{
-			Reference: &ReferenceInformation{
-				TableName:  tableName,
-				IsNullable: isNullable,
-			},
-		},
-	}
-}
-
 // ---+--- FieldDescription_FieldData ---+---
+type FnNewConcreteData[T any] func(T) *FieldDescription_FieldData
+type FnNewNullableData[T any] func(*T) *FieldDescription_FieldData
+
 func newFieldConcreteData(concrete *FieldDescription_ConcreteFieldData) *FieldDescription_FieldData {
 	return &FieldDescription_FieldData{
 		Data: &FieldDescription_FieldData_Concrete{
@@ -156,13 +142,14 @@ func NewFieldConcreteDate(date time.Time) *FieldDescription_FieldData {
 	})
 }
 
-func NewFieldConcreteReference(refComponent *ComponentDescription) *FieldDescription_FieldData {
+func NewFieldConcreteReference(fields []*FieldDescription) *FieldDescription_FieldData {
 	return newFieldConcreteData(&FieldDescription_ConcreteFieldData{
 		Data: &FieldDescription_ConcreteFieldData_Reference{
-			Reference: refComponent,
+			Reference: &FieldsDescription{
+				Fields: fields,
+			},
 		},
 	})
-
 }
 
 func NewFieldNullableNumber(number *int) *FieldDescription_FieldData {
@@ -215,17 +202,18 @@ func NewFieldNullableDate(date *time.Time) *FieldDescription_FieldData {
 	})
 }
 
-func NewFieldNullableReference(refComponent **ComponentDescription) *FieldDescription_FieldData {
-	if refComponent == nil {
+func NewFieldNullableReference(fields []*FieldDescription) *FieldDescription_FieldData {
+	if len(fields) == 0 {
 		return newFieldNullableData(nil)
 	}
 
 	return newFieldNullableData(&FieldDescription_ConcreteFieldData{
 		Data: &FieldDescription_ConcreteFieldData_Reference{
-			Reference: *refComponent,
+			Reference: &FieldsDescription{
+				Fields: fields,
+			},
 		},
 	})
-
 }
 
 // ---+--- ComponentCompositionDescription ---+---
