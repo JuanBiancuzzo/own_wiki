@@ -37,6 +37,7 @@ enum PrimitiveFieldType {
 // The information necesary to reference a table
 message ReferenceInformation {
     string table_name = 1;
+    bool is_nullable = 2;
 }
 
 // Represents the type information of the data

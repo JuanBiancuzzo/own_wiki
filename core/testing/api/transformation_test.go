@@ -177,87 +177,18 @@ func TestConventSimpelTableDataWithPointAndAllValues(t *testing.T) {
 		[]db.FieldData{1, "Text", []db.FieldData{2, 3}},
 	)
 
-	entityDescriptionExpected := &pb.EntityDescription{
-		Description: &pb.EntityDescription_Component{
-			Component: &pb.ComponentDescription{
-				Name:   "TestTable",
-				Amount: pb.ComponentDescription_ONE,
-				Rows:   1,
-				Fields: []*pb.FieldDescription{
-					{
-						Name: "Number",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_INT,
-							},
-						},
-						Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
-							Data: &pb.FieldDescription_ConcreteFieldData_Number{Number: 1},
-						}),
-					},
-					{
-						Name: "String",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_PRIMITIVE,
-							Information: &pb.FieldTypeInformation_Primitive{
-								Primitive: pb.PrimitiveFieldType_STRING,
-							},
-						},
-						Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
-							Data: &pb.FieldDescription_ConcreteFieldData_Text{Text: "Text"},
-						}),
-					},
-					{
-						Name: "Reference",
-						TypeInformation: &pb.FieldTypeInformation{
-							Type: pb.FieldTypeInformation_REFERENCE,
-							Information: &pb.FieldTypeInformation_Reference{
-								Reference: &pb.ReferenceInformation{
-									TableName: "RefererncesTable",
-								},
-							},
-						},
-						Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
-							Data: &pb.FieldDescription_ConcreteFieldData_Reference{
-								Reference: &pb.ComponentDescription{
-									Name:   "TestTable",
-									Amount: pb.ComponentDescription_ONE,
-									Rows:   1,
-									Fields: []*pb.FieldDescription{
-										{
-											Name: "Some",
-											TypeInformation: &pb.FieldTypeInformation{
-												Type: pb.FieldTypeInformation_PRIMITIVE,
-												Information: &pb.FieldTypeInformation_Primitive{
-													Primitive: pb.PrimitiveFieldType_INT,
-												},
-											},
-											Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
-												Data: &pb.FieldDescription_ConcreteFieldData_Number{Number: 2},
-											}),
-										},
-										{
-											Name: "Thing",
-											TypeInformation: &pb.FieldTypeInformation{
-												Type: pb.FieldTypeInformation_PRIMITIVE,
-												Information: &pb.FieldTypeInformation_Primitive{
-													Primitive: pb.PrimitiveFieldType_INT,
-												},
-											},
-											Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
-												Data: &pb.FieldDescription_ConcreteFieldData_Number{Number: 3},
-											}),
-										},
-									},
-								},
-							},
-						}),
-					},
-				},
-			},
-		},
-	}
+	refComponentExpected := pb.NewComponentDescriptionPoint("ReferenceTable", []*pb.FieldDescription{
+		pb.NewFieldPoint("Some", pb.NewPrimitiveInfo(pb.PFT_INT, false), pb.NewFieldConcreteNumber(2)),
+		pb.NewFieldPoint("Thing", pb.NewPrimitiveInfo(pb.PFT_INT, false), pb.NewFieldConcreteNumber(3)),
+	})
+
+	entityDescriptionExpected := pb.NewEntityDescriptionComponent(
+		pb.NewComponentDescriptionPoint("TestTable", []*pb.FieldDescription{
+			pb.NewFieldPoint("Number", pb.NewPrimitiveInfo(pb.PFT_INT, false), pb.NewFieldConcreteNumber(1)),
+			pb.NewFieldPoint("String", pb.NewPrimitiveInfo(pb.PFT_STRING, false), pb.NewFieldConcreteText("Text")),
+			pb.NewFieldPoint("Reference", pb.NewReferenceInfo("ReferencesTable", false), pb.NewFieldConcreteReference(refComponentExpected)),
+		}),
+	)
 
 	if entityDescription, err := pb.ConvertToEntityDescription(&tableElement); err != nil {
 		t.Errorf("While converting to EntityDescription, got the error: %v", err)

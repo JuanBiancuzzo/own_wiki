@@ -86,12 +86,13 @@ func NewPrimitiveInfo(primitiveType PrimitiveType, isNullable bool) *FieldTypeIn
 	}
 }
 
-func NewFieldTypeInformationReference(tableName string) *FieldTypeInformation {
+func NewReferenceInfo(tableName string, isNullable bool) *FieldTypeInformation {
 	return &FieldTypeInformation{
 		Type: FieldTypeInformation_REFERENCE,
 		Information: &FieldTypeInformation_Reference{
 			Reference: &ReferenceInformation{
-				TableName: tableName,
+				TableName:  tableName,
+				IsNullable: isNullable,
 			},
 		},
 	}
@@ -146,6 +147,15 @@ func NewFieldConcreteDate(date time.Time) *FieldDescription_FieldData {
 	})
 }
 
+func NewFieldConcreteReference(refComponent *ComponentDescription) *FieldDescription_FieldData {
+	return newFieldConcreteData(&FieldDescription_ConcreteFieldData{
+		Data: &FieldDescription_ConcreteFieldData_Reference{
+			Reference: refComponent,
+		},
+	})
+
+}
+
 func NewFieldNullableNumber(number *int) *FieldDescription_FieldData {
 	if number == nil {
 		return newFieldNullableData(nil)
@@ -194,6 +204,19 @@ func NewFieldNullableDate(date *time.Time) *FieldDescription_FieldData {
 	return newFieldNullableData(&FieldDescription_ConcreteFieldData{
 		Data: &FieldDescription_ConcreteFieldData_Date{Date: uint32(date.Unix())},
 	})
+}
+
+func NewFieldNullableReference(refComponent *ComponentDescription) *FieldDescription_FieldData {
+	if refComponent == nil {
+		return newFieldNullableData(nil)
+	}
+
+	return newFieldNullableData(&FieldDescription_ConcreteFieldData{
+		Data: &FieldDescription_ConcreteFieldData_Reference{
+			Reference: refComponent,
+		},
+	})
+
 }
 
 // ---+--- ComponentCompositionDescription ---+---
