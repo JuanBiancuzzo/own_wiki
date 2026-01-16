@@ -32,12 +32,15 @@ func TestConventSimpelTableDataWithSinglePointAndPrimitiveValues(t *testing.T) {
 		[]db.FieldData{int(1), "Text", true},
 	)
 
-	entityDescriptionExpected := pb.NewEntityDescriptionComponent(
-		pb.NewComponentDescriptionPoint("TestTable", []*pb.FieldDescription{
-			pb.NewFieldPoint("Number", pb.NewPrimitiveInfo(pb.PFT_INT, false), pb.NewFieldConcreteNumber(1)),
-			pb.NewFieldPoint("String", pb.NewPrimitiveInfo(pb.PFT_STRING, false), pb.NewFieldConcreteText("Text")),
-			pb.NewFieldPoint("Boolean", pb.NewPrimitiveInfo(pb.PFT_BOOL, false), pb.NewFieldConcreteBoolean(true)),
+	entityDescriptionExpected := pb.NewComponentDescriptionPoint(
+		pb.NewComponentStructure("TestTable", []*pb.FieldStructure{
+			pb.NewPrimitiveStructure("Number", pb.FieldType_INT, false, false),
+			pb.NewPrimitiveStructure("String", pb.FieldType_STRING, false, false),
+			pb.NewPrimitiveStructure("Boolean", pb.FieldType_BOOL, false, false),
 		}),
+		pb.NewFieldData(1),
+		pb.NewFieldData("Text"),
+		pb.NewFieldData(true),
 	)
 
 	if entityDescription, err := pb.ConvertToEntityDescription(&tableElement); err != nil {
@@ -75,12 +78,15 @@ func TestConventSimpelTableDataWithSinglePointAndPrimitiveValuesAndNullable(t *t
 		[]db.FieldData{&numberValue, "Text", dateValue},
 	)
 
-	entityDescriptionExpected := pb.NewEntityDescriptionComponent(
-		pb.NewComponentDescriptionPoint("TestTable", []*pb.FieldDescription{
-			pb.NewFieldPoint("Number", pb.NewPrimitiveInfo(pb.PFT_INT, true), pb.NewFieldNullableNumber(&numberValue)),
-			pb.NewFieldPoint("String", pb.NewPrimitiveInfo(pb.PFT_STRING, false), pb.NewFieldConcreteText("Text")),
-			pb.NewFieldPoint("Date", pb.NewPrimitiveInfo(pb.PFT_DATE, true), pb.NewFieldNullableDate(nil)),
+	entityDescriptionExpected := pb.NewComponentDescriptionPoint(
+		pb.NewComponentStructure("TestTable", []*pb.FieldStructure{
+			pb.NewPrimitiveStructure("Number", pb.FieldType_INT, true, false),
+			pb.NewPrimitiveStructure("String", pb.FieldType_STRING, false, false),
+			pb.NewPrimitiveStructure("Date", pb.FieldType_DATE, true, false),
 		}),
+		pb.NewFieldData(&numberValue),
+		pb.NewFieldData("Text"),
+		pb.NewFieldData(dateValue),
 	)
 
 	if entityDescription, err := pb.ConvertToEntityDescription(&tableElement); err != nil {
@@ -121,18 +127,16 @@ func TestConventSimpelTableDataWithArrayAndPrimitiveValues(t *testing.T) {
 			&numbers[2], "Tercero", false,
 		},
 	)
-	entityDescriptionExpected := pb.NewEntityDescriptionComponent(
-		pb.NewComponentDescriptionArray("TestTable", 3, []*pb.FieldDescription{
-			pb.NewFieldArray("Number", pb.NewPrimitiveInfo(pb.PFT_INT, true), []*pb.FieldDescription_FieldData{
-				pb.NewFieldNullableNumber(&numbers[0]), pb.NewFieldNullableNumber(nil), pb.NewFieldNullableNumber(&numbers[2]),
-			}),
-			pb.NewFieldArray("String", pb.NewPrimitiveInfo(pb.PFT_STRING, false), []*pb.FieldDescription_FieldData{
-				pb.NewFieldConcreteText("Primero"), pb.NewFieldConcreteText("Segundo"), pb.NewFieldConcreteText("Tercero"),
-			}),
-			pb.NewFieldArray("Boolean", pb.NewPrimitiveInfo(pb.PFT_BOOL, false), []*pb.FieldDescription_FieldData{
-				pb.NewFieldConcreteBoolean(true), pb.NewFieldConcreteBoolean(true), pb.NewFieldConcreteBoolean(false),
-			}),
+
+	entityDescriptionExpected := pb.NewComponentDescriptionArray(
+		pb.NewComponentStructure("TestTable", []*pb.FieldStructure{
+			pb.NewPrimitiveStructure("Number", pb.FieldType_INT, true, false),
+			pb.NewPrimitiveStructure("String", pb.FieldType_STRING, false, false),
+			pb.NewPrimitiveStructure("Boolean", pb.FieldType_DATE, false, false),
 		}),
+		pb.NewFieldDataArray(&numbers[0], nullNumber, &numbers[2]),
+		pb.NewFieldDataArray("Primero", "Segundo", "Tercero"),
+		pb.NewFieldDataArray(true, true, false),
 	)
 
 	if entityDescription, err := pb.ConvertToEntityDescription(&tableElement); err != nil {
@@ -163,7 +167,7 @@ func TestConventSimpelTableDataWithPointAndAllValues(t *testing.T) {
 	}
 	*/
 
-	referenceTableStructure := db.NewTableStructure("RefererncesTable", []db.Field{
+	referenceTableStructure := db.NewTableStructure("ReferencesTable", []db.Field{
 		db.NewPrimitiveField("Some", db.FT_INT, false, false),
 		db.NewPrimitiveField("Thing", db.FT_INT, false, false),
 	})
@@ -178,16 +182,22 @@ func TestConventSimpelTableDataWithPointAndAllValues(t *testing.T) {
 		[]db.FieldData{1, "Text", []db.FieldData{2, 3}},
 	)
 
-	refComponentExpected := pb.NewComponentDescriptionPoint("ReferenceTable", []*pb.FieldDescription{
-		pb.NewFieldPoint("Some", pb.NewPrimitiveInfo(pb.PFT_INT, false), pb.NewFieldConcreteNumber(2)),
-		pb.NewFieldPoint("Thing", pb.NewPrimitiveInfo(pb.PFT_INT, false), pb.NewFieldConcreteNumber(3)),
+	refStructure := pb.NewComponentStructure("ReferencesTable", []*pb.FieldStructure{
+		pb.NewPrimitiveStructure("Some", pb.FieldType_INT, false, false),
+		pb.NewPrimitiveStructure("Thing", pb.FieldType_INT, false, false),
 	})
 
-	entityDescriptionExpected := pb.NewEntityDescriptionComponent(
-		pb.NewComponentDescriptionPoint("TestTable", []*pb.FieldDescription{
-			pb.NewFieldPoint("Number", pb.NewPrimitiveInfo(pb.PFT_INT, false), pb.NewFieldConcreteNumber(1)),
-			pb.NewFieldPoint("String", pb.NewPrimitiveInfo(pb.PFT_STRING, false), pb.NewFieldConcreteText("Text")),
-			pb.NewFieldPoint("Reference", pb.NewReferenceInfo("ReferencesTable", false), pb.NewFieldConcreteReference(refComponentExpected)),
+	entityDescriptionExpected := pb.NewComponentDescriptionPoint(
+		pb.NewComponentStructure("TestTable", []*pb.FieldStructure{
+			pb.NewPrimitiveStructure("Number", pb.FieldType_INT, false, false),
+			pb.NewPrimitiveStructure("String", pb.FieldType_STRING, false, false),
+			pb.NewReferenceStructure("Reference", refStructure, false, false),
+		}),
+		pb.NewFieldData(1),
+		pb.NewFieldData("Text"),
+		pb.NewFieldData([]*pb.FieldData{
+			pb.NewFieldData(2),
+			pb.NewFieldData(3),
 		}),
 	)
 
