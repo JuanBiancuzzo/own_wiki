@@ -79,18 +79,15 @@ func TestConventSimpelTableDataWithSinglePointAndPrimitiveValues(t *testing.T) {
 		Boolean bool
 	}
 	*/
-	var tableElement db.TableElement = db.TableData{
-		Structure: db.TableStructure{
-			Name: "TestTable",
-			Fields: []db.Field{
-				db.NewPrimitiveField("Number", db.FT_INT, false, false),
-				db.NewPrimitiveField("String", db.FT_STRING, false, false),
-				db.NewPrimitiveField("Boolean", db.FT_BOOL, false, false),
-			},
-		},
-		DataAmount: db.DA_POINT,
-		Data:       []db.FieldData{int(1), "Text", true},
-	}
+	var tableElement db.TableElement = db.NewTableData(
+		db.NewTableStructure("TestTable", []db.Field{
+			db.NewPrimitiveField("Number", db.FT_INT, false, false),
+			db.NewPrimitiveField("String", db.FT_STRING, false, false),
+			db.NewPrimitiveField("Boolean", db.FT_BOOL, false, false),
+		}),
+		db.DA_POINT,
+		[]db.FieldData{int(1), "Text", true},
+	)
 
 	entityDescriptionExpected := &pb.EntityDescription{
 		Description: &pb.EntityDescription_Component{
@@ -165,18 +162,15 @@ func TestConventSimpelTableDataWithSinglePointAndPrimitiveValuesAndNullable(t *t
 	var numberValue int = 1
 	var dateValue *uint = nil
 
-	var tableElement db.TableElement = db.TableData{
-		Structure: db.TableStructure{
-			Name: "TestTable",
-			Fields: []db.Field{
-				db.NewPrimitiveField("Number", db.FT_INT, true, false),
-				db.NewPrimitiveField("String", db.FT_STRING, false, false),
-				db.NewPrimitiveField("Date", db.FT_DATE, true, false),
-			},
-		},
-		DataAmount: db.DA_POINT,
-		Data:       []db.FieldData{&numberValue, "Text", dateValue},
-	}
+	var tableElement db.TableElement = db.NewTableData(
+		db.NewTableStructure("TestTable", []db.Field{
+			db.NewPrimitiveField("Number", db.FT_INT, true, false),
+			db.NewPrimitiveField("String", db.FT_STRING, false, false),
+			db.NewPrimitiveField("Date", db.FT_DATE, true, false),
+		}),
+		db.DA_POINT,
+		[]db.FieldData{&numberValue, "Text", dateValue},
+	)
 
 	entityDescriptionExpected := &pb.EntityDescription{
 		Description: &pb.EntityDescription_Component{
@@ -249,22 +243,19 @@ func TestConventSimpelTableDataWithArrayAndPrimitiveValues(t *testing.T) {
 	numbers := []int{1, 2, 3}
 	var nullNumber *int = nil
 
-	var tableElement db.TableElement = db.TableData{
-		Structure: db.TableStructure{
-			Name: "TestTable",
-			Fields: []db.Field{
-				db.NewPrimitiveField("Number", db.FT_INT, true, false),
-				db.NewPrimitiveField("String", db.FT_STRING, false, false),
-				db.NewPrimitiveField("Boolean", db.FT_BOOL, false, false),
-			},
-		},
-		DataAmount: db.DA_ARRAY,
-		Data: []db.FieldData{
+	var tableElement db.TableElement = db.NewTableData(
+		db.NewTableStructure("TestTable", []db.Field{
+			db.NewPrimitiveField("Number", db.FT_INT, true, false),
+			db.NewPrimitiveField("String", db.FT_STRING, false, false),
+			db.NewPrimitiveField("Boolean", db.FT_BOOL, false, false),
+		}),
+		db.DA_ARRAY,
+		[]db.FieldData{
 			&numbers[0], "Primero", true,
 			nullNumber, "Segundo", true,
 			&numbers[2], "Tercero", false,
 		},
-	}
+	)
 
 	entityDescriptionExpected := &pb.EntityDescription{
 		Description: &pb.EntityDescription_Component{
@@ -313,6 +304,131 @@ func TestConventSimpelTableDataWithArrayAndPrimitiveValues(t *testing.T) {
 							{Data: &pb.FieldDescription_ConcreteFieldData_Boolean{Boolean: true}},
 							{Data: &pb.FieldDescription_ConcreteFieldData_Boolean{Boolean: true}},
 							{Data: &pb.FieldDescription_ConcreteFieldData_Boolean{Boolean: false}},
+						}),
+					},
+				},
+			},
+		},
+	}
+
+	if entityDescription, err := pb.ConvertToEntityDescription(&tableElement); err != nil {
+		t.Errorf("While converting to EntityDescription, got the error: %v", err)
+
+	} else if diff := deep.Equal(entityDescriptionExpected, entityDescription); diff != nil {
+		t.Error(diff)
+
+	} else if tableElementGen, err := entityDescription.ConvertToTableElement(); err != nil {
+		t.Errorf("While converting to TableElement, got the error: %v", err)
+
+	} else if diff := deep.Equal(tableElement, tableElementGen); diff != nil {
+		t.Error(diff)
+	}
+}
+
+func TestConventSimpelTableDataWithPointAndAllValues(t *testing.T) {
+	/* This is the representation of the structure:
+	type TestTable struct {
+		Number    int
+		String    string
+		Reference *ReferencesTable
+	}
+
+	type ReferencesTable struct {
+		Some int
+		Thing int
+	}
+	*/
+
+	referenceTableStructure := db.NewTableStructure("RefererncesTable", []db.Field{
+		db.NewPrimitiveField("Some", db.FT_INT, false, false),
+		db.NewPrimitiveField("Thing", db.FT_INT, false, false),
+	})
+
+	var tableElement db.TableElement = db.NewTableData(
+		db.NewTableStructure("TestTable", []db.Field{
+			db.NewPrimitiveField("Number", db.FT_INT, false, false),
+			db.NewPrimitiveField("String", db.FT_STRING, false, false),
+			db.NewReferencesField("Reference", referenceTableStructure, false, false),
+		}),
+		db.DA_POINT,
+		[]db.FieldData{1, "Text", []db.FieldData{2, 3}},
+	)
+
+	entityDescriptionExpected := &pb.EntityDescription{
+		Description: &pb.EntityDescription_Component{
+			Component: &pb.ComponentDescription{
+				Name:   "TestTable",
+				Amount: pb.ComponentDescription_ONE,
+				Rows:   1,
+				Fields: []*pb.FieldDescription{
+					{
+						Name: "Number",
+						TypeInformation: &pb.FieldTypeInformation{
+							Type: pb.FieldTypeInformation_PRIMITIVE,
+							Information: &pb.FieldTypeInformation_Primitive{
+								Primitive: pb.PrimitiveFieldType_INT,
+							},
+						},
+						Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
+							Data: &pb.FieldDescription_ConcreteFieldData_Number{Number: 1},
+						}),
+					},
+					{
+						Name: "String",
+						TypeInformation: &pb.FieldTypeInformation{
+							Type: pb.FieldTypeInformation_PRIMITIVE,
+							Information: &pb.FieldTypeInformation_Primitive{
+								Primitive: pb.PrimitiveFieldType_STRING,
+							},
+						},
+						Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
+							Data: &pb.FieldDescription_ConcreteFieldData_Text{Text: "Text"},
+						}),
+					},
+					{
+						Name: "Reference",
+						TypeInformation: &pb.FieldTypeInformation{
+							Type: pb.FieldTypeInformation_REFERENCE,
+							Information: &pb.FieldTypeInformation_Reference{
+								Reference: &pb.ReferenceInformation{
+									TableName: "RefererncesTable",
+								},
+							},
+						},
+						Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
+							Data: &pb.FieldDescription_ConcreteFieldData_Reference{
+								Reference: &pb.ComponentDescription{
+									Name:   "TestTable",
+									Amount: pb.ComponentDescription_ONE,
+									Rows:   1,
+									Fields: []*pb.FieldDescription{
+										{
+											Name: "Some",
+											TypeInformation: &pb.FieldTypeInformation{
+												Type: pb.FieldTypeInformation_PRIMITIVE,
+												Information: &pb.FieldTypeInformation_Primitive{
+													Primitive: pb.PrimitiveFieldType_INT,
+												},
+											},
+											Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
+												Data: &pb.FieldDescription_ConcreteFieldData_Number{Number: 2},
+											}),
+										},
+										{
+											Name: "Thing",
+											TypeInformation: &pb.FieldTypeInformation{
+												Type: pb.FieldTypeInformation_PRIMITIVE,
+												Information: &pb.FieldTypeInformation_Primitive{
+													Primitive: pb.PrimitiveFieldType_INT,
+												},
+											},
+											Data: createConcretePointData(&pb.FieldDescription_ConcreteFieldData{
+												Data: &pb.FieldDescription_ConcreteFieldData_Number{Number: 3},
+											}),
+										},
+									},
+								},
+							},
 						}),
 					},
 				},

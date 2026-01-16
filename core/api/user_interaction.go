@@ -243,7 +243,7 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 			}
 		}
 
-		nameTables[name] = db.NewTableDescription(name, fields)
+		nameTables[name] = db.NewTableStructure(name, fields)
 		return nil
 	}
 

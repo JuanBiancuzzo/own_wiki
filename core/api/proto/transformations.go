@@ -211,7 +211,8 @@ func ConvertToComponentDescription(tableData *db.TableData) (*EntityDescription_
 		return nil, fmt.Errorf("invalid tablaData amount, with error: %v", err)
 	}
 
-	dataRows := len(tableData.Data) / amountFields
+	dataColumns := tableData.Structure.AmountOfPrimitiveValues()
+	dataRows := len(tableData.Data) / int(dataColumns)
 
 	for i, fieldData := range tableData.Structure.Fields {
 		var fieldTypeInformation *FieldTypeInformation
@@ -306,16 +307,16 @@ func ConvertToCompositionDescription(tableComposition *db.TableComposition) (*En
 
 func ConvertToEntityDescription(tableElement *db.TableElement) (*EntityDescription, error) {
 	switch table := (*tableElement).(type) {
-	case db.TableData:
-		if component, err := ConvertToComponentDescription(&table); err != nil {
+	case *db.TableData:
+		if component, err := ConvertToComponentDescription(table); err != nil {
 			return nil, err
 
 		} else {
 			return &EntityDescription{Description: component}, nil
 		}
 
-	case db.TableComposition:
-		if composition, err := ConvertToCompositionDescription(&table); err != nil {
+	case *db.TableComposition:
+		if composition, err := ConvertToCompositionDescription(table); err != nil {
 			return nil, err
 
 		} else {
@@ -443,40 +444,42 @@ func (fd *FieldDescription) ConvertToDataValues(dataAmount db.DataAmount) (data 
 	return data, field, err
 }
 
-func (cd *ComponentDescription) ConvertToTableData() (db.TableData, error) {
+func (cd *ComponentDescription) ConvertToTableData() (*db.TableData, error) {
 	dataAmount, err := cd.GetAmount().GetDataBaseAmount()
 	if err != nil {
-		return db.TableData{}, fmt.Errorf("Failed to get dataAmount, with error: %v", err)
+		return nil, fmt.Errorf("Failed to get dataAmount, with error: %v", err)
 	}
 
 	amountFields := len(cd.GetFields())
-
 	data := make([]db.FieldData, int(cd.GetRows())*amountFields)
 	fields := make([]db.Field, amountFields)
 
+	// As each field may contain more than one element, this should acount for the offset of the data of each field
+	acumulatedOffset := 0
 	for i, fieldDescription := range cd.GetFields() {
 		dataArray, field, err := fieldDescription.ConvertToDataValues(dataAmount)
 		if err != nil {
-			return db.TableData{}, fmt.Errorf("Failed to get DataArray data and field infomation, with error: %v", err)
+			return nil, fmt.Errorf("Failed to get DataArray data and field infomation, with error: %v", err)
 
 		} else if len(dataArray) != int(cd.GetRows()) {
-			return db.TableData{}, fmt.Errorf("The amount of data in the arrays (%d) is not the same as the amount of rows (%d)", len(dataArray), cd.Rows)
+			return nil, fmt.Errorf("The amount of data in the arrays (%d) is not the same as the amount of rows (%d)", len(dataArray), cd.Rows)
 		}
-
 		fields[i] = field
+
+		// The offset should be the amount of elements data are store
+		addedOffet := int(field.AmountOfPrimitiveValues())
+
 		for row := range len(dataArray) {
-			data[i+row*amountFields] = dataArray[row]
+			for offset := range addedOffet {
+				dataPoint := dataArray[row+offset]
+				data[offset+acumulatedOffset+row*amountFields] = dataPoint
+			}
 		}
+		acumulatedOffset += addedOffet
 	}
 
-	return db.TableData{
-		Structure: db.TableStructure{
-			Name:   cd.GetName(),
-			Fields: fields,
-		},
-		DataAmount: dataAmount,
-		Data:       data,
-	}, nil
+	structure := db.NewTableStructure(cd.GetName(), fields)
+	return db.NewTableData(structure, dataAmount, data), nil
 }
 
 func (ed *EntityDescription) ConvertToTableElement() (tableElement db.TableElement, err error) {

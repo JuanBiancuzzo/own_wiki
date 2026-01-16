@@ -16,11 +16,18 @@ type TableStructure struct {
 	Fields []Field
 }
 
-func NewTableDescription(name string, fields []Field) *TableStructure {
+func NewTableStructure(name string, fields []Field) *TableStructure {
 	return &TableStructure{
 		Name:   name,
 		Fields: fields,
 	}
+}
+
+func (ts *TableStructure) AmountOfPrimitiveValues() (amount uint) {
+	for _, field := range ts.Fields {
+		amount += field.AmountOfPrimitiveValues()
+	}
+	return amount
 }
 
 type Field struct {
@@ -49,4 +56,16 @@ func NewReferencesField(name string, reference *TableStructure, isNull, isKey bo
 		IsNull:    isNull,
 		IsKey:     isKey,
 	}
+}
+
+func (f Field) AmountOfPrimitiveValues() (amount uint) {
+	switch f.Type {
+	case FT_INT, FT_STRING, FT_CHAR, FT_BOOL, FT_DATE:
+		amount = 1
+
+	case FT_REF:
+		amount = 1
+		// amount = f.Reference.AmountOfPrimitiveValues()
+	}
+	return amount
 }

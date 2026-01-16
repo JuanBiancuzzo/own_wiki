@@ -1,8 +1,11 @@
 package database
 
-// This Could be a primitive value, int, string, etc. or a pointer to
-// another TablaData
+// This could be a primitive value, int, string, etc. Note: only primitive value and
+// there pointers could be FieldData. There shouldn't be a pointer to a structure
 type FieldData any
+
+// This TableElement could be a *TableData o *TableComposition
+type TableElement any
 
 type DataAmount uint8
 
@@ -12,7 +15,7 @@ const (
 )
 
 type TableData struct {
-	Structure TableStructure
+	Structure *TableStructure
 
 	DataAmount
 
@@ -22,9 +25,20 @@ type TableData struct {
 	Data []FieldData
 }
 
-// This TableElement could be a TableData o TableComposition
-type TableElement any
+func NewTableData(structure *TableStructure, dataAmount DataAmount, data []FieldData) *TableData {
+	return &TableData{
+		Structure:  structure,
+		DataAmount: dataAmount,
+		Data:       data,
+	}
+}
 
 type TableComposition struct {
 	Composition []TableElement
+}
+
+func NewTableComposition(composition []TableElement) *TableComposition {
+	return &TableComposition{
+		Composition: composition,
+	}
 }
