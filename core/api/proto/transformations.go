@@ -148,10 +148,10 @@ func ConvertFieldDescriptions(structure *db.TableStructure, data []db.FieldData)
 			refData := make([]db.FieldData, rows*refColumns)
 			for row := range rows {
 				for refColumn := range refColumns {
-					if dataArray, ok := data[column+row*columns].([]*FieldData); ok {
+					if dataArray, ok := data[column+row*columns].([]db.FieldData); ok {
 						refData[refColumn+row*refColumns] = dataArray[refColumn]
 					} else {
-						return fieldDescriptions, rows, fmt.Errorf("References date not found")
+						return fieldDescriptions, rows, fmt.Errorf("References date not found, the data was of type %T", data[column+row*columns])
 					}
 				}
 			}
@@ -287,8 +287,7 @@ func (fd *FieldDescription) ConvertToDataValues(fieldStructure *FieldStructure, 
 
 	case FieldType_REFERENCE:
 		reference := fd.GetReference()
-		columns := len(reference.Fields)
-		data = make([]db.FieldData, columns*rows)
+		dataArray := make([][]db.FieldData, rows)
 
 		for i, field := range reference.GetFields() {
 			fieldValues, errConv := field.ConvertToDataValues(fieldStructure.Reference.Fields[i], rows)
@@ -296,9 +295,14 @@ func (fd *FieldDescription) ConvertToDataValues(fieldStructure *FieldStructure, 
 				return data, fmt.Errorf("Failed to get field values, with error: %v", err)
 			}
 
-			for row := range rows {
-				data[i+row*columns] = fieldValues[row]
+			for row, value := range fieldValues {
+				dataArray[row] = append(dataArray[row], value)
 			}
+		}
+
+		data = make([]db.FieldData, rows)
+		for row := range rows {
+			data[row] = dataArray[row]
 		}
 
 	default:
@@ -365,7 +369,12 @@ func (cd *ComponentDescription) ConvertToTableData(cache *cacheData) (table *db.
 		}
 
 		for j, dataPoint := range fieldValues {
-			data[i+j*columns] = dataPoint
+			if j > 0 {
+				panic(fmt.Sprintf("j > 0, with len(values): %v, and i = %d", len(fieldValues), i))
+			} else if i >= 3 {
+				panic("i >= 3")
+			}
+			data[i+j*rows] = dataPoint
 		}
 	}
 
