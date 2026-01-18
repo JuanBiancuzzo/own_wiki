@@ -5,7 +5,6 @@ type FieldType uint8
 const (
 	FT_INT = iota
 	FT_STRING
-	FT_CHAR
 	FT_BOOL
 	FT_DATE
 	FT_REF
@@ -60,7 +59,7 @@ func NewReferencesField(name string, reference *TableStructure, isNull, isKey bo
 
 func (f Field) AmountOfPrimitiveValues() (amount uint) {
 	switch f.Type {
-	case FT_INT, FT_STRING, FT_CHAR, FT_BOOL, FT_DATE:
+	case FT_INT, FT_STRING, FT_BOOL, FT_DATE:
 		amount = 1
 
 	case FT_REF:

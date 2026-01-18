@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -22,15 +23,10 @@ func NewEntityDescriptionComposition(composition *ComponentCompositionDescriptio
 }
 
 // ---+--- ComponentDescription ---+---
-func NewComponentDescriptionPoint(structure *ComponentStructure, data ...*FieldData) *ComponentDescription {
-	fields := make([]*FieldDescription, len(data))
-	for i, dataPoint := range data {
-		fields[i] = NewFieldPoint(dataPoint)
-	}
-
+func NewComponentDescriptionPoint(structure *ComponentStructure, fields ...*FieldDescription) *ComponentDescription {
 	return &ComponentDescription{
 		Structure: structure,
-		Amount:    ComponentDescription_POINT,
+		Amount:    DataAmount_POINT,
 		Rows:      1,
 		Fields: &FieldsDescription{
 			Fields: fields,
@@ -38,23 +34,34 @@ func NewComponentDescriptionPoint(structure *ComponentStructure, data ...*FieldD
 	}
 }
 
-func NewComponentDescriptionArray(structure *ComponentStructure, data ...[]*FieldData) *ComponentDescription {
-	fields := make([]*FieldDescription, len(data))
-	rows := len(data[0])
-	for i, dataArray := range data {
-		if len(dataArray) < rows {
-			rows = len(dataArray)
-		}
-
-		fields[i] = NewFieldArray(dataArray)
-	}
-
+func NewComponentDescriptionArray(structure *ComponentStructure, rows int, fields ...*FieldDescription) *ComponentDescription {
 	return &ComponentDescription{
 		Structure: structure,
-		Amount:    ComponentDescription_ARRAY,
+		Amount:    DataAmount_ARRAY,
 		Rows:      int32(rows),
 		Fields: &FieldsDescription{
 			Fields: fields,
+		},
+	}
+}
+
+// ---+--- FieldDescription ---+---
+func NewPrimitiveDescription(array ...*FieldData) *FieldDescription {
+	return &FieldDescription{
+		Data: &FieldDescription_DataArray{
+			DataArray: &FieldDataArray{
+				Array: array,
+			},
+		},
+	}
+}
+
+func NewReferenceDescription(fields ...*FieldDescription) *FieldDescription {
+	return &FieldDescription{
+		Data: &FieldDescription_Reference{
+			Reference: &FieldsDescription{
+				Fields: fields,
+			},
 		},
 	}
 }
@@ -88,115 +95,136 @@ func NewReferenceStructure(name string, reference *ComponentStructure, isNull, i
 	}
 }
 
-// ---+--- FieldDescription ---+---
-func NewFieldPoint(point *FieldData) *FieldDescription {
-	return &FieldDescription{
-		Data: &FieldDescription_Point{
-			Point: point,
-		},
-	}
-}
-
-func NewFieldArray(array []*FieldData) *FieldDescription {
-	return &FieldDescription{
-		Data: &FieldDescription_Array{
-			Array: &FieldDescription_FieldDataArray{
-				DataArray: array,
-			},
-		},
-	}
-}
-
 // ---+--- FieldData ---+---
-type FnNewConcreteData[T any] func(T) *FieldData
-type FnNewConcreteArray[T any] func([]T) *FieldData
-type FnNewNullableData[T any] func(*T) *FieldData
-type FnNewNullableArray[T any] func([]*T) *FieldData
-
-func newConcreteData(data isFieldData_ConcreteFieldData_Data) *FieldData {
+func newConcreteData(data isFieldData_Data) *FieldData {
 	return &FieldData{
-		Data: &FieldData_Concrete{
-			Concrete: &FieldData_ConcreteFieldData{
-				Data: data,
-			},
-		},
+		Data:   data,
+		IsNull: false,
 	}
 }
 
-func newNullableData(data isFieldData_ConcreteFieldData_Data) *FieldData {
+func newNullableData(data isFieldData_Data, isNull bool) *FieldData {
 	return &FieldData{
-		Data: &FieldData_Nullable{
-			Nullable: &FieldData_NullableFieldData{
-				Data: &FieldData_ConcreteFieldData{
-					Data: data,
-				},
-			},
-		},
+		Data:   data,
+		IsNull: isNull,
 	}
 }
 
-type valueConstraint interface {
+type valueContraint interface {
 	int | string | bool | time.Time |
-		[]*FieldData |
 		*int | *string | *bool | *time.Time
 }
 
-func NewFieldData[T valueConstraint](x T) *FieldData {
+func NewFieldData[T valueContraint](x T) *FieldData {
 	switch value := any(x).(type) {
 	case int:
-		return newConcreteData(&FieldData_ConcreteFieldData_Number{Number: int32(value)})
+		return newConcreteData(&FieldData_Number{Number: int32(value)})
 	case *int:
 		if value == nil {
-			return newNullableData(nil)
+			return newNullableData(&FieldData_Number{}, true)
 		}
-		return newNullableData(&FieldData_ConcreteFieldData_Number{Number: int32(*value)})
+		return newNullableData(&FieldData_Number{Number: int32(*value)}, false)
 
 	case string:
-		return newConcreteData(&FieldData_ConcreteFieldData_Text{Text: value})
+		return newConcreteData(&FieldData_Text{Text: value})
 	case *string:
 		if value == nil {
-			return newNullableData(nil)
+			return newNullableData(&FieldData_Text{}, true)
 		}
-		return newNullableData(&FieldData_ConcreteFieldData_Text{Text: *value})
+		return newNullableData(&FieldData_Text{Text: *value}, false)
 
 	case bool:
-		return newConcreteData(&FieldData_ConcreteFieldData_Boolean{Boolean: value})
+		return newConcreteData(&FieldData_Boolean{Boolean: value})
 	case *bool:
 		if value == nil {
-			return newNullableData(nil)
+			return newNullableData(&FieldData_Boolean{}, true)
 		}
-		return newNullableData(&FieldData_ConcreteFieldData_Boolean{Boolean: *value})
+		return newNullableData(&FieldData_Boolean{Boolean: *value}, false)
 
 	case time.Time:
-		return newConcreteData(&FieldData_ConcreteFieldData_Date{Date: uint32(value.Unix())})
+		return newConcreteData(&FieldData_Date{Date: uint32(value.Unix())})
 	case *time.Time:
 		if value == nil {
-			return newNullableData(nil)
+			return newNullableData(&FieldData_Date{}, true)
 		}
-		return newNullableData(&FieldData_ConcreteFieldData_Date{Date: uint32(value.Unix())})
-
-	case []*FieldDescription:
-		return newConcreteData(&FieldData_ConcreteFieldData_Reference{
-			Reference: &FieldsDescription{
-				Fields: value,
-			},
-		})
-	case *[]*FieldDescription:
-		if value == nil {
-			return newNullableData(nil)
-		}
-		return newNullableData(&FieldData_ConcreteFieldData_Reference{
-			Reference: &FieldsDescription{
-				Fields: *value,
-			},
-		})
+		return newNullableData(&FieldData_Date{Date: uint32(value.Unix())}, false)
 
 	default:
 		panic("This is not possible")
 	}
 }
 
-func NewFieldDataArray[T valueConstraint](x ...T) []*FieldData {
+func castArray[T any](array []any) ([]T, error) {
+	valueArray := make([]T, len(array))
+	for i, data := range array {
+		if value, ok := data.(T); ok {
+			valueArray[i] = value
+
+		} else {
+			return valueArray, fmt.Errorf("Mix type, expected: %T and got %T", value, data)
+		}
+	}
+	return valueArray, nil
+}
+
+func NewFieldDataArrayWithError(x []any) (fieldData []*FieldData, err error) {
+	if len(x) == 0 {
+		return fieldData, fmt.Errorf("Array of length 0")
+	}
+
+	switch any(x[0]).(type) {
+	case int:
+		var array []int
+		if array, err = castArray[int](x); err == nil {
+			fieldData = NewFieldDataArray(array...)
+		}
+	case *int:
+		var array []*int
+		if array, err = castArray[*int](x); err == nil {
+			fieldData = NewFieldDataArray(array...)
+		}
+
+	case string:
+		var array []string
+		if array, err = castArray[string](x); err == nil {
+			fieldData = NewFieldDataArray(array...)
+		}
+	case *string:
+		var array []*string
+		if array, err = castArray[*string](x); err == nil {
+			fieldData = NewFieldDataArray(array...)
+		}
+
+	case bool:
+		var array []bool
+		if array, err = castArray[bool](x); err == nil {
+			fieldData = NewFieldDataArray(array...)
+		}
+	case *bool:
+		var array []*bool
+		if array, err = castArray[*bool](x); err == nil {
+			fieldData = NewFieldDataArray(array...)
+		}
+
+	case time.Time:
+		var array []time.Time
+		if array, err = castArray[time.Time](x); err == nil {
+			fieldData = NewFieldDataArray(array...)
+		}
+	case *time.Time:
+		var array []*time.Time
+		if array, err = castArray[*time.Time](x); err == nil {
+			fieldData = NewFieldDataArray(array...)
+		}
+
+	default:
+		err = fmt.Errorf("The type does not satisfy the concreteValueContraint or nullableValueContraint, it has type of: %T", x[0])
+	}
+
+	return fieldData, err
+}
+
+func NewFieldDataArray[T valueContraint](x ...T) []*FieldData {
 	data := make([]*FieldData, len(x))
 	for i, dataPoint := range x {
 		data[i] = NewFieldData(dataPoint)

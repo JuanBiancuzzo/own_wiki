@@ -40,12 +40,15 @@ message ComponentCompositionDescription {
     repeated EntityDescription entities = 1;
 }
 
+
+// Represents if the data is a single point or an array of values
+enum DataAmount {
+    POINT = 0;
+    ARRAY = 1;
+}
+
 // Represents the data of the component
 message ComponentDescription {
-    enum DataAmount {
-        POINT = 0;
-        ARRAY = 1;
-    }
 
     ComponentStructure structure = 1;
     DataAmount amount = 2;
@@ -60,38 +63,28 @@ message FieldsDescription {
 
 // Represents the data itself
 message FieldData {
-    message ConcreteFieldData {
-        oneof data {
-            int32 number = 1;
-            string text = 2;
-            bool boolean = 3;
-            uint32 date = 4;
-            FieldsDescription reference = 5;
-        }
-    }
-
-    message NullableFieldData {
-        optional ConcreteFieldData data = 1;
-    }
-
     oneof data {
-        ConcreteFieldData concrete = 1;
-        NullableFieldData nullable = 2;
+        int32 number = 1;
+        string text = 2;
+        bool boolean = 3;
+        uint32 date = 4;
     }
+
+    // if the data is nullable, then is field has meaning
+    bool is_null = 5; 
+}
+
+// When the DataAmount is Point this array always has 1 element, and when the
+// DataAmount is Array, this array has at least 1 element
+message FieldDataArray {
+    repeated FieldData array = 1;
 }
 
 // Represents the data of a field in a query result (array of values)
 message FieldDescription {
 
-
-    message FieldDataArray {
-        repeated FieldData data_array = 1;
-    }
-
-    // This should be all of the same type. This is to save space and
-    // not have the type information in the FieldData
     oneof data {
-        FieldData point = 1;
-        FieldDataArray array = 2;
+        FieldDataArray data_array = 1;
+        FieldsDescription reference = 2;
     }
 }
