@@ -1,5 +1,8 @@
 package scene
 
+// The types that holds the interface
+// 	*TextObject
+// 	*ImageObject
 type SceneObject isScreenObject
 
 type isScreenObject interface {
