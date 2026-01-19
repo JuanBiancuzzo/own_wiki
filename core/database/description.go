@@ -37,7 +37,7 @@ type TableComposition struct {
 	Composition []TableElement
 }
 
-func NewTableComposition(composition []TableElement) *TableComposition {
+func NewTableComposition(composition ...TableElement) *TableComposition {
 	return &TableComposition{
 		Composition: composition,
 	}

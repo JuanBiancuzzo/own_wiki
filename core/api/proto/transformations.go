@@ -350,6 +350,10 @@ func (cs *ComponentStructure) ConvertToTableStructure(cache *cacheData) (*db.Tab
 }
 
 func (cd *ComponentDescription) ConvertToTableData(cache *cacheData) (table *db.TableData, err error) {
+	if cache == nil {
+		cache = newCacheData()
+	}
+
 	structure, err := cd.Structure.ConvertToTableStructure(cache)
 	if err != nil {
 		return table, fmt.Errorf("Failed to get structure, with error: %v", err)
@@ -369,27 +373,43 @@ func (cd *ComponentDescription) ConvertToTableData(cache *cacheData) (table *db.
 		}
 
 		for j, dataPoint := range fieldValues {
-			if j > 0 {
-				panic(fmt.Sprintf("j > 0, with len(values): %v, and i = %d", len(fieldValues), i))
-			} else if i >= 3 {
-				panic("i >= 3")
-			}
-			data[i+j*rows] = dataPoint
+			data[i+j*columns] = dataPoint
 		}
 	}
 
 	return db.NewTableData(structure, dataAmount, data), err
 }
 
-func (ed *EntityDescription) ConvertToTableElement() (tableElement db.TableElement, err error) {
-	cache := newCacheData()
+func (cp *ComponentCompositionDescription) ConvertToCompositionDescription(cache *cacheData) (*db.TableComposition, error) {
+	if cache == nil {
+		cache = newCacheData()
+	}
+
+	entities := make([]db.TableElement, len(cp.GetEntities()))
+
+	for i, entityDescription := range cp.GetEntities() {
+		if entity, err := entityDescription.ConvertToTableElement(cache); err != nil {
+			return nil, fmt.Errorf("Failed to convert entity description while converting from table composition, with error: %v", err)
+
+		} else {
+			entities[i] = entity
+		}
+	}
+
+	return db.NewTableComposition(entities...), nil
+}
+
+func (ed *EntityDescription) ConvertToTableElement(cache *cacheData) (tableElement db.TableElement, err error) {
+	if cache == nil {
+		cache = newCacheData()
+	}
 
 	switch table := ed.GetDescription().(type) {
 	case *EntityDescription_Component:
 		tableElement, err = table.Component.ConvertToTableData(cache)
 
 	case *EntityDescription_Composition:
-		// TODO: Convert composition
+		tableElement, err = table.Composition.ConvertToCompositionDescription(cache)
 
 	default:
 		err = fmt.Errorf("The entity description is not define")

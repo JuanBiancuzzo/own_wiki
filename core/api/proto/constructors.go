@@ -233,7 +233,7 @@ func NewFieldDataArray[T valueContraint](x ...T) []*FieldData {
 }
 
 // ---+--- ComponentCompositionDescription ---+---
-func NewComponentCompositionDescription(entities []*EntityDescription) *ComponentCompositionDescription {
+func NewComponentCompositionDescription(entities ...*EntityDescription) *ComponentCompositionDescription {
 	return &ComponentCompositionDescription{
 		Entities: entities,
 	}
