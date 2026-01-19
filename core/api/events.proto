@@ -25,6 +25,7 @@ message Event {
         // System
 
         // User interaction
+        PromptTextEvent prompt_event = 3;
     
         // UI
     }
