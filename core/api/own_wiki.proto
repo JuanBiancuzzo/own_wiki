@@ -7,6 +7,7 @@ option go_package = "github.com/JuanBiancuzzo/own_wiki/core";
 
 import "components.proto";
 import "events.proto";
+import "scene.proto";
 
 // ---+--- Services ---+---
 
@@ -93,9 +94,3 @@ message QueryResponse {
 message SendEventRequest {
     Event event = 1;
 }
-
-// --- Pending to define ---
-
-message FrameInformation {}
-
-message SceneDescription {}

@@ -239,9 +239,7 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 	return descriptions, nil
 }
 
-type EntityDescription db.TableElement
-
-func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths chan string, receiveEntity chan EntityDescription) error {
+func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths chan string, receiveEntity chan db.TableElement) error {
 	stream, err := uc.User.ImportFiles(ctx)
 	if err != nil {
 		// We close the channel because there is no entity to be send
@@ -282,7 +280,7 @@ func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths 
 	}(sendFilePaths, stream, &waitSendAndReceive)
 
 	waitSendAndReceive.Add(1)
-	go func(sendEntity chan EntityDescription, stream pb.UserInteraction_ImportFilesClient, wg *sync.WaitGroup) {
+	go func(sendEntity chan db.TableElement, stream pb.UserInteraction_ImportFilesClient, wg *sync.WaitGroup) {
 		cacheStructures := pb.NewCacheData()
 		for {
 			if response, err := stream.Recv(); err == io.EOF {
