@@ -239,8 +239,7 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 	return descriptions, nil
 }
 
-// TODO: Change this type to be the correct representation of the ComponentDescription, this should be able to be save in the database
-type EntityDescription *pb.EntityDescription
+type EntityDescription db.TableElement
 
 func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths chan string, receiveEntity chan EntityDescription) error {
 	stream, err := uc.User.ImportFiles(ctx)
@@ -284,6 +283,7 @@ func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths 
 
 	waitSendAndReceive.Add(1)
 	go func(sendEntity chan EntityDescription, stream pb.UserInteraction_ImportFilesClient, wg *sync.WaitGroup) {
+		cacheStructures := pb.NewCacheData()
 		for {
 			if response, err := stream.Recv(); err == io.EOF {
 				errorChannel <- nil
@@ -293,8 +293,12 @@ func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths 
 				errorChannel <- fmt.Errorf("Error while receiving entity information, with error: %v", err)
 				break
 
+			} else if entity, err := response.GetEntity().ConvertToTableElement(cacheStructures); err != nil {
+				errorChannel <- fmt.Errorf("Error while converting entity to db.Description, with error: %v", err)
+				break
+
 			} else {
-				sendEntity <- response.GetEntity()
+				sendEntity <- entity
 			}
 		}
 
