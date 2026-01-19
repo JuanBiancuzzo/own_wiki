@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -28,10 +28,7 @@ jobs:
         run: |
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-
-      - name: Generate Go code from .proto files
-        run: make -C ${{ github.workspace }}/core/api build_proto
         
       # Run all the tests in all directories
-      - name: Test
-        run: go test ${{ github.workspace }}/core/...
+      - name: Build all necessary files and tests
+        run: make -C ${{ github.workspace }} build_tests

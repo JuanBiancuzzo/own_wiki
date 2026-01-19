@@ -1,0 +1,43 @@
+syntax = "proto3";
+package api;
+
+option go_package = "github.com/JuanBiancuzzo/own_wiki/core"; 
+
+// Represents the information like the frame count, etc.
+message FrameInformation {
+    uint32 frame_count = 1;
+}
+
+// Represents the description of the scene in a agnostic way
+message SceneDescription {
+    CameraDescription main_camera = 1;
+}
+
+// Its the way to capture the perspective of the objects
+message CameraDescription {
+    // The perspective matrix is a R^(4x4)
+    message PerspectiveMatrix {
+        repeated float value = 1;
+    }
+
+    PerspectiveMatrix perspective = 1;
+    LayoutDescription screen_layout = 2;
+}
+
+// Represents a group of objects that 
+message LayoutDescription {
+    repeated SceneObject objects = 1;
+}
+
+// All the objects that could be define, are define here
+message SceneObject {
+    message Image {
+        string url = 1;
+        string title = 2;
+    }
+
+    oneof object {
+        string text = 1;
+        Image image_info = 2;
+    }
+}
