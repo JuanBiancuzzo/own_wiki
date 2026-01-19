@@ -15,7 +15,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5 
         with:
-          go-version-file: "go.work"
+          go-version-file: "${{ github.workspace }}/go.work"
           cache-dependency-path: "**/*.sum"
 
       # We need to regenerate the proto files to golang files
@@ -30,8 +30,8 @@ jobs:
           go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
       - name: Generate Go code from .proto files
-        run: make -c ./core/api build_proto
+        run: make -C ${{ github.workspace }}/core/api build_proto
         
       # Run all the tests in all directories
       - name: Test
-        run: go test ./...
+        run: go test ${{ github.workspace }}/core/...
