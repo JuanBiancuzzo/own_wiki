@@ -15,6 +15,7 @@ message SceneDescription {
 
 // Its the way to capture the perspective of the objects
 message Camera {
+    // The perspective matrix is a R^(4x4)
     message PerspectiveMatrix {
         repeated float value = 1;
     }
@@ -30,17 +31,13 @@ message Layout {
 
 // All the objects that could be define, are define here
 message SceneObject {
-    message Text {
-        string text = 1;
-    }
-
     message Image {
         string url = 1;
         string title = 2;
     }
 
     oneof object {
-        Text text = 1;
-        Image url = 2;
+        string text = 1;
+        Image image_info = 2;
     }
 }
