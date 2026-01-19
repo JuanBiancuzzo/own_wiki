@@ -42,7 +42,7 @@ func Test2DScene(t *testing.T) {
 	}
 }
 
-func FuzzSceneObjects(f *testing.F) {
+func TestSceneObjects(t *testing.T) {
 	systems := []s.SceneObject{
 		s.NewTextObject("Test text"),
 		s.NewImageObject("url:path/to/image", "Test title"),
@@ -54,14 +54,10 @@ func FuzzSceneObjects(f *testing.F) {
 
 	amountTestCases := len(systems)
 	if amountTestCases != len(protocols) {
-		f.Fatalf("Amount of systems objects (%d) is different from protocol objects (%d)", len(systems), len(protocols))
+		t.Fatalf("Amount of systems objects (%d) is different from protocol objects (%d)", len(systems), len(protocols))
 	}
 
 	for i := range amountTestCases {
-		f.Add(i)
-	}
-
-	f.Fuzz(func(t *testing.T, i int) {
 		system, protocol := systems[i], protocols[i]
 
 		if protocolGen, err := pb.ConvertFromSystemObject(system); err != nil {
@@ -76,5 +72,5 @@ func FuzzSceneObjects(f *testing.F) {
 		} else if diff := deep.Equal(protocol, protocolGen); diff != nil {
 			t.Error(diff)
 		}
-	})
+	}
 }
