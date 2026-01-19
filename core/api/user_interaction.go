@@ -177,13 +177,11 @@ func dfs(name string, tableNames map[string]*seenComponent, exec func(*pb.Compon
 
 	component := seenComponent.Component
 	for _, field := range component.GetFields() {
-		typeInformation := field.GetTypeInformation()
-
-		if typeInformation.GetType() != pb.FieldTypeInformation_REFERENCE {
+		if field.GetType() != pb.FieldType_REFERENCE {
 			continue
 		}
 
-		refTableName := typeInformation.GetReference().GetTableName()
+		refTableName := field.GetReference().GetName()
 		refComponent := tableNames[refTableName]
 
 		switch refComponent.Seen {
@@ -216,36 +214,12 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 		tableNames[name] = &seenComponent{Component: component, Seen: ST_NOT_SEEN}
 	}
 
-	nameTables := make(map[string]*db.TableStructure)
-	exec := func(component *pb.ComponentStructure) error {
-		name := component.GetName()
-		fieldStructures := component.GetFields()
-		fields := make([]db.Field, len(fieldStructures))
-
-		for i, field := range fieldStructures {
-			typeInformation := field.GetTypeInformation()
-
-			switch typeInformation.GetType() {
-			case pb.FieldTypeInformation_PRIMITIVE:
-				fieldType, isNull, err := typeInformation.GetPrimitive().GetDataBaseFieldType()
-				if err != nil {
-					return fmt.Errorf("Primitive type failed, with error: %v", err)
-
-				} else if field.GetIsNull() != isNull {
-					return fmt.Errorf("The field information of its nullability are different in fieldStructure is %v and in type is %v", field.GetIsNull(), isNull)
-				}
-
-				fields[i] = db.NewPrimitiveField(field.GetName(), fieldType, field.GetIsNull(), field.GetIsKey())
-
-			case pb.FieldTypeInformation_REFERENCE:
-				reference := nameTables[typeInformation.GetReference().GetTableName()]
-				fields[i] = db.NewReferencesField(field.GetName(), reference, field.GetIsNull(), field.GetIsKey())
-			}
-		}
-
-		nameTables[name] = db.NewTableStructure(name, fields)
-		return nil
+	cache := pb.NewCacheData()
+	exec := func(component *pb.ComponentStructure) (err error) {
+		_, err = component.ConvertToTableStructure(cache)
+		return err
 	}
+	nameTables := cache.TableStructures
 
 	for _, component := range tableNames {
 		if component.Seen == ST_COMPLETED {

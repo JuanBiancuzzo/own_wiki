@@ -7,12 +7,12 @@ import (
 	db "github.com/JuanBiancuzzo/own_wiki/core/database"
 )
 
-type cacheData struct {
+type CacheStructures struct {
 	TableStructures map[string]*db.TableStructure
 }
 
-func newCacheData() *cacheData {
-	return &cacheData{
+func NewCacheData() *CacheStructures {
+	return &CacheStructures{
 		TableStructures: make(map[string]*db.TableStructure),
 	}
 }
@@ -312,7 +312,7 @@ func (fd *FieldDescription) ConvertToDataValues(fieldStructure *FieldStructure, 
 	return data, err
 }
 
-func (fs *FieldStructure) ConvertToFieldStructure(cache *cacheData) (field db.Field, err error) {
+func (fs *FieldStructure) ConvertToFieldStructure(cache *CacheStructures) (field db.Field, err error) {
 	switch fs.Type {
 	case FieldType_INT, FieldType_STRING, FieldType_BOOL, FieldType_DATE:
 		if fieldType, err := fs.Type.ConvertToDatabase(); err == nil {
@@ -332,7 +332,7 @@ func (fs *FieldStructure) ConvertToFieldStructure(cache *cacheData) (field db.Fi
 	return field, err
 }
 
-func (cs *ComponentStructure) ConvertToTableStructure(cache *cacheData) (*db.TableStructure, error) {
+func (cs *ComponentStructure) ConvertToTableStructure(cache *CacheStructures) (*db.TableStructure, error) {
 	if knowStruct, ok := cache.TableStructures[cs.Name]; ok {
 		return knowStruct, nil
 	}
@@ -346,12 +346,15 @@ func (cs *ComponentStructure) ConvertToTableStructure(cache *cacheData) (*db.Tab
 		}
 	}
 
-	return db.NewTableStructure(cs.GetName(), fields), nil
+	structure := db.NewTableStructure(cs.GetName(), fields)
+	cache.TableStructures[cs.Name] = structure
+
+	return structure, nil
 }
 
-func (cd *ComponentDescription) ConvertToTableData(cache *cacheData) (table *db.TableData, err error) {
+func (cd *ComponentDescription) ConvertToTableData(cache *CacheStructures) (table *db.TableData, err error) {
 	if cache == nil {
-		cache = newCacheData()
+		cache = NewCacheData()
 	}
 
 	structure, err := cd.Structure.ConvertToTableStructure(cache)
@@ -380,9 +383,9 @@ func (cd *ComponentDescription) ConvertToTableData(cache *cacheData) (table *db.
 	return db.NewTableData(structure, dataAmount, data), err
 }
 
-func (cp *ComponentCompositionDescription) ConvertToCompositionDescription(cache *cacheData) (*db.TableComposition, error) {
+func (cp *ComponentCompositionDescription) ConvertToCompositionDescription(cache *CacheStructures) (*db.TableComposition, error) {
 	if cache == nil {
-		cache = newCacheData()
+		cache = NewCacheData()
 	}
 
 	entities := make([]db.TableElement, len(cp.GetEntities()))
@@ -399,9 +402,9 @@ func (cp *ComponentCompositionDescription) ConvertToCompositionDescription(cache
 	return db.NewTableComposition(entities...), nil
 }
 
-func (ed *EntityDescription) ConvertToTableElement(cache *cacheData) (tableElement db.TableElement, err error) {
+func (ed *EntityDescription) ConvertToTableElement(cache *CacheStructures) (tableElement db.TableElement, err error) {
 	if cache == nil {
-		cache = newCacheData()
+		cache = NewCacheData()
 	}
 
 	switch table := ed.GetDescription().(type) {

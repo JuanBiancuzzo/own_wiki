@@ -88,7 +88,7 @@ func (sc *SystemInteractionClient) Query(ctx context.Context, queryEntity *db.Ta
 	} else if response, err := sc.system.Query(ctx, &pb.QueryRequest{Query: queryDescription}); err != nil {
 		return nil, fmt.Errorf("Failed to convert to query the system, with error: %v", err)
 
-	} else if queryResult, err := response.GetResult().ConvertToTableElement(); err != nil {
+	} else if queryResult, err := response.GetResult().ConvertToTableElement(nil); err != nil {
 		return nil, fmt.Errorf("Failed to convert result to db.TableElement, while Querying, with error: %v", err)
 
 	} else {
