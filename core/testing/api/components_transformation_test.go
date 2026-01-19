@@ -10,8 +10,6 @@ import (
 	db "github.com/JuanBiancuzzo/own_wiki/core/database"
 )
 
-// ---+--- helping function ---+---
-
 // ---+--- tests ---+---
 
 func TestConventSimpelTableDataWithSinglePointAndPrimitiveValues(t *testing.T) {

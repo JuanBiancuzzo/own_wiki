@@ -1,0 +1,43 @@
+syntax = "proto3";
+package api;
+
+option go_package = "github.com/JuanBiancuzzo/own_wiki/core"; 
+
+// The type is the way to recognize which event ocurre
+enum EventType {
+    // System
+    QUIT = 0;
+
+    // User interaction
+    PROMT_TEXT = 1;
+    
+    // UI
+}
+
+// Represent the posible events send and receive
+message Event {
+    message EmtpyEvent {}
+
+    EventType type = 1;
+    oneof info {
+        EmtpyEvent empty = 2;
+
+        // System
+
+        // User interaction
+        PromptTextEvent prompt_event = 3;
+    
+        // UI
+    }
+}
+
+// ---+--- System ---+---
+
+// ---+--- User interaction ---+---
+
+// Represent the request for text of the user
+message PromptTextEvent {
+    string text = 1;
+}
+    
+// ---+--- UI ---+---
