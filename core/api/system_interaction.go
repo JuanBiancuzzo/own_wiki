@@ -6,6 +6,7 @@ import (
 	"net"
 
 	db "github.com/JuanBiancuzzo/own_wiki/core/database"
+	ev "github.com/JuanBiancuzzo/own_wiki/core/events"
 	c "github.com/JuanBiancuzzo/own_wiki/core/systems/configuration"
 
 	pb "github.com/JuanBiancuzzo/own_wiki/core/api/proto"
@@ -96,10 +97,16 @@ func (sc *SystemInteractionClient) Query(ctx context.Context, queryEntity *db.Ta
 	}
 }
 
-// TODO: Change "in *pb.SendEventRequest", to be a core/events/Event, and this function should change it to the request
-func (sc *SystemInteractionClient) SendEvent(ctx context.Context, in *pb.SendEventRequest) error {
-	_, err := sc.system.SendEvent(ctx, in)
-	return err
+func (sc *SystemInteractionClient) SendEvent(ctx context.Context, event ev.Event) error {
+	if eventRequest, err := pb.ConvertFromSystemEvent(event); err != nil {
+		return fmt.Errorf("Faield converting system event to proto event, with error: %v", err)
+
+	} else if _, err = sc.system.SendEvent(ctx, &pb.SendEventRequest{Event: eventRequest}); err != nil {
+		return err
+
+	} else {
+		return nil
+	}
 }
 
 func (sc *SystemInteractionClient) Close() {
