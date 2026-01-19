@@ -42,7 +42,7 @@ func NewLayout(objects ...*SceneObject) *LayoutDescription {
 }
 
 // ---+--- SceenObject ---+---
-func NewSceenTextObject(text string) *SceneObject {
+func NewSceneTextObject(text string) *SceneObject {
 	return &SceneObject{
 		Object: &SceneObject_Text{
 			Text: text,
@@ -50,7 +50,7 @@ func NewSceenTextObject(text string) *SceneObject {
 	}
 }
 
-func NewSceenImageObject(url, title string) *SceneObject {
+func NewSceneImageObject(url, title string) *SceneObject {
 	return &SceneObject{
 		Object: &SceneObject_ImageInfo{
 			ImageInfo: &SceneObject_Image{

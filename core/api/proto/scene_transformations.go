@@ -9,10 +9,10 @@ import (
 func ConvertFromSystemObject(object s.SceneObject) (objectDescription *SceneObject, err error) {
 	switch value := object.(type) {
 	case *s.TextObject:
-		objectDescription = NewSceenTextObject(value.Text)
+		objectDescription = NewSceneTextObject(value.Text)
 
 	case *s.ImageObject:
-		objectDescription = NewSceenImageObject(value.Url, value.Title)
+		objectDescription = NewSceneImageObject(value.Url, value.Title)
 
 	default:
 		err = fmt.Errorf("Object type not a SceneObject, was of: %T", object)
