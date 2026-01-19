@@ -34,4 +34,4 @@ jobs:
         
       # Run all the tests in all directories
       - name: Test
-        run: go test ${{ github.workspace }}/core/...
+        run: go test ${{ github.workspace }}/core/... -fuzz=.
