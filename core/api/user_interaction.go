@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	db "github.com/JuanBiancuzzo/own_wiki/core/database"
+	s "github.com/JuanBiancuzzo/own_wiki/core/scene"
 	c "github.com/JuanBiancuzzo/own_wiki/core/systems/configuration"
 	f "github.com/JuanBiancuzzo/own_wiki/core/systems/files"
 	log "github.com/JuanBiancuzzo/own_wiki/core/systems/logger"
@@ -320,10 +321,84 @@ func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths 
 	return nil
 }
 
-// TODO: Change the function to accept a channel for events (as in core/events/Event) to send, and a channel to get
-// the scene representation
-func (uc *UserInteractionClient) Render(ctx context.Context) (pb.UserInteraction_RenderClient, error) {
-	return uc.User.Render(ctx)
+func (uc *UserInteractionClient) Render(ctx context.Context, sendFrame chan s.FrameInformation, receiveScene chan *s.Scene) error {
+	stream, err := uc.User.Render(ctx)
+	if err != nil {
+		// We close the channel because there is no sceneDescription to be send
+		close(receiveScene)
+
+		// We consume all the files send
+		for range sendFrame {
+		}
+
+		return fmt.Errorf("Failed to create Render stream, with error: %v", err)
+	}
+
+	var waitSendAndReceive sync.WaitGroup
+	errorChannel := make(chan error, 2)
+
+	waitSendAndReceive.Go(func() {
+		errorOccurred := false
+
+		for frameInformation := range sendFrame {
+			if errorOccurred {
+				// We need to consume all the file send
+				continue
+			}
+
+			if request, err := pb.NewRenderRequest(frameInformation); err != nil {
+				errorOccurred = true
+				errorChannel <- err
+
+			} else if err := stream.Send(request); err != nil {
+				errorOccurred = true
+				errorChannel <- fmt.Errorf("Error while sending file, with error: %v", err)
+			}
+		}
+
+		if !errorOccurred {
+			errorChannel <- nil
+		}
+
+		stream.CloseSend()
+	})
+
+	waitSendAndReceive.Go(func() {
+		for {
+			if response, err := stream.Recv(); err == io.EOF {
+				errorChannel <- nil
+				break
+
+			} else if err != nil {
+				errorChannel <- fmt.Errorf("Error while receiving entity information, with error: %v", err)
+				break
+
+			} else if scene, err := response.GetScene().ConvertToSystemScene(); err != nil {
+				errorChannel <- fmt.Errorf("Error while converting to system scene, with error: %v", err)
+				break
+
+			} else {
+				receiveScene <- scene
+			}
+		}
+
+		close(receiveScene)
+	})
+
+	firstError, secondError := <-errorChannel, <-errorChannel
+	waitSendAndReceive.Wait()
+
+	if firstError != nil && secondError != nil {
+		return fmt.Errorf("Got the errors: %v, and %v", firstError, secondError)
+
+	} else if firstError != nil {
+		return firstError
+
+	} else if secondError != nil {
+		return secondError
+	}
+
+	return nil
 }
 
 func (uc *UserInteractionClient) Close() {
