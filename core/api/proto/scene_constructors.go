@@ -25,6 +25,13 @@ func New2DCamera(layout *Layout) *Camera {
 	}
 }
 
+// ---+--- SceenLayout ---+---
+func NewLayout(objects ...*SceneObject) *Layout {
+	return &Layout{
+		Objects: objects,
+	}
+}
+
 // ---+--- SceenObject ---+---
 func NewSceenTextObject(text string) *SceneObject {
 	return &SceneObject{
