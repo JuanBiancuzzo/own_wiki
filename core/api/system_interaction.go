@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	db "github.com/JuanBiancuzzo/own_wiki/core/database"
 	c "github.com/JuanBiancuzzo/own_wiki/core/systems/configuration"
 
 	pb "github.com/JuanBiancuzzo/own_wiki/core/api/proto"
@@ -80,15 +81,18 @@ func NewSystemInteractionClient(config c.SystemInteractionConfig) (*SystemIntera
 	}, nil
 }
 
-// TODO: Change "in *pb.QueryRequest" and "*pb.QueryResponse", to be the simplest representation, and this function
-// should converted to request and response, respectively
-func (sc *SystemInteractionClient) Query(ctx context.Context, queryDescription *pb.ComponentDescription) (*pb.ComponentDescription, error) {
-	// We should define if the query request is an entity (component composition) or a simple component
-	if response, err := sc.system.Query(ctx, &pb.QueryRequest{Query: queryDescription}); err != nil {
-		return nil, err
+func (sc *SystemInteractionClient) Query(ctx context.Context, queryEntity *db.TableElement) (db.TableElement, error) {
+	if queryDescription, err := pb.ConvertToEntityDescription(queryEntity); err != nil {
+		return nil, fmt.Errorf("Failed to convert to pb.EntityDescription, while Querying, with error: %v", err)
+
+	} else if response, err := sc.system.Query(ctx, &pb.QueryRequest{Query: queryDescription}); err != nil {
+		return nil, fmt.Errorf("Failed to convert to query the system, with error: %v", err)
+
+	} else if queryResult, err := response.GetResult().ConvertToTableElement(nil); err != nil {
+		return nil, fmt.Errorf("Failed to convert result to db.TableElement, while Querying, with error: %v", err)
 
 	} else {
-		return response.GetResult(), nil
+		return queryResult, nil
 	}
 }
 

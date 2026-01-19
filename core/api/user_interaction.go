@@ -36,22 +36,29 @@ func newUserInteraction(config c.UserInteractionConfig) *userInteraction {
 	}
 }
 
-func (*userInteraction) LoadPlugin(ctx context.Context, loadPluginRequest *pb.LoadPluginRequest) (*pb.LoadPluginResponse, error) {
+func (ui *userInteraction) LoadPlugin(ctx context.Context, loadPluginRequest *pb.LoadPluginRequest) (*pb.LoadPluginResponse, error) {
 	// We would need to find the files (build it as a plugin), then load it and keep the reference to that plugin.
 	// With the plugin, we should call the necesary function to define the structures given by the user. This should
 	// be the components, and the views. Then the components should be return
 
+	// We would load the plugin to ui.Plugin that holds the shared.UserDefineStructure interface
+
 	return nil, nil
 }
 
-// TODO: Finish the implementation to convert from EntityDescription to ComponentDescription
 func (ui *userInteraction) ImportFiles(importFileStream pb.UserInteraction_ImportFilesServer) error {
 	receiveFilePaths := make(chan string, ui.FilePathCapacity)
-	sendComponents := make(chan *pb.ComponentDescription, ui.ComponentCapacity)
+	sendEntities := make(chan *pb.EntityDescription, ui.ComponentCapacity)
 
 	pluginExe := func(file f.File) {
-		for range ui.Plugin.ProcessFile(shared.File(file)) {
-			sendComponents <- &pb.ComponentDescription{}
+		for _, entityDescription := range ui.Plugin.ProcessFile(shared.File(file)) {
+			var tableElement db.TableElement = entityDescription
+			if entity, err := pb.ConvertToEntityDescription(&tableElement); err != nil {
+				log.Error("Failed to convert pb.EntityDescription, with error: %v", err)
+
+			} else {
+				sendEntities <- entity
+			}
 		}
 	}
 
@@ -76,8 +83,8 @@ func (ui *userInteraction) ImportFiles(importFileStream pb.UserInteraction_Impor
 
 	// sending componentDescriptions
 	waitFiles.Go(func() {
-		for component := range sendComponents {
-			if err := importFileStream.Send(&pb.ImportFilesResponse{Component: component}); err != nil {
+		for entity := range sendEntities {
+			if err := importFileStream.Send(&pb.ImportFilesResponse{Entity: entity}); err != nil {
 				log.Warn("Error while sendign ImportFileResponse, with error: %v", err)
 			}
 		}
@@ -170,10 +177,11 @@ func dfs(name string, tableNames map[string]*seenComponent, exec func(*pb.Compon
 
 	component := seenComponent.Component
 	for _, field := range component.GetFields() {
-		if _, ok := field.GetType().(*pb.FieldStructure_Reference); !ok {
+		if field.GetType() != pb.FieldType_REFERENCE {
 			continue
 		}
-		refTableName := field.GetReference().GetTableName()
+
+		refTableName := field.GetReference().GetName()
 		refComponent := tableNames[refTableName]
 
 		switch refComponent.Seen {
@@ -191,7 +199,7 @@ func dfs(name string, tableNames map[string]*seenComponent, exec func(*pb.Compon
 	return exec(component)
 }
 
-func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath string) (descriptions []db.TableDescription, err error) {
+func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath string) (descriptions []db.TableStructure, err error) {
 	response, err := uc.User.LoadPlugin(ctx, &pb.LoadPluginRequest{PluginPath: pluginPath})
 	if err != nil {
 		return descriptions, fmt.Errorf("Failed to load plugin at %q and get component data, with error: %v", pluginPath, err)
@@ -206,34 +214,12 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 		tableNames[name] = &seenComponent{Component: component, Seen: ST_NOT_SEEN}
 	}
 
-	nameTables := make(map[string]*db.TableDescription)
-	exec := func(component *pb.ComponentStructure) error {
-		name := component.GetName()
-		fieldStructures := component.GetFields()
-		fields := make([]db.Field, len(fieldStructures))
-
-		for i, fieldStructure := range fieldStructures {
-			fieldName := fieldStructure.GetName()
-			fieldIsNull := fieldStructure.GetIsNull()
-			fieldIsKey := fieldStructure.GetIsKey()
-
-			switch value := fieldStructure.GetType().(type) {
-			case *pb.FieldStructure_Primitive:
-				fieldType, err := value.Primitive.GetDataBaseFieldType()
-				if err != nil {
-					return fmt.Errorf("Primitive type failed, with error: %v", err)
-				}
-				fields[i] = db.NewPrimitiveField(fieldName, fieldType, fieldIsNull, fieldIsKey)
-
-			case *pb.FieldStructure_Reference:
-				reference := nameTables[value.Reference.GetTableName()]
-				fields[i] = db.NewReferencesField(fieldName, reference, fieldIsNull, fieldIsKey)
-			}
-		}
-
-		nameTables[name] = db.NewTableDescription(name, fields)
-		return nil
+	cache := pb.NewCacheData()
+	exec := func(component *pb.ComponentStructure) (err error) {
+		_, err = component.ConvertToTableStructure(cache)
+		return err
 	}
+	nameTables := cache.TableStructures
 
 	for _, component := range tableNames {
 		if component.Seen == ST_COMPLETED {
@@ -245,7 +231,7 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 		}
 	}
 
-	descriptions = make([]db.TableDescription, 0, len(nameTables))
+	descriptions = make([]db.TableStructure, 0, len(nameTables))
 	for _, table := range nameTables {
 		descriptions[len(descriptions)] = *table
 	}
@@ -254,7 +240,7 @@ func (uc *UserInteractionClient) LoadPlugin(ctx context.Context, pluginPath stri
 }
 
 // TODO: Change this type to be the correct representation of the ComponentDescription, this should be able to be save in the database
-type EntityDescription *pb.ComponentDescription
+type EntityDescription *pb.EntityDescription
 
 func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths chan string, receiveEntity chan EntityDescription) error {
 	stream, err := uc.User.ImportFiles(ctx)
@@ -308,7 +294,7 @@ func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths 
 				break
 
 			} else {
-				sendEntity <- response.GetComponent()
+				sendEntity <- response.GetEntity()
 			}
 		}
 
