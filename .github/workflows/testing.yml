@@ -32,6 +32,9 @@ jobs:
       - name: Generate Go code from .proto files
         run: make -C ${{ github.workspace }}/core/api build_proto
         
+      - name: Check files
+        run: ls ${{ github.workspace }}/core
+
       # Run all the tests in all directories
       - name: Test
         run: go test -fuzz=${{ github.workspace }}/core/...
