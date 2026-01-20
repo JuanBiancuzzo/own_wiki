@@ -2,14 +2,22 @@ package shared
 
 import (
 	db "github.com/JuanBiancuzzo/own_wiki/core/database"
+	ev "github.com/JuanBiancuzzo/own_wiki/core/events"
 	f "github.com/JuanBiancuzzo/own_wiki/core/systems/files"
+	v "github.com/JuanBiancuzzo/own_wiki/core/views"
 )
 
 // Represents the structure of a component, this defines the structure of the data to be save
 type ComponentStructure any
 
+// This interface lets the user interact with the core system
+type ExternalFunctions interface {
+	// This lets the user send system, or userInteraction events to the core system
+	SendEvent(event ev.Event)
+}
+
 // Represents which views would be shown, and what information (entity) is need it to show it
-type ViewInformation any
+type ViewInformation v.View[ExternalFunctions]
 
 // Represents a component or a composition of components (an entity) that holds information
 type EntityElement db.TableElement
@@ -17,9 +25,7 @@ type EntityElement db.TableElement
 // Is the string representation of a file, and its metadata
 type File f.File
 
-/*
-This interface lets the user define the components, each entity and view for the project.
-*/
+// This interface lets the user define the components, each entity and view for the project.
 type UserDefineStructure interface {
 	// The components are the smallest data storage given by the system. They can depende on
 	// each other, but there has to be a way to constructe them with out an infinite loop
@@ -27,7 +33,7 @@ type UserDefineStructure interface {
 
 	// Views are the representation of a entity to be shown by the program in the platform
 	// define at compilation time
-	RegisterViews() (mainViews ViewInformation, otherViews []ViewInformation)
+	RegisterViews() (homeView ViewInformation, otherViews []ViewInformation)
 
 	// Given that when importing file there has to be a way to transform them in entities, this
 	// is where it happends. This also defines what entity is it wanted to be the main menu. If
