@@ -2,3 +2,6 @@
 .env
 
 **/go.work.sum
+**/go.work
+
+examples/**
