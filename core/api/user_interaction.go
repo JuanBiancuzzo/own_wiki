@@ -321,7 +321,7 @@ func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths 
 	return nil
 }
 
-func (uc *UserInteractionClient) Render(ctx context.Context, sendFrame chan s.FrameInformation, receiveScene chan *s.Scene) error {
+func (uc *UserInteractionClient) Render(ctx context.Context, sendFrame chan s.FrameInformation, receiveScene chan *s.SceneCtx) error {
 	stream, err := uc.User.Render(ctx)
 	if err != nil {
 		// We close the channel because there is no sceneDescription to be send

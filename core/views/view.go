@@ -4,11 +4,15 @@ import (
 	s "github.com/JuanBiancuzzo/own_wiki/core/scene"
 )
 
-type FnYield func() <-chan s.FrameInformation
-
-type View[Data any] interface {
-	// The view represents a continuous rendering of a scene, where each frame is
-	// finish when the yield funtion is call. The Data any generics lets inyect
-	// extra functionality, like a way to send events
-	View(scene *s.Scene, data Data, yield FnYield) View[Data]
+// This interfaces allows the user to create layouts and animations in a
+// Immediate Mode way.
+type View interface {
+	// The sCtx *s.SceneCtx is the way to add elements to the scene, and get useful
+	// informations regarding the resolution, the time, the platform, etc.
+	// The return value of the view should
+	//  * If the view should be render the next frame, then it should return itself
+	//  * If we need to render another view, then it should return an instances
+	// 		of the other view with the corresponding data
+	//  * else there is no next view, then it should return nil
+	View(sCtx *s.SceneCtx) View
 }

@@ -17,7 +17,7 @@ type ExternalFunctions interface {
 }
 
 // Represents which views would be shown, and what information (entity) is need it to show it
-type ViewInformation v.View[ExternalFunctions]
+type ViewInformation v.View
 
 // Represents a component or a composition of components (an entity) that holds information
 type EntityElement db.TableElement
