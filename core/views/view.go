@@ -14,5 +14,12 @@ type View interface {
 	//  * If we need to render another view, then it should return an instances
 	// 		of the other view with the corresponding data
 	//  * else there is no next view, then it should return nil
-	View(sCtx *s.SceneCtx) View
+	View(sCtx *s.SceneCtx) (nextView View)
 }
+
+// We need to implement helper functions that helps with
+// * Tweening
+// * Timing
+// * Squencing
+// * State machines
+// * Handle interaccions
