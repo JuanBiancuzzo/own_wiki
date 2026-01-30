@@ -25,3 +25,7 @@ func (t *Tween) Tween(duration, dt float64, update FnUpdate) {
 
 	update(t.Time.InvLerp())
 }
+
+func (t *Tween) Restart() {
+	t.Time = nil
+}
