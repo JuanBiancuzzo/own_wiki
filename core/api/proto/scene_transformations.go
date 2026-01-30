@@ -48,7 +48,7 @@ func ConvertFromSystemCamera(camera *s.Camera) (*CameraDescription, error) {
 	}
 }
 
-func ConvertFromSystemScene(scene *s.Scene) (*SceneDescription, error) {
+func ConvertFromSystemScene(scene *s.SceneCtx) (*SceneDescription, error) {
 	if mainCamera, err := ConvertFromSystemCamera(scene.MainCamera); err != nil {
 		return nil, fmt.Errorf("Failed to convert from Camera, with error: %v", err)
 
@@ -105,7 +105,7 @@ func (cd *CameraDescription) ConvertToSystemCamera() (*s.Camera, error) {
 	}
 }
 
-func (sd *SceneDescription) ConvertToSystemScene() (*s.Scene, error) {
+func (sd *SceneDescription) ConvertToSystemScene() (*s.SceneCtx, error) {
 	if camera, err := sd.MainCamera.ConvertToSystemCamera(); err != nil {
 		return nil, err
 
