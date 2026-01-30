@@ -6,19 +6,6 @@ import (
 	s "github.com/JuanBiancuzzo/own_wiki/core/scene"
 )
 
-type EaseType uint
-
-const (
-	LINEAR_EASE = iota
-	QUAD_EASE
-	CUBIC_EASE
-	QUART_EASE
-	QUINT_EASE
-	SINE_EASE
-	EXPO_EASE
-	CIRC_EASE
-)
-
 type EaseTimeApply uint
 
 const (
@@ -28,6 +15,7 @@ const (
 )
 
 // ---+--- Easing functions ---+---
+
 type FnEase func(in s.UnitRange) (out s.UnitRange)
 
 /*
@@ -48,8 +36,33 @@ func GetLinearEase() FnEase {
 	return easeLinear
 }
 
+func GetSawEase(peaks int) FnEase {
+	return func(in s.UnitRange) s.UnitRange {
+		_, frac := math.Modf(float64(in) * float64(peaks))
+		return s.UnitRange(frac)
+	}
+}
+
+func GetTriangleEase(peaks int) FnEase {
+	return func(in s.UnitRange) s.UnitRange {
+		integer, frac := math.Modf(float64(in) * float64(peaks))
+		if int(integer)%2 == 0 {
+			return s.UnitRange(frac)
+
+		} else {
+			return s.UnitRange(1 - frac)
+		}
+	}
+}
+
 func easeLinear(in s.UnitRange) s.UnitRange {
 	return in
+}
+
+func GetSmoothStep() FnEase {
+	return func(in s.UnitRange) s.UnitRange {
+		return easePolynomial(in, 2, EA_BOTH)
+	}
 }
 
 func GetPolinomialEase(power uint, timeApply EaseTimeApply) FnEase {

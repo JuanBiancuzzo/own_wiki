@@ -182,6 +182,7 @@ func SlerpUv[F c.Float](t UnitRange, start, end UvVector[F]) UvVector[F] {
 	return UvVector[F](SlerpVec2(t, Vector2[F](start), Vector2[F](end)))
 }
 
+// Make lerp in another space of values
 func InvLerpColorRGB[F c.Float](in, start, end ColorRGB[F]) UnitRange {
 	return InvLerpVec3(Vector3[F](in), Vector3[F](start), Vector3[F](end))
 }
@@ -194,6 +195,7 @@ func SlerpColorRGB[F c.Float](t UnitRange, start, end ColorRGB[F]) ColorRGB[F] {
 	return ColorRGB[F](SlerpVec3(t, Vector3[F](start), Vector3[F](end)))
 }
 
+// Make lerp in another space of values
 func InvLerpColorRGBA[F c.Float](in, start, end ColorRGBA[F]) UnitRange {
 	return InvLerpVec4(Vector4[F](in), Vector4[F](start), Vector4[F](end))
 }
