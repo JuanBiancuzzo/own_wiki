@@ -22,4 +22,3 @@ type View interface {
 // * Timing
 // * Squencing
 // * State machines
-// * Handle interaccions
