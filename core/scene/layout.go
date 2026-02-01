@@ -1,11 +1,33 @@
 package scene
 
-type Layout struct {
-	Objects []SceneObject
+type LayoutDirection uint
+
+const (
+	VERTICAL_DIR = iota
+	HORIZONTAL_DIR
+)
+
+type LayoutConfig struct {
+	X, Y, W, H DimensionValue
+	Dir        LayoutDirection
+	Padding    DimConfig
+	Margin     DimConfig
 }
 
-func NewLayout(objects ...SceneObject) *Layout {
+type Layout struct {
+	Config LayoutConfig
+}
+
+func NewLayout(config LayoutConfig) *Layout {
 	return &Layout{
-		Objects: objects,
+		Config: config,
 	}
 }
+
+func (l *Layout) Update(config LayoutConfig) {
+	l.Config = config
+}
+
+func (l *Layout) Init() {}
+
+func (l *Layout) End() {}

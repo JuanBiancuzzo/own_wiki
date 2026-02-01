@@ -1,11 +1,11 @@
 package scene
 
 type Camera struct {
-	PerspectiveMatrix [][]float32
+	PerspectiveMatrix Mat4[float64]
 	ScreenLayout      *Layout
 }
 
-func NewGeneralCamera(perspectiveMatrix [][]float32, layout *Layout) *Camera {
+func NewGeneralCamera(perspectiveMatrix Mat4[float64], layout *Layout) *Camera {
 	return &Camera{
 		PerspectiveMatrix: perspectiveMatrix,
 		ScreenLayout:      layout,
@@ -13,12 +13,9 @@ func NewGeneralCamera(perspectiveMatrix [][]float32, layout *Layout) *Camera {
 }
 
 func New2DCamera(layout *Layout) *Camera {
-	var identityMatrix = [][]float32{
-		{1, 0, 0, 0},
-		{0, 1, 0, 0},
-		{0, 0, 1, 0},
-		{0, 0, 0, 1},
+	var identityMatrix = Matrix4x4[float64]{
+		A11: 1, A22: 1, A33: 1, A44: 1,
 	}
 
-	return NewGeneralCamera(identityMatrix, layout)
+	return NewGeneralCamera(Mat4[float64](identityMatrix), layout)
 }

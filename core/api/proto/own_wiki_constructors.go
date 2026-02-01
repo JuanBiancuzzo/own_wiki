@@ -6,7 +6,7 @@ import (
 	s "github.com/JuanBiancuzzo/own_wiki/core/scene"
 )
 
-func NewRenderRequest(frameInformation s.FrameInformation) (*RenderRequest, error) {
+func NewRenderRequest(frameInformation s.FrameInformation2) (*RenderRequest, error) {
 	events := make([]*Event, len(frameInformation.Events))
 	for i, event := range frameInformation.Events {
 		var err error

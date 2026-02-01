@@ -1,6 +1,6 @@
 package scene
 
-type SceneInformation struct {
+type FrameInformation struct {
 	Resolution Vec3[float64]
 	Time       float64
 	DTime      float64
@@ -24,39 +24,59 @@ type SceneInformation struct {
 // We should contamplate the idea of having a way to represent the scene
 // instead of sharing all the scene itself
 type SceneCtx struct {
-	SceneInformation
+	FrameInformation
 
 	MainCamera *Camera
 	MainLayout *Layout
+
+	SelectedLayout *Layout
 }
 
-func NewSceneContext(mainCamera *Camera, mainLayout *Layout, sceneInfo SceneInformation) *SceneCtx {
+func NewSceneContext(mainCamera *Camera, mainLayout *Layout, sceneInfo FrameInformation) *SceneCtx {
 	return &SceneCtx{
-		SceneInformation: sceneInfo,
+		FrameInformation: sceneInfo,
 		MainCamera:       mainCamera,
 		MainLayout:       mainLayout,
+
+		SelectedLayout: nil,
 	}
-}
-
-type LayoutDirection uint
-
-const (
-	VERTICAL_DIR = iota
-	HORIZONTAL_DIR
-)
-
-type LayoutConfig struct {
-	X, Y, W, H DimensionValue
-	Dir        LayoutDirection
-	Padding    DimConfig
-	Margin     DimConfig
 }
 
 // In the main layout the x, y, width and height are already set, so the values pass
 // for those will be ignore
-func (sCtx *SceneCtx) AddMainLayout(config LayoutConfig, creation func()) {}
+func (sCtx *SceneCtx) AddMainLayout(config LayoutConfig, creation func()) {
+	// Overwriting x, y, width and height
+	config.X = ValueFix(0)
+	config.Y = ValueFix(0)
+	config.W = ValueFix(int(sCtx.FrameInformation.Resolution.X))
+	config.H = ValueFix(int(sCtx.FrameInformation.Resolution.Y))
+	sCtx.MainLayout.Update(config)
 
-func (sCtx *SceneCtx) AddLayout(config LayoutConfig, creation func()) {}
+	sCtx.SelectedLayout = sCtx.MainLayout
+	defer func() { sCtx.SelectedLayout = nil }()
+
+	sCtx.SelectedLayout.Init()
+	defer sCtx.SelectedLayout.End()
+
+	creation()
+}
+
+func (sCtx *SceneCtx) AddLayout(config LayoutConfig, creation func()) {
+	if sCtx.SelectedLayout == nil {
+		// Now we dont support other layouts than the main, as the first
+		sCtx.AddMainLayout(config, creation)
+		return
+	}
+
+	previousLayout := sCtx.SelectedLayout
+	sCtx.SelectedLayout = NewLayout(config)
+	defer func() { sCtx.SelectedLayout = previousLayout }()
+
+	sCtx.SelectedLayout.Init()
+	defer sCtx.SelectedLayout.End()
+
+	creation()
+}
 
 type TextBehaviour uint
 
@@ -104,6 +124,13 @@ func ValuePorce(porcentage float32) DimensionValue {
 	return DimensionValue{
 		DimensionType: PORCENTAGE,
 		Value:         porcentage,
+	}
+}
+
+func ValueFix(pixels int) DimensionValue {
+	return DimensionValue{
+		DimensionType: FIX,
+		Value:         pixels,
 	}
 }
 
