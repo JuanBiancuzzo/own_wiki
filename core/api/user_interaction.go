@@ -321,7 +321,7 @@ func (uc *UserInteractionClient) ImportFiles(ctx context.Context, sendFilePaths 
 	return nil
 }
 
-func (uc *UserInteractionClient) Render(ctx context.Context, sendFrame chan s.FrameInformation2, receiveScene chan *s.SceneCtx) error {
+func (uc *UserInteractionClient) Render(ctx context.Context, sendFrame chan s.FrameInformation, receiveScene chan *s.SceneCtx) error {
 	stream, err := uc.User.Render(ctx)
 	if err != nil {
 		// We close the channel because there is no sceneDescription to be send
@@ -365,7 +365,7 @@ func (uc *UserInteractionClient) Render(ctx context.Context, sendFrame chan s.Fr
 
 	waitSendAndReceive.Go(func() {
 		for {
-			if response, err := stream.Recv(); err == io.EOF {
+			if _, err := stream.Recv(); err == io.EOF {
 				errorChannel <- nil
 				break
 
@@ -373,12 +373,12 @@ func (uc *UserInteractionClient) Render(ctx context.Context, sendFrame chan s.Fr
 				errorChannel <- fmt.Errorf("Error while receiving entity information, with error: %v", err)
 				break
 
-			} else if scene, err := response.GetScene().ConvertToSystemScene(); err != nil {
-				errorChannel <- fmt.Errorf("Error while converting to system scene, with error: %v", err)
+			} else if true {
+				errorChannel <- fmt.Errorf("TODO: We need to receive draw commands")
 				break
 
 			} else {
-				receiveScene <- scene
+				// receiveScene <- scene
 			}
 		}
 

@@ -42,6 +42,10 @@ func NewSceneContext(mainCamera *Camera, mainLayout *Layout, sceneInfo FrameInfo
 	}
 }
 
+func (sCtx *SceneCtx) GenerateDrawCommands() []DrawCommand {
+	return []DrawCommand{}
+}
+
 // In the main layout the x, y, width and height are already set, so the values pass
 // for those will be ignore
 func (sCtx *SceneCtx) AddMainLayout(config LayoutConfig, creation func()) {
