@@ -1,5 +1,7 @@
 package scene
 
+import d "github.com/JuanBiancuzzo/own_wiki/core/scene/draw_commands"
+
 type FrameInformation struct {
 	Resolution Vec3[float64]
 	Time       float64
@@ -42,8 +44,8 @@ func NewSceneContext(mainCamera *Camera, mainLayout *Layout, sceneInfo FrameInfo
 	}
 }
 
-func (sCtx *SceneCtx) GenerateDrawCommands() []DrawCommand {
-	return []DrawCommand{}
+func (sCtx *SceneCtx) GenerateDrawCommands() []d.DrawCommand {
+	return []d.DrawCommand{}
 }
 
 // In the main layout the x, y, width and height are already set, so the values pass
