@@ -4,7 +4,7 @@ type DrawRectangle struct {
 	// Position
 	// Size
 	// Background color
-	// rounded corners
+	// rounded corners // for now we dont include it
 }
 
 func NewDrawRectangle() DrawRectangle {

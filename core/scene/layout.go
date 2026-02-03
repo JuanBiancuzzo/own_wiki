@@ -15,7 +15,8 @@ type LayoutConfig struct {
 }
 
 type Layout struct {
-	Config LayoutConfig
+	Config  LayoutConfig
+	Objects []Object
 }
 
 func NewLayout(config LayoutConfig) *Layout {
@@ -24,10 +25,21 @@ func NewLayout(config LayoutConfig) *Layout {
 	}
 }
 
+// This is to make a layout an object
+func (*Layout) isObject() {}
+
 func (l *Layout) Update(config LayoutConfig) {
 	l.Config = config
 }
 
 func (l *Layout) Init() {}
 
+func (l *Layout) AddObject(object Object) {
+	l.Objects = append(l.Objects, object)
+}
+
 func (l *Layout) End() {}
+
+func (l *Layout) GenerateCameraDescription(givenCamera *Camera) []*CameraDescription {
+	return []*CameraDescription{}
+}

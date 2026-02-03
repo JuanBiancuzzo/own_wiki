@@ -3,44 +3,31 @@ package scene
 import d "github.com/JuanBiancuzzo/own_wiki/core/scene/draw_commands"
 
 type FrameInformation struct {
-	Resolution Vec3[float64]
-	Time       float64
-	DTime      float64
-	FrameRate  float64
-	FrameCount uint64
-
-	// This are the inputs in a ShaderToy shader
-	// uniform vec3      iResolution;           // viewport resolution (in pixels)
-	// uniform float     iTime;                 // shader playback time (in seconds)
-	// uniform float     iTimeDelta;            // render time (in seconds)
-	// uniform float     iFrameRate;            // shader frame rate
-	// uniform int       iFrame;                // shader playback frame
-	// uniform float     iChannelTime[4];       // channel playback time (in seconds)
-	// uniform vec3      iChannelResolution[4]; // channel resolution (in pixels)
-	// uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click
-	// uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube
-	// uniform vec4      iDate;                 // (year, month, day, time in seconds)
-	// uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
+	// This are inspired from inputs in a ShaderToy shader
+	Resolution Vec3[float64] // X and Y are the amount of pixels and Z is the aspect ratio
+	Time       float64       // The time from the first call to the view
+	DTime      float64       // The delta time between frames
+	FrameRate  float64       // The framerate (it would be a fix framerate for now)
+	FrameCount uint64        // The amount of frames from the first call to the view
 }
 
-// We should contamplate the idea of having a way to represent the scene
-// instead of sharing all the scene itself
+// The MainCamera and MainLayout generate a tree like structure where each alter the elements
+// that are containt within
 type SceneCtx struct {
 	FrameInformation
 
+	// Is will contain elements that are going to be alter by the camara perspective matrix
 	MainCamera *Camera
-	MainLayout *Layout
 
-	SelectedLayout *Layout
+	selectedLayout *Layout
 }
 
-func NewSceneContext(mainCamera *Camera, mainLayout *Layout, sceneInfo FrameInformation) *SceneCtx {
+func NewSceneContext(mainCamera *Camera, sceneInfo FrameInformation) *SceneCtx {
 	return &SceneCtx{
 		FrameInformation: sceneInfo,
 		MainCamera:       mainCamera,
-		MainLayout:       mainLayout,
 
-		SelectedLayout: nil,
+		selectedLayout: nil,
 	}
 }
 
@@ -58,28 +45,28 @@ func (sCtx *SceneCtx) AddMainLayout(config LayoutConfig, creation func()) {
 	config.H = ValueFix(int(sCtx.FrameInformation.Resolution.Y))
 	sCtx.MainLayout.Update(config)
 
-	sCtx.SelectedLayout = sCtx.MainLayout
-	defer func() { sCtx.SelectedLayout = nil }()
+	sCtx.selectedLayout = sCtx.MainLayout
+	defer func() { sCtx.selectedLayout = nil }()
 
-	sCtx.SelectedLayout.Init()
-	defer sCtx.SelectedLayout.End()
+	sCtx.selectedLayout.Init()
+	defer sCtx.selectedLayout.End()
 
 	creation()
 }
 
 func (sCtx *SceneCtx) AddLayout(config LayoutConfig, creation func()) {
-	if sCtx.SelectedLayout == nil {
+	if sCtx.selectedLayout == nil {
 		// Now we dont support other layouts than the main, as the first
 		sCtx.AddMainLayout(config, creation)
 		return
 	}
 
-	previousLayout := sCtx.SelectedLayout
-	sCtx.SelectedLayout = NewLayout(config)
-	defer func() { sCtx.SelectedLayout = previousLayout }()
+	previousLayout := sCtx.selectedLayout
+	sCtx.selectedLayout = NewLayout(config)
+	defer func() { sCtx.selectedLayout = previousLayout }()
 
-	sCtx.SelectedLayout.Init()
-	defer sCtx.SelectedLayout.End()
+	sCtx.selectedLayout.Init()
+	defer sCtx.selectedLayout.End()
 
 	creation()
 }

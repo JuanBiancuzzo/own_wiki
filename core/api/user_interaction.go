@@ -139,6 +139,14 @@ func (us *UserInteractionServer) Serve() error {
 	return nil
 }
 
+type UserInteractionProtocol interface {
+	LoadPlugin(ctx context.Context, pluginPath string) (descriptions []db.TableStructure, err error)
+
+	ImportFiles(ctx context.Context, sendFilePaths chan string, receiveEntity chan db.TableElement) error
+
+	Render(ctx context.Context, sendFrame chan s.FrameInformation, receiveScene chan *s.SceneCtx) error
+}
+
 type UserInteractionClient struct {
 	Conn *grpc.ClientConn
 	User pb.UserInteractionClient

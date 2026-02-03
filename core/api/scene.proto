@@ -3,14 +3,25 @@ package api;
 
 option go_package = "github.com/JuanBiancuzzo/own_wiki/core"; 
 
-// Represents the information like the frame count, etc.
+// Represents the information needed (and sometimes optional) to render a frame
 message FrameInformation {
-    uint32 frame_count = 1;
+    // The amount of pixels asign to the horizontal direction
+    uint32 resolution_x = 1;
+    // The amount of pixels asign to the vertical direction
+    uint32 resolution_y = 2;
+	// The time in seconds from the first call to the view 
+    float time = 3;
+	// The delta time between frames
+    float dtime = 4;
+	// The framerate (it would be a fix framerate for now)
+    float frame_rate = 5;
+	// The amount of frames from the first call to the view
+    uint32 frame_count = 6;
 }
 
 // Represents the description of the scene in a agnostic way
 message SceneDescription {
-    CameraDescription main_camera = 1;
+    repeated CameraDescription cameras = 1;
 }
 
 // Its the way to capture the perspective of the objects
@@ -21,23 +32,45 @@ message CameraDescription {
     }
 
     PerspectiveMatrix perspective = 1;
-    LayoutDescription screen_layout = 2;
+    repeated DrawCommand draw_commands = 2;
 }
 
-// Represents a group of objects that 
-message LayoutDescription {
-    repeated SceneObject objects = 1;
+// This represents the smallest draw to make
+message DrawCommand {
+    enum DrawType {
+        RECTANGLE = 0;
+        TEXT = 1;
+    }
+
+    DrawType type = 1;
+    oneof value {
+        DrawRectangle rectangle = 2;
+        DrawText text = 3;
+    }
 }
 
-// All the objects that could be define, are define here
-message SceneObject {
-    message Image {
-        string url = 1;
-        string title = 2;
-    }
+// This describes a quad
+message DrawRectangle {
+    float position_x = 1;
+    float position_y = 2;
+    float width = 3;
+    float height = 4;
+    Color background = 5;
+}
 
-    oneof object {
-        string text = 1;
-        Image image_info = 2;
-    }
+// This represents any text
+message DrawText {
+    float position_x = 1;
+    float position_y = 2;
+    float width = 3;
+    float height = 4;
+    string content = 5;
+}
+
+// This represents any type of color
+message Color {
+    float r = 1;
+    float g = 2;
+    float b = 3;
+    float a = 4;
 }
