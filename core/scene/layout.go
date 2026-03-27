@@ -40,6 +40,8 @@ func (l *Layout) AddObject(object Object) {
 
 func (l *Layout) End() {}
 
-func (l *Layout) GenerateCameraDescription(givenCamera *Camera) []*CameraDescription {
+func (l *Layout) GenerateCameraDescription() []*CameraDescription {
+	// The layout its always an orthogonal camera, not given by the camera that its attach?
+	// The z component is always discarted because its 2D
 	return []*CameraDescription{}
 }
